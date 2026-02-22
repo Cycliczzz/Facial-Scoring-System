@@ -1,1 +1,71 @@
 # Facial-Scoring-System
+Front profile:
+- Lateral Canthal Tilt
+- Nose Bridge to Nose Width
+- Bitemporal Width
+- Neck Width
+- Ear Protrusion Angle
+- Cheekbone height
+- Cupid'Bow Depth
+- Bigonial width
+- Jaw Slope
+- Ear Protrusion Ratio
+- Middle Third
+- Eye Aspect Ratio
+- Mouth Corner Position
+- Eye Separation Ratio
+- Eyebrow Tilt
+- Lower Third
+- Face Width to Height Ratio
+- Interpupillary-Mouth Width Ratio
+- Jaw Frontal Angle
+- Intercanthal-Nasal Width Ratio
+- Top Third
+- One Eye Apart Test
+- Midface Ratio
+- Ipsilateral Alar Angle
+- Mouth width to nose width ratio
+- Total Facial Width to Height Ratio
+- Chin to Philtrum Ratio
+- Eyebrow Low Setedness
+- Brow Length to Face Width Ratio
+- Nose Tip Position
+- Deviation of IAA(Ipsilateral alar angle) & JFA(jaw frontal angle)
+- Lower Lip to Upper Lip Ratio
+- Lower Third Proportion
+
+
+
+Side Profile:
+- Nasal Tip Angle
+- Nasal Width to Height Ratio
+- Upper Lip S-line Position
+- Nasal Projection
+- Nasofrontal Angle
+- Recession relative to frankfort plane
+- Holdaway H Line
+- Mentolabial Angle
+- Upper Forehead Slope 
+- Facial Convexity (Nasion)
+- Anterior Facial Depth
+- Upper Lip E-Line Position
+- Submental Cervical Angle
+- Facial Depth to Height Ratio
+- Browridge Inclination Angle
+- Total Facial Convexity
+- Facial Convexity(Glabella)
+- Orbital Vector
+- Interior Midface Projection Angle
+- Z Angle
+- Nose Tip Rotation Angle
+- Nasolabial Angle
+- Nasofacial Angle
+- Nasomental Angle
+- Frankfort-tip Angle
+- Lower Lip S-Line Position
+- Lower Lip E-Line Position
+- Lower Lip Burstone Line
+- Gonial Angle
+- Mandibular Plane Angle
+- Ramus to Mandible Ratio
+- Gonion to Mouth line
