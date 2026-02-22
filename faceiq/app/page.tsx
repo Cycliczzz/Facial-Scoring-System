@@ -1,6 +1,8 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
+
 import {
   Card,
   CardHeader,
@@ -113,30 +115,138 @@ const pricing = [
 ]
 
 export default function Home() {
+  const [activeSection, setActiveSection] = useState<string>("hero")
+  const [isScrolled, setIsScrolled] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const sectionIds = ["hero", "technology", "how-it-works", "pricing"]
+    const sections = sectionIds
+      .map((id) => document.getElementById(id))
+      .filter(Boolean) as HTMLElement[]
+
+    if (!sections.length) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.target.getBoundingClientRect().top - b.target.getBoundingClientRect().top)
+
+        if (visible.length > 0) {
+          const id = visible[0].target.id
+          setActiveSection(id)
+        }
+      },
+      {
+        threshold: 0.35,
+        rootMargin: "-72px 0px -40% 0px",
+      },
+    )
+
+    sections.forEach((section) => observer.observe(section))
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const onScroll = () => {
+      setIsScrolled(window.scrollY > 10)
+    }
+
+    onScroll()
+    window.addEventListener("scroll", onScroll)
+
+    return () => {
+      window.removeEventListener("scroll", onScroll)
+    }
+  }, [])
+
+  const scrollToSection = (sectionId: string) => {
+
+    if (typeof window === "undefined") return
+
+    const element = document.getElementById(sectionId)
+    if (!element) return
+
+    const headerOffset = 80
+    const elementPosition = element.getBoundingClientRect().top + window.scrollY
+    const offsetPosition = elementPosition - headerOffset
+
+        window.scrollTo({
+      top: offsetPosition,
+      behavior: "smooth",
+    })
+
+    // trigger a subtle highlight animation on the target section
+    element.classList.remove("section-focus")
+    // force reflow so the animation can restart
+    void element.offsetWidth
+    element.classList.add("section-focus")
+
+    window.setTimeout(() => {
+      element.classList.remove("section-focus")
+    }, 900)
+  }
+
   return (
+
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
+
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="hero-orbit" />
         <div className="grid-overlay" />
       </div>
-      {/* Top navigation */}
-      <header className="sticky top-0 z-20 border-b border-border/60 bg-background/80 backdrop-blur-xl">
+            {/* Top navigation */}
+      <header
+        className={`
+          sticky top-0 z-20 border-b bg-background/80 backdrop-blur-xl header-shell
+          ${isScrolled ? "header-shell-scrolled" : "border-border/60"}
+        `}
+      >
+
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">
             <div className="flex size-8 items-center justify-center rounded-md bg-primary/15 text-primary">
               <Sparkles className="size-4" />
             </div>
             <div className="flex flex-col leading-tight">
-              <span className="text-sm font-semibold tracking-tight">FaceIQ Labs</span>
+                            <span className="text-sm font-semibold tracking-tight">LooksmaxxAI</span>
+
               <span className="text-[11px] text-muted-foreground">Facial harmony analytics</span>
             </div>
           </div>
 
-          <div className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-            <button className="transition-colors hover:text-foreground">Technology</button>
-            <button className="transition-colors hover:text-foreground">How it works</button>
-            <button className="transition-colors hover:text-foreground">Pricing</button>
-          </div>
+                              <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
+            <button
+              type="button"
+              className={`nav-link ${activeSection === "technology" ? "nav-link-active" : ""}`}
+              onClick={() => scrollToSection("technology")}
+            >
+              Technology
+            </button>
+            <button
+              type="button"
+              className={`nav-link ${activeSection === "how-it-works" ? "nav-link-active" : ""}`}
+              onClick={() => scrollToSection("how-it-works")}
+            >
+              How it works
+            </button>
+            <button
+              type="button"
+              className={`nav-link ${activeSection === "pricing" ? "nav-link-active" : ""}`}
+              onClick={() => scrollToSection("pricing")}
+            >
+              Pricing
+            </button>
+          </nav>
+
+
 
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" className="hidden md:inline-flex">
@@ -154,8 +264,12 @@ export default function Home() {
       </header>
 
       <main className="mx-auto flex max-w-6xl flex-col gap-16 px-4 pb-16 pt-10 sm:px-6 lg:px-8 lg:pb-24 lg:pt-16">
-        {/* Hero section */}
-        <section className="section-enter section-delay-1 grid items-center gap-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+                {/* Hero section */}
+        <section
+          id="hero"
+          className="section-shell section-enter section-delay-1 grid items-center gap-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]"
+        >
+
           <div className="space-y-6">
             <div className="inline-flex items-center gap-2 rounded-full border border-sky-500/40 bg-sky-500/5 px-3 py-1 text-xs text-sky-200/80">
               <span className="inline-flex items-center gap-1 font-medium text-sky-300">
@@ -202,7 +316,8 @@ export default function Home() {
 
           <div className="relative">
             <div className="pointer-events-none absolute inset-0 -z-10 rounded-3xl bg-gradient-to-br from-sky-500/15 via-transparent to-blue-500/25" />
-            <Card className="border-border/60 bg-card/80 shadow-[0_24px_60px_rgba(15,23,42,0.7)] backdrop-blur-xl card-raise">
+                        <Card className="border-border/60 bg-card/80 shadow-[0_24px_60px_rgba(15,23,42,0.7)] backdrop-blur-xl card-raise hero-card">
+
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center justify-between text-base">
                   <span>Harmony overview</span>
@@ -267,8 +382,14 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Technology section */}
-        <section className="section-enter section-delay-2 space-y-6" aria-labelledby="technology-heading">
+                        {/* Technology section */}
+        <section
+          id="technology"
+          className="section-shell section-enter section-delay-2 space-y-6"
+          aria-labelledby="technology-heading"
+        >
+
+
           <div className="space-y-2">
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-sky-400">
               Technology
@@ -307,8 +428,14 @@ export default function Home() {
           </div>
         </section>
 
-        {/* How it works */}
-        <section className="section-enter section-delay-3 space-y-6" aria-labelledby="how-heading">
+                        {/* How it works */}
+        <section
+          id="how-it-works"
+          className="section-shell section-enter section-delay-3 space-y-6"
+          aria-labelledby="how-heading"
+        >
+
+
           <div className="space-y-2">
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-sky-400">
               How it works
@@ -347,11 +474,12 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Personalized plan */}
+                {/* Personalized plan */}
         <section
-          className="section-enter section-delay-3 grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]"
+          className="section-shell section-enter section-delay-3 grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]"
           aria-labelledby="plan-heading"
         >
+
           <div className="space-y-2">
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-sky-400">
               Personalized roadmap
@@ -435,8 +563,14 @@ export default function Home() {
           </Card>
         </section>
 
-        {/* Pricing */}
-        <section className="section-enter section-delay-4 space-y-6" aria-labelledby="pricing-heading">
+                        {/* Pricing */}
+        <section
+          id="pricing"
+          className="section-shell section-enter section-delay-4 space-y-6"
+          aria-labelledby="pricing-heading"
+        >
+
+
           <div className="space-y-2 text-center">
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-sky-400">
               Pricing
@@ -468,10 +602,12 @@ export default function Home() {
                   </div>
                 )}
                 <CardHeader className="pb-3">
-                  <CardTitle className="flex items-baseline justify-between text-base">
+                                    <CardTitle className="flex items-baseline justify-between text-base">
                     <span>{tier.name}</span>
-                    <span className="text-sm font-semibold">{tier.price}</span>
+                                        <span className="mt-2 text-sm font-semibold">{tier.price}</span>
+
                   </CardTitle>
+
                   <CardDescription className="text-xs leading-relaxed">
                     {tier.description}
                   </CardDescription>
@@ -503,8 +639,9 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Final CTA */}
-        <section className="section-enter section-delay-4 rounded-2xl border border-sky-500/40 bg-gradient-to-br from-sky-500/15 via-background to-blue-500/20 px-6 py-8 text-center shadow-[0_18px_50px_rgba(15,23,42,0.7)] sm:px-10">
+                {/* Final CTA */}
+        <section className="section-enter section-delay-4 rounded-2xl border border-sky-500/40 bg-gradient-to-br from-sky-500/15 via-background to-blue-500/20 px-6 py-8 text-center shadow-[0_18px_50px_rgba(15,23,42,0.7)] sm:px-10 cta-shell">
+
           <h2 className="text-balance text-xl font-semibold tracking-tight sm:text-2xl">
             Ready to see your facial harmony from a new angle?
           </h2>
