@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Check } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -9,13 +10,15 @@ export type Gender = "male" | "female"
 
 export function GenderSelector() {
   const [selected, setSelected] = useState<Gender | null>(null)
+  const router = useRouter()
 
   const isSelected = (value: Gender) => selected === value
 
   const handleContinue = () => {
     if (!selected) return
-    // TODO: Implement redirect or API call to persist gender selection
+    // TODO: Persist gender selection if needed, then go to ethnicity step
     console.log("Selected gender:", selected)
+    router.push(`/onboarding/ethnicity?gender=${selected}`)
   }
 
   return (
