@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
+
+
+
 
 
 import {
@@ -13,7 +17,8 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card"
-import { ArrowRight, Check, LineChart, Shield, Sparkles } from "lucide-react"
+import { ArrowRight, Check, LineChart, Shield, Sparkles, X } from "lucide-react"
+
 
 const features = [
   {
@@ -72,7 +77,22 @@ const planItems = [
   },
 ]
 
+const heroImages = [
+  "/hero-samples/sample-1.jpg",
+  "/hero-samples/sample-2.jpg",
+  "/hero-samples/sample-3.jpg",
+  "/hero-samples/sample-4.jpg",
+  "/hero-samples/sample-5.jpg",
+  "/hero-samples/sample-6.jpg",
+  "/hero-samples/sample-7.jpg",
+  "/hero-samples/sample-8.jpg",
+  "/hero-samples/sample-9.jpg",
+  "/hero-samples/sample-10.jpg",
+]
+
+
 const pricing = [
+
   {
     name: "Free",
     price: "$0",
@@ -117,8 +137,13 @@ const pricing = [
 ]
 
 export default function Home() {
-  const [activeSection, setActiveSection] = useState<string>("hero")
+    const [activeSection, setActiveSection] = useState<string>("hero")
   const [isScrolled, setIsScrolled] = useState(false)
+  const [showSampleReport, setShowSampleReport] = useState(false)
+  const [closingSampleReport, setClosingSampleReport] = useState(false)
+  const [currentHeroImage, setCurrentHeroImage] = useState(0)
+
+
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -154,7 +179,7 @@ export default function Home() {
     }
   }, [])
 
-  useEffect(() => {
+    useEffect(() => {
     if (typeof window === "undefined") return
 
     const onScroll = () => {
@@ -169,7 +194,35 @@ export default function Home() {
     }
   }, [])
 
+    useEffect(() => {
+    if (typeof window === "undefined") return
+    if (heroImages.length <= 1) return
+
+    const id = window.setInterval(() => {
+      setCurrentHeroImage((prev) => (prev + 1) % heroImages.length)
+    }, 4500)
+
+    return () => {
+      window.clearInterval(id)
+    }
+  }, [])
+
+  const handleOpenSampleReport = () => {
+    setClosingSampleReport(false)
+    setShowSampleReport(true)
+  }
+
+  const handleCloseSampleReport = () => {
+    setClosingSampleReport(true)
+    window.setTimeout(() => {
+      setShowSampleReport(false)
+      setClosingSampleReport(false)
+    }, 220)
+  }
+
   const scrollToSection = (sectionId: string) => {
+
+
 
     if (typeof window === "undefined") return
 
@@ -308,9 +361,15 @@ export default function Home() {
                 </Link>
               </Button>
 
-              <button className="text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+                                                        <button
+                type="button"
+                className="text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                onClick={handleOpenSampleReport}
+              >
+
                 View example report
               </button>
+
             </div>
 
             <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground sm:text-sm">
@@ -325,72 +384,110 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="relative">
+                                                                                <div className="relative hero-visual">
             <div className="pointer-events-none absolute inset-0 -z-10 rounded-3xl bg-gradient-to-br from-sky-500/15 via-transparent to-blue-500/25" />
-                        <Card className="border-border/60 bg-card/80 shadow-[0_24px_60px_rgba(15,23,42,0.7)] backdrop-blur-xl card-raise hero-card">
+            <div
+              className={`hero-image-shell ${
+                showSampleReport && !closingSampleReport
+                  ? "hero-image-shell-hidden"
+                  : "hero-image-shell-visible"
+              }`}
+            >
+              <div className="relative aspect-square w-full overflow-hidden rounded-3xl border border-border/70 bg-card/60 shadow-[0_24px_60px_rgba(15,23,42,0.7)] backdrop-blur-xl">
+                <Image
+                  key={currentHeroImage}
+                  src={heroImages[currentHeroImage]}
+                  alt="Illustrative harmony analysis view"
+                  fill
+                  className="hero-image object-cover"
+                  sizes="(min-width: 1024px) 420px, 100vw"
+                  priority
+                />
+              </div>
+            </div>
 
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center justify-between text-base">
-                  <span>Harmony overview</span>
-                  <span className="text-xs font-normal text-muted-foreground">Sample report</span>
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  A snapshot of the kind of high‑level summary you&apos;ll see after your analysis.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 pb-4 pt-2 text-sm">
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div>
-                    <div className="text-xs text-muted-foreground">Overall score</div>
-                    <div className="mt-1 text-2xl font-semibold">7.4</div>
-                    <div className="text-xs text-emerald-400">Top 12% • Excellent balance</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">Front profile</div>
-                    <div className="mt-1 text-xl font-semibold">7.8</div>
-                    <div className="text-xs text-emerald-400">Strong mid‑face harmony</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">Side profile</div>
-                    <div className="mt-1 text-xl font-semibold">7.0</div>
-                    <div className="text-xs text-amber-400">Room for profile refinement</div>
-                  </div>
-                </div>
+                        {showSampleReport && (
+              <div className={`hero-sample-overlay ${closingSampleReport ? "hero-sample-closing" : "hero-sample-open"}`}>
 
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-lg border border-sky-500/20 bg-sky-950/40 p-3">
-                    <div className="text-xs font-medium text-muted-foreground">Key strengths</div>
-                    <ul className="mt-2 space-y-1 text-xs">
-                      <li className="flex items-center gap-1.5">
-                        <Check className="size-3 text-sky-400" />
-                        Balanced facial thirds
-                      </li>
-                      <li className="flex items-center gap-1.5">
-                        <Check className="size-3 text-sky-400" />
-                        Favorable eye spacing
-                      </li>
-                    </ul>
-                  </div>
-                  <div className="rounded-lg border border-sky-500/20 bg-sky-950/40 p-3">
-                    <div className="text-xs font-medium text-muted-foreground">Focus areas</div>
-                    <ul className="mt-2 space-y-1 text-xs">
-                      <li className="flex items-center gap-1.5">
-                        <Check className="size-3 text-amber-400" />
-                        Mild jaw angle asymmetry
-                      </li>
-                      <li className="flex items-center gap-1.5">
-                        <Check className="size-3 text-amber-400" />
-                        Slight nasal projection imbalance
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="border-t border-border/60 pt-3 text-xs text-muted-foreground">
-                Example values are illustrative only and not a medical diagnosis.
-              </CardFooter>
-            </Card>
+                <Card className="hero-sample-card border-border/70 bg-card/95 shadow-[0_24px_70px_rgba(15,23,42,0.95)] backdrop-blur-xl">
+
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <CardTitle className="flex items-center justify-between text-base">
+                          <span>Harmony overview</span>
+                          <span className="ml-2 text-xs font-normal text-muted-foreground">Sample report</span>
+                        </CardTitle>
+                        <CardDescription className="text-xs">
+                          A snapshot of the kind of high‑level summary you&apos;ll see after your analysis.
+                        </CardDescription>
+                      </div>
+                                            <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        className="rounded-full bg-background/40 hover:bg-background/70"
+                        onClick={handleCloseSampleReport}
+                      >
+
+                        <X className="size-3.5" />
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4 pb-4 pt-2 text-sm">
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div>
+                        <div className="text-xs text-muted-foreground">Overall score</div>
+                        <div className="mt-1 text-2xl font-semibold">7.4</div>
+                        <div className="text-xs text-emerald-400">Top 12% • Excellent balance</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground">Front profile</div>
+                        <div className="mt-1 text-xl font-semibold">7.8</div>
+                        <div className="text-xs text-emerald-400">Strong mid‑face harmony</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground">Side profile</div>
+                        <div className="mt-1 text-xl font-semibold">7.0</div>
+                        <div className="text-xs text-amber-400">Room for profile refinement</div>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-lg border border-sky-500/20 bg-sky-950/40 p-3">
+                        <div className="text-xs font-medium text-muted-foreground">Key strengths</div>
+                        <ul className="mt-2 space-y-1 text-xs">
+                          <li className="flex items-center gap-1.5">
+                            <Check className="size-3 text-sky-400" />
+                            Balanced facial thirds
+                          </li>
+                          <li className="flex items-center gap-1.5">
+                            <Check className="size-3 text-sky-400" />
+                            Favorable eye spacing
+                          </li>
+                        </ul>
+                      </div>
+                      <div className="rounded-lg border border-sky-500/20 bg-sky-950/40 p-3">
+                        <div className="text-xs font-medium text-muted-foreground">Focus areas</div>
+                        <ul className="mt-2 space-y-1 text-xs">
+                          <li className="flex items-center gap-1.5">
+                            <Check className="size-3 text-amber-400" />
+                            Mild jaw angle asymmetry
+                          </li>
+                          <li className="flex items-center gap-1.5">
+                            <Check className="size-3 text-amber-400" />
+                            Slight nasal projection imbalance
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                                    </CardContent>
+                </Card>
+
+              </div>
+            )}
           </div>
+
         </section>
 
                         {/* Technology section */}

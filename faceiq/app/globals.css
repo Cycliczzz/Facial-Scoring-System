@@ -360,6 +360,87 @@
     background-color: oklch(0.22 0.04 260);
   }
 
+  .hero-image {
+    animation: hero-image-fade 0.8s ease-out;
+    transform-origin: center;
+  }
+
+  .hero-sample-overlay {
+    position: absolute;
+    inset: 0;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .hero-sample-card {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 1.5rem;
+    pointer-events: auto;
+  }
+
+  .hero-image-shell {
+    transition:
+      opacity 260ms ease-out,
+      transform 260ms ease-out;
+  }
+
+  .hero-image-shell-visible {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+  }
+
+  .hero-image-shell-hidden {
+    opacity: 0;
+    transform: scale(1.02);
+    pointer-events: none;
+  }
+
+  .hero-sample-open .hero-sample-card {
+    animation: hero-card-pop-in 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .hero-sample-closing .hero-sample-card {
+    animation: hero-card-pop-out 0.22s ease-in forwards;
+  }
+
+  @keyframes hero-image-fade {
+    0% {
+      opacity: 0;
+      transform: scale(1.04) translateY(6px);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  @keyframes hero-card-pop-in {
+    0% {
+      opacity: 0;
+      transform: translateY(10px) scale(0.96);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes hero-card-pop-out {
+    0% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(8px) scale(0.97);
+    }
+  }
+
   /* --- CTA subtle animated glow --- */
   .cta-shell {
     position: relative;
