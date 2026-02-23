@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FaceIQ Labs – Facial Harmony Analysis",
+  title: "LooksmaxAI – Facial Harmony Analysis",
   description:
     "Upload two photos and receive a structured, non‑medical facial harmony report with measurements, scores, and an improvement roadmap.",
 };

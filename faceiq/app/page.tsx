@@ -1,7 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
+
 
 import {
   Card,
@@ -249,16 +251,21 @@ export default function Home() {
 
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="hidden md:inline-flex">
-              Log in
+                        <Button asChild variant="ghost" size="sm" className="hidden md:inline-flex">
+              <Link href="/login">Log in</Link>
             </Button>
-            <Button
+
+                        <Button
+              asChild
               size="sm"
               className="gap-1 transform-gpu bg-gradient-to-r from-sky-500 to-blue-500 text-primary-foreground shadow-[0_14px_38px_rgba(37,99,235,0.6)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_55px_rgba(37,99,235,0.8)]"
             >
-              Get started
-              <ArrowRight className="size-3.5" />
+              <Link href="/login">
+                Get started
+                <ArrowRight className="size-3.5" />
+              </Link>
             </Button>
+
           </div>
         </div>
       </header>
@@ -290,13 +297,17 @@ export default function Home() {
             </div>
 
             <div className="flex flex-wrap items-center gap-4">
-              <Button
+                            <Button
+                asChild
                 size="lg"
                 className="gap-2 transform-gpu bg-gradient-to-r from-sky-500 to-blue-500 text-primary-foreground shadow-[0_18px_45px_rgba(37,99,235,0.65)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(37,99,235,0.85)]"
               >
-                Start free analysis
-                <ArrowRight className="size-4" />
+                <Link href="/login">
+                  Start free analysis
+                  <ArrowRight className="size-4" />
+                </Link>
               </Button>
+
               <button className="text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
                 View example report
               </button>
@@ -623,7 +634,8 @@ export default function Home() {
                   </ul>
                 </CardContent>
                 <CardFooter>
-                  <Button
+                                    <Button
+                    asChild
                     variant={tier.highlight ? "default" : "outline"}
                     className={
                       tier.highlight
@@ -631,8 +643,11 @@ export default function Home() {
                         : "w-full justify-center"
                     }
                   >
-                    {tier.highlight ? "Get started" : "Try for free"}
+                    <Link href="/login">
+                      {tier.highlight ? "Get started" : "Try for free"}
+                    </Link>
                   </Button>
+
                 </CardFooter>
               </Card>
             ))}
@@ -650,13 +665,17 @@ export default function Home() {
             better balance.
           </p>
           <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-            <Button
+                        <Button
+              asChild
               size="lg"
               className="gap-2 transform-gpu bg-gradient-to-r from-sky-500 to-blue-500 text-primary-foreground shadow-[0_18px_45px_rgba(37,99,235,0.65)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(37,99,235,0.85)]"
             >
-              Begin free assessment
-              <ArrowRight className="size-4" />
+              <Link href="/login">
+                Begin free assessment
+                <ArrowRight className="size-4" />
+              </Link>
             </Button>
+
             <span className="text-xs text-muted-foreground">
               No subscription required to try the core experience.
             </span>
