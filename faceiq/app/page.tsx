@@ -271,7 +271,7 @@ export default function Home() {
               <Sparkles className="size-4" />
             </div>
             <div className="flex flex-col leading-tight">
-                            <span className="text-sm font-semibold tracking-tight">LooksmaxxAI</span>
+                            <span className="text-sm font-semibold tracking-tight">LooksmaxAI</span>
 
               <span className="text-[11px] text-muted-foreground">Facial harmony analytics</span>
             </div>

@@ -1,5 +1,8 @@
+"use client"
+
 import { ArrowLeft, Lock, Shield, Sparkles } from "lucide-react"
 import Link from "next/link"
+import { signIn } from "next-auth/react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -72,8 +75,8 @@ export default function LoginPage() {
               <Button
                 size="lg"
                 className="w-full justify-center gap-2 border border-border/70 bg-background/80 text-foreground shadow-[0_14px_35px_rgba(15,23,42,0.9)] transition-all hover:border-sky-500/70 hover:bg-accent/40"
-                // TODO: Wire this up to your Google OAuth / NextAuth sign-in endpoint
                 type="button"
+                onClick={() => signIn("google", { callbackUrl: "/onboarding" })}
               >
                 <span className="inline-flex size-5 items-center justify-center rounded-full bg-white shadow-sm">
                   <span className="text-[11px] font-semibold text-[#4285F4]">G</span>
