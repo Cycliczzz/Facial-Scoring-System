@@ -29,9 +29,9 @@ export default async function LandmarksPage({ searchParams }: LandmarksPageProps
         <div className="grid-overlay" />
       </div>
 
-      <main className="mx-auto flex min-h-screen w-full items-center justify-center px-4 sm:px-6 lg:px-8 py-8">
+      <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 py-6">
         <Card className="onboarding-shell w-full border-border/70 bg-card/90 shadow-[0_24px_70px_rgba(15,23,42,0.9)] backdrop-blur-xl">
-          <CardContent className="px-4 py-6 sm:px-8 sm:py-8">
+          <CardContent className="px-3 py-4 sm:px-6 sm:py-6">
             <LandmarkMarker initialGender={genderParam} initialEthnicity={ethnicityParam} />
           </CardContent>
         </Card>

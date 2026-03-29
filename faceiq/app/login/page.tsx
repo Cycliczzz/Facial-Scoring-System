@@ -21,7 +21,7 @@ export default function LoginPage() {
         <div className="grid-overlay" />
       </div>
 
-      <div className="mx-auto flex min-h-screen max-w-6xl items-center justify-center px-4 sm:px-6 lg:px-8 -mt-50">
+      <div className="mx-auto flex min-h-screen max-w-6xl items-center justify-center px-4 sm:px-6 lg:px-8">
         <div className="page-enter w-full space-y-8">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
           <Link

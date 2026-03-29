@@ -151,7 +151,7 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
     img.src = currentImage
     img.onload = () => {
       const containerWidth = container.clientWidth
-      const maxHeight = 600
+      const maxHeight = 320
       const aspectRatio = img.width / img.height
 
       let width = containerWidth
@@ -320,9 +320,9 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
   const progress = ((currentLandmarkIndex / landmarkDefinitions.length) * 100).toFixed(0)
 
   return (
-    <div className="space-y-6 section-enter">
+    <div className="space-y-3 section-enter">
       {/* Header */}
-      <div className="space-y-3 text-center section-enter section-delay-1">
+      <div className="space-y-2 text-center section-enter section-delay-1">
         <div className="flex items-center justify-center gap-3">
           <div
             className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium transition-all duration-300 ${
@@ -351,17 +351,17 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
           </div>
         </div>
 
-        <h2 className="text-2xl font-semibold tracking-tight text-sky-100 sm:text-3xl">
+        <h2 className="text-lg font-semibold tracking-tight text-sky-100 sm:text-xl">
           Mark facial landmarks
         </h2>
-        <p className="text-xs text-muted-foreground sm:text-sm">
+        <p className="text-xs text-muted-foreground">
           Click on your {profileType} profile photo to mark the key facial landmarks. Follow the
           instructions for each point.
         </p>
       </div>
 
       {/* Main content */}
-      <div className="grid gap-6 lg:grid-cols-[1fr,380px]">
+      <div className="grid gap-4 lg:grid-cols-[1fr,320px]">
         {/* Canvas area */}
         <div className="space-y-4 section-enter section-delay-2">
           <div
@@ -433,7 +433,7 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
           {!isCompleted ? (
             <>
               <div
-                className={`rounded-2xl border p-5 transition-all duration-300 ${
+                className={`rounded-2xl border p-3 transition-all duration-300 ${
                   isFemaleAccent
                     ? "border-pink-500/40 bg-pink-500/5"
                     : "border-sky-500/40 bg-sky-500/5"
@@ -472,7 +472,7 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
                   All landmarks
                 </div>
 
-                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                <div className={`space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar ${isFemaleAccent ? 'custom-scrollbar-pink' : ''}`}>
                   {landmarkDefinitions.map((landmark, index) => (
                     <div
                       key={landmark.id}
