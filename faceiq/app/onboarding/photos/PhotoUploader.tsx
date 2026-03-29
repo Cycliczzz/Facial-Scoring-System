@@ -41,7 +41,15 @@ export function PhotoUploader({ initialGender = "male", initialEthnicity }: Phot
     setError(null)
     setSuccess(false)
     setFile(selectedFile)
-    setPreviewUrl(URL.createObjectURL(selectedFile))
+    const objectUrl = URL.createObjectURL(selectedFile)
+    setPreviewUrl(objectUrl)
+    
+    // Save to localStorage
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      localStorage.setItem("frontProfileImage", reader.result as string)
+    }
+    reader.readAsDataURL(selectedFile)
   }
 
   const onInputChange = (e: ChangeEvent<HTMLInputElement>) => {

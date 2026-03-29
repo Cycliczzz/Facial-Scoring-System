@@ -41,7 +41,15 @@ export function SidePhotoUploader({ initialGender = "male", initialEthnicity }: 
     setError(null)
     setSuccess(false)
     setFile(selectedFile)
-    setPreviewUrl(URL.createObjectURL(selectedFile))
+    const objectUrl = URL.createObjectURL(selectedFile)
+    setPreviewUrl(objectUrl)
+    
+    // Save to localStorage
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      localStorage.setItem("sideProfileImage", reader.result as string)
+    }
+    reader.readAsDataURL(selectedFile)
   }
 
   const onInputChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -88,8 +96,11 @@ export function SidePhotoUploader({ initialGender = "male", initialEthnicity }: 
       })
 
       setSuccess(true)
-      // TODO: Redirect to final step / dashboard
-      // router.push("/dashboard")
+      
+      // Redirect to landmarks page
+      const genderQuery = initialGender ?? "male"
+      const ethnicityQuery = initialEthnicity ? `&ethnicity=${initialEthnicity}` : ""
+      router.push(`/onboarding/landmarks?gender=${genderQuery}${ethnicityQuery}`)
     } catch (err) {
       console.error(err)
       setError("Something went wrong while uploading. Please try again.")

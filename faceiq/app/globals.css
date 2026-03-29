@@ -540,4 +540,101 @@
       transform: rotate(360deg) translate3d(0, 0, 0);
     }
   }
+
+  /* --- Landmark marker animations --- */
+  .landmark-pulse {
+    animation: landmark-pulse 1.5s ease-out infinite;
+  }
+
+  @keyframes landmark-pulse {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.15);
+      opacity: 0.8;
+    }
+  }
+
+  .landmark-placed {
+    animation: landmark-placed 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes landmark-placed {
+    0% {
+      transform: scale(0) rotate(0deg);
+      opacity: 0;
+    }
+    60% {
+      transform: scale(1.2) rotate(180deg);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1) rotate(360deg);
+      opacity: 1;
+    }
+  }
+
+  .profile-transition {
+    animation: profile-transition 0.6s ease-out;
+  }
+
+  @keyframes profile-transition {
+    0% {
+      opacity: 0;
+      transform: translateX(30px) scale(0.95);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+    }
+  }
+
+  .progress-bar-fill {
+    transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .instruction-panel-enter {
+    animation: instruction-panel-enter 0.5s ease-out;
+  }
+
+  @keyframes instruction-panel-enter {
+    0% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .completion-badge {
+    animation: completion-badge 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes completion-badge {
+    0% {
+      transform: scale(0) rotate(-180deg);
+      opacity: 0;
+    }
+    60% {
+      transform: scale(1.1) rotate(10deg);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+      opacity: 1;
+    }
+  }
+
+  .canvas-container {
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .canvas-container:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.8);
+  }
 }
