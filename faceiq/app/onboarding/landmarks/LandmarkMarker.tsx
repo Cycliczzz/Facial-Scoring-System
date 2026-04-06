@@ -348,9 +348,39 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
           }
 
           if (profileType === "front") {
-            setFrontLandmarks([...frontLandmarks, newLandmark])
+            const updatedFrontLandmarks = [...frontLandmarks, newLandmark]
+            setFrontLandmarks(updatedFrontLandmarks)
+            
+            // Check if all front landmarks are placed
+            if (updatedFrontLandmarks.length === FRONT_LANDMARKS.length) {
+              // Automatically switch to side profile
+              setTimeout(() => {
+                setProfileType("side")
+                setCurrentLandmarkIndex(0)
+                setImageLoaded(false)
+                setZoomLevel(1)
+                setPanOffset({ x: 0, y: 0 })
+              }, 500) // Small delay for better UX
+            } else {
+              // Advance to next landmark
+              if (currentLandmarkIndex < landmarkDefinitions.length - 1) {
+                setCurrentLandmarkIndex(currentLandmarkIndex + 1)
+              }
+            }
           } else {
-            setSideLandmarks([...sideLandmarks, newLandmark])
+            const updatedSideLandmarks = [...sideLandmarks, newLandmark]
+            setSideLandmarks(updatedSideLandmarks)
+            
+            // Check if all side landmarks are placed
+            if (updatedSideLandmarks.length === SIDE_LANDMARKS.length) {
+              // Mark as completed
+              setIsCompleted(true)
+            } else {
+              // Advance to next landmark
+              if (currentLandmarkIndex < landmarkDefinitions.length - 1) {
+                setCurrentLandmarkIndex(currentLandmarkIndex + 1)
+              }
+            }
           }
         }
       }
@@ -561,7 +591,7 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
           setZoomLevel(1)
           setPanOffset({ x: 0, y: 0 })
         } else {
-          // All done
+          // All done (both front and side)
           setIsCompleted(true)
         }
       }
