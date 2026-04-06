@@ -126,6 +126,8 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
   const [isPanning, setIsPanning] = useState(false)
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 })
   const [editingLandmarkIndex, setEditingLandmarkIndex] = useState<number | null>(null)
+  const [draggingLandmarkIndex, setDraggingLandmarkIndex] = useState<number | null>(null)
+  const [workflowMode, setWorkflowMode] = useState<"guided" | "free">("guided")
 
   const isFemaleAccent = initialGender === "female"
 
@@ -227,30 +229,30 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
     const color = isFemaleAccent ? "#ec4899" : "#38bdf8"
     const activeColor = isFemaleAccent ? "#f472b6" : "#7dd3fc"
 
-    // Outer glow
-    ctx.shadowBlur = 15
+    // Outer glow - smaller for better accuracy
+    ctx.shadowBlur = 8
     ctx.shadowColor = isActive ? activeColor : color
 
-    // Draw circle
+    // Draw circle - smaller for better accuracy
     ctx.beginPath()
-    ctx.arc(x, y, isActive ? 10 : 8, 0, 2 * Math.PI)
+    ctx.arc(x, y, isActive ? 6 : 5, 0, 2 * Math.PI)
     ctx.fillStyle = isActive ? activeColor : color
     ctx.fill()
 
-    // Inner circle
+    // Inner circle - smaller for better accuracy
     ctx.beginPath()
-    ctx.arc(x, y, isActive ? 5 : 4, 0, 2 * Math.PI)
+    ctx.arc(x, y, isActive ? 3 : 2.5, 0, 2 * Math.PI)
     ctx.fillStyle = "rgba(255, 255, 255, 0.9)"
     ctx.fill()
 
     ctx.shadowBlur = 0
 
-    // Draw number
-    ctx.font = "bold 12px sans-serif"
+    // Draw number - smaller font
+    ctx.font = "bold 10px sans-serif"
     ctx.fillStyle = "#fff"
     ctx.textAlign = "center"
     ctx.textBaseline = "middle"
-    ctx.fillText(number.toString(), x, y - 22)
+    ctx.fillText(number.toString(), x, y - 18)
   }
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -304,56 +306,149 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
         }
         
         setEditingLandmarkIndex(null)
-        // Return to the next landmark after editing
-        if (editingLandmarkIndex === currentLandmarkIndex - 1) {
-          setCurrentLandmarkIndex(currentLandmarkIndex)
-        }
-      } else if (currentLandmarkIndex < landmarkDefinitions.length) {
-        // Place new landmark
-        const newLandmark: Landmark = {
-          id: currentLandmark.id,
-          x,
-          y,
-          label: currentLandmark.label,
-        }
-
-        if (profileType === "front") {
-          setFrontLandmarks([...frontLandmarks, newLandmark])
-        } else {
-          setSideLandmarks([...sideLandmarks, newLandmark])
-        }
-
-        if (currentLandmarkIndex + 1 >= landmarkDefinitions.length) {
-          // Completed current profile
+      } else {
+        // Check if this landmark already exists
+        const existingIndex = currentLandmarks.findIndex(l => l.id === currentLandmark.id)
+        
+        if (existingIndex !== -1) {
+          // Update existing landmark
+          const updatedLandmarks = [...currentLandmarks]
+          updatedLandmarks[existingIndex] = {
+            ...updatedLandmarks[existingIndex],
+            x,
+            y
+          }
+          
           if (profileType === "front") {
-            // Move to side profile
-            setTimeout(() => {
-              setProfileType("side")
-              setCurrentLandmarkIndex(0)
-              setImageLoaded(false)
-              setZoomLevel(1)
-              setPanOffset({ x: 0, y: 0 })
-            }, 500)
+            setFrontLandmarks(updatedLandmarks)
           } else {
-            // All done
-            setIsCompleted(true)
+            setSideLandmarks(updatedLandmarks)
           }
         } else {
-          setCurrentLandmarkIndex(currentLandmarkIndex + 1)
+          // Place new landmark
+          const newLandmark: Landmark = {
+            id: currentLandmark.id,
+            x,
+            y,
+            label: currentLandmark.label,
+          }
+
+          if (profileType === "front") {
+            setFrontLandmarks([...frontLandmarks, newLandmark])
+          } else {
+            setSideLandmarks([...sideLandmarks, newLandmark])
+          }
         }
       }
     }
   }
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (zoomLevel > 1) {
-      setIsPanning(true)
-      setLastMousePos({ x: e.clientX, y: e.clientY })
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const rect = canvas.getBoundingClientRect()
+    const clickX = e.clientX - rect.left
+    const clickY = e.clientY - rect.top
+
+    // Check if user clicked on an existing landmark
+    const img = new Image()
+    img.src = currentImage
+    img.onload = () => {
+      const imgAspectRatio = img.width / img.height
+      const canvasAspectRatio = canvas.width / canvas.height
+      
+      let drawX, drawY
+      
+      if (imgAspectRatio > canvasAspectRatio) {
+        // Image is wider than canvas
+        const drawHeight = canvas.width / imgAspectRatio
+        drawX = 0
+        drawY = (canvas.height - drawHeight) / 2
+      } else {
+        // Image is taller than canvas
+        const drawWidth = canvas.height * imgAspectRatio
+        drawX = (canvas.width - drawWidth) / 2
+        drawY = 0
+      }
+
+      // Check each landmark to see if click is within its area
+      for (let i = 0; i < currentLandmarks.length; i++) {
+        const landmark = currentLandmarks[i]
+        const landmarkX = (landmark.x + drawX - panOffset.x) / zoomLevel
+        const landmarkY = (landmark.y + drawY - panOffset.y) / zoomLevel
+        
+        // Calculate distance from click to landmark
+        const distance = Math.sqrt(
+          Math.pow(clickX - landmarkX, 2) + Math.pow(clickY - landmarkY, 2)
+        )
+        
+        // If click is within 15 pixels of landmark (considering zoom)
+        if (distance < 15 / zoomLevel) {
+          setDraggingLandmarkIndex(i)
+          setLastMousePos({ x: e.clientX, y: e.clientY })
+          return
+        }
+      }
+
+      // If no landmark was clicked and zoom level > 1, start panning
+      if (zoomLevel > 1) {
+        setIsPanning(true)
+        setLastMousePos({ x: e.clientX, y: e.clientY })
+      }
     }
   }
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (isPanning && zoomLevel > 1) {
+    if (draggingLandmarkIndex !== null) {
+      // Drag landmark
+      const canvas = canvasRef.current
+      if (!canvas) return
+
+      const rect = canvas.getBoundingClientRect()
+      const deltaX = e.clientX - lastMousePos.x
+      const deltaY = e.clientY - lastMousePos.y
+      
+      const img = new Image()
+      img.src = currentImage
+      img.onload = () => {
+        const imgAspectRatio = img.width / img.height
+        const canvasAspectRatio = canvas.width / canvas.height
+        
+        let drawX, drawY
+        
+        if (imgAspectRatio > canvasAspectRatio) {
+          // Image is wider than canvas
+          const drawHeight = canvas.width / imgAspectRatio
+          drawX = 0
+          drawY = (canvas.height - drawHeight) / 2
+        } else {
+          // Image is taller than canvas
+          const drawWidth = canvas.height * imgAspectRatio
+          drawX = (canvas.width - drawWidth) / 2
+          drawY = 0
+        }
+
+        const updatedLandmarks = [...currentLandmarks]
+        const landmark = updatedLandmarks[draggingLandmarkIndex]
+        
+        // Update landmark position based on mouse movement
+        updatedLandmarks[draggingLandmarkIndex] = {
+          ...landmark,
+          x: landmark.x + deltaX / zoomLevel,
+          y: landmark.y + deltaY / zoomLevel
+        }
+        
+        if (profileType === "front") {
+          setFrontLandmarks(updatedLandmarks)
+        } else {
+          setSideLandmarks(updatedLandmarks)
+        }
+        
+        setLastMousePos({ x: e.clientX, y: e.clientY })
+      }
+    } else if (isPanning && zoomLevel > 1) {
+      // Pan canvas
       const deltaX = e.clientX - lastMousePos.x
       const deltaY = e.clientY - lastMousePos.y
       setPanOffset(prev => ({
@@ -365,6 +460,9 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
   }
 
   const handleMouseUp = () => {
+    if (draggingLandmarkIndex !== null) {
+      setDraggingLandmarkIndex(null)
+    }
     setIsPanning(false)
   }
 
@@ -382,13 +480,35 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
   }
 
   const handleLandmarkClick = (index: number) => {
-    if (index < currentLandmarks.length) {
-      // Allow editing of placed landmarks
-      setEditingLandmarkIndex(index)
-      setCurrentLandmarkIndex(index)
-    } else if (index === currentLandmarks.length) {
-      // Clicking on current landmark (not placed yet)
-      setCurrentLandmarkIndex(index)
+    setCurrentLandmarkIndex(index)
+    setEditingLandmarkIndex(null)
+  }
+
+  const handleNextLandmark = () => {
+    if (currentLandmarkIndex < landmarkDefinitions.length - 1) {
+      setCurrentLandmarkIndex(currentLandmarkIndex + 1)
+      setEditingLandmarkIndex(null)
+    } else {
+      // Check if all landmarks are placed
+      if (currentLandmarks.length === landmarkDefinitions.length) {
+        if (profileType === "front") {
+          // Move to side profile
+          setProfileType("side")
+          setCurrentLandmarkIndex(0)
+          setImageLoaded(false)
+          setZoomLevel(1)
+          setPanOffset({ x: 0, y: 0 })
+        } else {
+          // All done
+          setIsCompleted(true)
+        }
+      }
+    }
+  }
+
+  const handlePreviousLandmark = () => {
+    if (currentLandmarkIndex > 0) {
+      setCurrentLandmarkIndex(currentLandmarkIndex - 1)
       setEditingLandmarkIndex(null)
     }
   }
@@ -720,9 +840,45 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
                 </p>
               </div>
               
-              <div className="flex items-center gap-0.5 text-xs text-muted-foreground">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
-                <span>Click any landmark in the list below to edit its position</span>
+              <div className="space-y-1">
+                <div className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                  <span>Click any landmark in the list below to edit its position</span>
+                </div>
+                <div className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
+                  <span>Drag any placed landmark to adjust its position</span>
+                </div>
+                <div className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                  <div className="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
+                  <span>Use Next/Previous buttons to navigate between landmarks</span>
+                </div>
+              </div>
+
+              {/* Navigation buttons */}
+              <div className="flex gap-1 pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePreviousLandmark}
+                  className="flex-1 gap-0.5 h-6 text-xs"
+                  disabled={currentLandmarkIndex === 0}
+                >
+                  <ArrowLeft className="size-2.5" />
+                  Previous
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextLandmark}
+                  className="flex-1 gap-0.5 h-6 text-xs"
+                  disabled={currentLandmarkIndex >= landmarkDefinitions.length - 1 && currentLandmarks.length === landmarkDefinitions.length}
+                >
+                  Next
+                  <ArrowRight className="size-2.5" />
+                </Button>
               </div>
             </div>
           </div>
