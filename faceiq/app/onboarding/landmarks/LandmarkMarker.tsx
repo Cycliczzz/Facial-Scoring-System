@@ -208,14 +208,28 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
         drawY = 0
       }
       
+      // Apply zoom and pan transformations
+      ctx.save()
+      
+      // Calculate zoom center
+      const zoomCenterX = canvas.width / 2
+      const zoomCenterY = canvas.height / 2
+      
+      // Move to center, scale, then move back
+      ctx.translate(zoomCenterX + panOffset.x, zoomCenterY + panOffset.y)
+      ctx.scale(zoomLevel, zoomLevel)
+      ctx.translate(-zoomCenterX, -zoomCenterY)
+      
       // Draw image with correct aspect ratio (centered)
       ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight)
 
-      // Draw existing landmarks (with centering offsets)
+      // Draw existing landmarks (with centering offsets and zoom/pan adjustments)
       currentLandmarks.forEach((landmark, index) => {
         const isActive = index === currentLandmarkIndex - 1 || index === editingLandmarkIndex
         drawLandmark(ctx, landmark.x + drawX, landmark.y + drawY, isActive, index + 1)
       })
+
+      ctx.restore()
     }
   }
 
@@ -351,6 +365,9 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
     const clickX = e.clientX - rect.left
     const clickY = e.clientY - rect.top
 
+    // Store initial mouse position in canvas coordinates
+    setLastMousePos({ x: clickX, y: clickY })
+
     // Check if user clicked on an existing landmark
     const img = new Image()
     img.src = currentImage
@@ -375,18 +392,23 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
       // Check each landmark to see if click is within its area
       for (let i = 0; i < currentLandmarks.length; i++) {
         const landmark = currentLandmarks[i]
-        const landmarkX = (landmark.x + drawX - panOffset.x) / zoomLevel
-        const landmarkY = (landmark.y + drawY - panOffset.y) / zoomLevel
+        
+        // Calculate landmark position on canvas with zoom and pan adjustments
+        const zoomCenterX = canvas.width / 2
+        const zoomCenterY = canvas.height / 2
+        
+        // Transform landmark position through the same zoom/pan transformation as drawing
+        const landmarkCanvasX = (landmark.x + drawX - zoomCenterX) * zoomLevel + zoomCenterX + panOffset.x
+        const landmarkCanvasY = (landmark.y + drawY - zoomCenterY) * zoomLevel + zoomCenterY + panOffset.y
         
         // Calculate distance from click to landmark
         const distance = Math.sqrt(
-          Math.pow(clickX - landmarkX, 2) + Math.pow(clickY - landmarkY, 2)
+          Math.pow(clickX - landmarkCanvasX, 2) + Math.pow(clickY - landmarkCanvasY, 2)
         )
         
-        // If click is within 15 pixels of landmark (considering zoom)
-        if (distance < 15 / zoomLevel) {
+        // If click is within 20 pixels of landmark
+        if (distance < 20) {
           setDraggingLandmarkIndex(i)
-          setLastMousePos({ x: e.clientX, y: e.clientY })
           return
         }
       }
@@ -394,68 +416,61 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
       // If no landmark was clicked and zoom level > 1, start panning
       if (zoomLevel > 1) {
         setIsPanning(true)
-        setLastMousePos({ x: e.clientX, y: e.clientY })
       }
     }
   }
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const rect = canvas.getBoundingClientRect()
+    const currentMouseX = e.clientX - rect.left
+    const currentMouseY = e.clientY - rect.top
+    
     if (draggingLandmarkIndex !== null) {
-      // Drag landmark
-      const canvas = canvasRef.current
-      if (!canvas) return
-
-      const rect = canvas.getBoundingClientRect()
-      const deltaX = e.clientX - lastMousePos.x
-      const deltaY = e.clientY - lastMousePos.y
+      // Professional landmark dragging with proper zoom handling
+      // Calculate mouse movement in canvas coordinates
+      const deltaX = currentMouseX - lastMousePos.x
+      const deltaY = currentMouseY - lastMousePos.y
       
-      const img = new Image()
-      img.src = currentImage
-      img.onload = () => {
-        const imgAspectRatio = img.width / img.height
-        const canvasAspectRatio = canvas.width / canvas.height
-        
-        let drawX, drawY
-        
-        if (imgAspectRatio > canvasAspectRatio) {
-          // Image is wider than canvas
-          const drawHeight = canvas.width / imgAspectRatio
-          drawX = 0
-          drawY = (canvas.height - drawHeight) / 2
-        } else {
-          // Image is taller than canvas
-          const drawWidth = canvas.height * imgAspectRatio
-          drawX = (canvas.width - drawWidth) / 2
-          drawY = 0
-        }
-
-        const updatedLandmarks = [...currentLandmarks]
-        const landmark = updatedLandmarks[draggingLandmarkIndex]
-        
-        // Update landmark position based on mouse movement
-        updatedLandmarks[draggingLandmarkIndex] = {
-          ...landmark,
-          x: landmark.x + deltaX / zoomLevel,
-          y: landmark.y + deltaY / zoomLevel
-        }
-        
-        if (profileType === "front") {
-          setFrontLandmarks(updatedLandmarks)
-        } else {
-          setSideLandmarks(updatedLandmarks)
-        }
-        
-        setLastMousePos({ x: e.clientX, y: e.clientY })
+      // For professional dragging, we need to convert screen movement to image coordinates
+      // The movement should be inversely proportional to zoom level
+      const imageDeltaX = deltaX / zoomLevel
+      const imageDeltaY = deltaY / zoomLevel
+      
+      // Update the landmark position
+      const updatedLandmarks = [...currentLandmarks]
+      const landmark = updatedLandmarks[draggingLandmarkIndex]
+      
+      updatedLandmarks[draggingLandmarkIndex] = {
+        ...landmark,
+        x: landmark.x + imageDeltaX,
+        y: landmark.y + imageDeltaY
       }
+      
+      if (profileType === "front") {
+        setFrontLandmarks(updatedLandmarks)
+      } else {
+        setSideLandmarks(updatedLandmarks)
+      }
+      
+      // Update last mouse position for next movement
+      setLastMousePos({ x: currentMouseX, y: currentMouseY })
     } else if (isPanning && zoomLevel > 1) {
-      // Pan canvas
-      const deltaX = e.clientX - lastMousePos.x
-      const deltaY = e.clientY - lastMousePos.y
+      // Professional panning - only when zoomed in
+      // Calculate mouse movement
+      const deltaX = currentMouseX - lastMousePos.x
+      const deltaY = currentMouseY - lastMousePos.y
+      
+      // Update pan offset
       setPanOffset(prev => ({
         x: prev.x + deltaX,
         y: prev.y + deltaY
       }))
-      setLastMousePos({ x: e.clientX, y: e.clientY })
+      
+      // Update last mouse position
+      setLastMousePos({ x: currentMouseX, y: currentMouseY })
     }
   }
 
@@ -476,6 +491,53 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
 
   const handleResetZoom = () => {
     setZoomLevel(1)
+    setPanOffset({ x: 0, y: 0 })
+  }
+
+  const handleZoomToLandmark = () => {
+    if (currentLandmarks.length > 0) {
+      // Zoom to the last placed landmark
+      const lastLandmark = currentLandmarks[currentLandmarks.length - 1]
+      const canvas = canvasRef.current
+      if (!canvas) return
+
+      const img = new Image()
+      img.src = currentImage
+      img.onload = () => {
+        const imgAspectRatio = img.width / img.height
+        const canvasAspectRatio = canvas.width / canvas.height
+        
+        let drawX, drawY
+        
+        if (imgAspectRatio > canvasAspectRatio) {
+          // Image is wider than canvas
+          const drawHeight = canvas.width / imgAspectRatio
+          drawX = 0
+          drawY = (canvas.height - drawHeight) / 2
+        } else {
+          // Image is taller than canvas
+          const drawWidth = canvas.height * imgAspectRatio
+          drawX = (canvas.width - drawWidth) / 2
+          drawY = 0
+        }
+
+        // Calculate position of landmark on canvas
+        const landmarkCanvasX = lastLandmark.x + drawX
+        const landmarkCanvasY = lastLandmark.y + drawY
+        
+        // Set zoom to 2x and center on the landmark
+        setZoomLevel(2)
+        setPanOffset({
+          x: canvas.width / 2 - landmarkCanvasX * 2,
+          y: canvas.height / 2 - landmarkCanvasY * 2
+        })
+      }
+    }
+  }
+
+  const handleZoomToCurrent = () => {
+    // Zoom to the center of the image for precise placement
+    setZoomLevel(2.5)
     setPanOffset({ x: 0, y: 0 })
   }
 
@@ -568,7 +630,7 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header - Professional and clean */}
-      <div className="px-6 py-4 border-b border-border/50 bg-card/50 backdrop-blur-sm">
+      <div className="px-6 py-4 border-b border-border/50 bg-card/50 backdrop-blur-sm rounded-b-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div>
@@ -655,7 +717,7 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-6 gap-2 p-2 overflow-hidden">
         {/* Left panel - Image (4/6 width for maximum size) */}
         <div className="lg:col-span-4 flex flex-col">
-          <div className="flex-1 bg-card/30 border border-border/50 rounded-lg overflow-hidden flex flex-col shadow-lg">
+            <div className="flex-1 bg-card/30 border border-border/50 rounded-xl overflow-hidden flex flex-col shadow-lg">
             <div className="p-2 border-b border-border/50 bg-card/50 flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-foreground text-sm">
@@ -690,26 +752,45 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
                     <button
                       onClick={handleZoomIn}
                       className="p-0.5 hover:bg-secondary/50 rounded-sm transition-colors flex items-center justify-center"
-                      title="Zoom In"
+                      title="Zoom In (+25%)"
                     >
                       <Plus className="size-3 text-foreground" />
                     </button>
                     <button
                       onClick={handleZoomOut}
                       className="p-0.5 hover:bg-secondary/50 rounded-sm transition-colors flex items-center justify-center"
-                      title="Zoom Out"
+                      title="Zoom Out (-25%)"
                     >
                       <Minus className="size-3 text-foreground" />
                     </button>
                     <button
                       onClick={handleResetZoom}
                       className="p-0.5 hover:bg-secondary/50 rounded-sm transition-colors flex items-center justify-center"
-                      title="Reset Zoom"
+                      title="Reset Zoom (100%)"
                     >
                       <Maximize2 className="size-3 text-foreground" />
                     </button>
                     <div className="w-px h-2.5 bg-border/50 mx-0.5" />
                     <div className="text-xs font-bold text-foreground px-0.5">{Math.round(zoomLevel * 100)}%</div>
+                  </div>
+                  
+                  {/* Intelligent zoom buttons */}
+                  <div className="flex items-center gap-0.5 mt-1 pt-1 border-t border-border/30">
+                    <button
+                      onClick={handleZoomToCurrent}
+                      className="p-0.5 hover:bg-secondary/50 rounded-sm transition-colors flex items-center justify-center"
+                      title="Zoom to Center (250%)"
+                    >
+                      <ZoomIn className="size-2.5 text-foreground" />
+                    </button>
+                    <button
+                      onClick={handleZoomToLandmark}
+                      className="p-0.5 hover:bg-secondary/50 rounded-sm transition-colors flex items-center justify-center"
+                      title="Zoom to Last Landmark"
+                      disabled={currentLandmarks.length === 0}
+                    >
+                      <MousePointer2 className="size-2.5 text-foreground" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -808,7 +889,7 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
         {/* Right panel - Landmark list and instructions (2/6 width) */}
         <div className="lg:col-span-2 flex flex-col gap-2 overflow-hidden">
           {/* Current landmark instructions */}
-          <div className={`rounded-lg border p-2 ${isFemaleAccent
+          <div className={`rounded-xl border p-2 ${isFemaleAccent
             ? "border-pink-500/40 bg-pink-500/5"
             : "border-sky-500/40 bg-sky-500/5"}`}>
             <div className="flex items-center gap-1 text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1.5">
@@ -884,7 +965,7 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
           </div>
 
           {/* Landmark progress list */}
-          <div className="flex-1 rounded-lg border border-border/50 bg-card/30 p-2 flex flex-col overflow-hidden shadow-inner">
+          <div className="flex-1 rounded-xl border border-border/50 bg-card/30 p-2 flex flex-col overflow-hidden shadow-inner">
             <div className="flex items-center justify-between mb-1.5">
               <h3 className="font-semibold text-foreground text-sm">Landmark Progress</h3>
               <div className="text-xs text-muted-foreground">
