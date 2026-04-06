@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { CheckCircle2, Info, RotateCcw, ArrowRight, ArrowLeft } from "lucide-react"
+import { CheckCircle2, Info, RotateCcw, ArrowRight, ArrowLeft, ZoomIn, ZoomOut, Maximize2, Minus, Plus, MousePointer2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 
@@ -121,6 +121,11 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
   const [isCompleted, setIsCompleted] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 })
+  const [zoomLevel, setZoomLevel] = useState(1)
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
+  const [isPanning, setIsPanning] = useState(false)
+  const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 })
+  const [editingLandmarkIndex, setEditingLandmarkIndex] = useState<number | null>(null)
 
   const isFemaleAccent = initialGender === "female"
 
@@ -151,20 +156,13 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
     img.src = currentImage
     img.onload = () => {
       const containerWidth = container.clientWidth
-      const maxHeight = 320
-      const aspectRatio = img.width / img.height
+      const containerHeight = container.clientHeight
+      const imgAspectRatio = img.width / img.height
 
-      let width = containerWidth
-      let height = width / aspectRatio
-
-      if (height > maxHeight) {
-        height = maxHeight
-        width = height * aspectRatio
-      }
-
-      canvas.width = width
-      canvas.height = height
-      setCanvasSize({ width, height })
+      // Set canvas to container size
+      canvas.width = containerWidth
+      canvas.height = containerHeight
+      setCanvasSize({ width: containerWidth, height: containerHeight })
       setImageLoaded(true)
       drawCanvas()
     }
@@ -174,7 +172,7 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
     if (imageLoaded) {
       drawCanvas()
     }
-  }, [currentLandmarks, currentLandmarkIndex, imageLoaded])
+  }, [currentLandmarks, currentLandmarkIndex, imageLoaded, zoomLevel, panOffset, editingLandmarkIndex])
 
   const drawCanvas = () => {
     const canvas = canvasRef.current
@@ -187,12 +185,34 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
     img.src = currentImage
     img.onload = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      
+      // Calculate aspect ratio and drawing dimensions
+      const imgAspectRatio = img.width / img.height
+      const canvasAspectRatio = canvas.width / canvas.height
+      
+      let drawWidth, drawHeight, drawX, drawY
+      
+      if (imgAspectRatio > canvasAspectRatio) {
+        // Image is wider than canvas
+        drawWidth = canvas.width
+        drawHeight = drawWidth / imgAspectRatio
+        drawX = 0
+        drawY = (canvas.height - drawHeight) / 2
+      } else {
+        // Image is taller than canvas
+        drawHeight = canvas.height
+        drawWidth = drawHeight * imgAspectRatio
+        drawX = (canvas.width - drawWidth) / 2
+        drawY = 0
+      }
+      
+      // Draw image with correct aspect ratio (centered)
+      ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight)
 
-      // Draw existing landmarks
+      // Draw existing landmarks (with centering offsets)
       currentLandmarks.forEach((landmark, index) => {
-        const isActive = index === currentLandmarkIndex - 1
-        drawLandmark(ctx, landmark.x, landmark.y, isActive, index + 1)
+        const isActive = index === currentLandmarkIndex - 1 || index === editingLandmarkIndex
+        drawLandmark(ctx, landmark.x + drawX, landmark.y + drawY, isActive, index + 1)
       })
     }
   }
@@ -213,64 +233,163 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
 
     // Draw circle
     ctx.beginPath()
-    ctx.arc(x, y, isActive ? 8 : 6, 0, 2 * Math.PI)
+    ctx.arc(x, y, isActive ? 10 : 8, 0, 2 * Math.PI)
     ctx.fillStyle = isActive ? activeColor : color
     ctx.fill()
 
     // Inner circle
     ctx.beginPath()
-    ctx.arc(x, y, isActive ? 4 : 3, 0, 2 * Math.PI)
+    ctx.arc(x, y, isActive ? 5 : 4, 0, 2 * Math.PI)
     ctx.fillStyle = "rgba(255, 255, 255, 0.9)"
     ctx.fill()
 
     ctx.shadowBlur = 0
 
     // Draw number
-    ctx.font = "bold 11px sans-serif"
+    ctx.font = "bold 12px sans-serif"
     ctx.fillStyle = "#fff"
     ctx.textAlign = "center"
     ctx.textBaseline = "middle"
-    ctx.fillText(number.toString(), x, y - 18)
+    ctx.fillText(number.toString(), x, y - 22)
   }
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (currentLandmarkIndex >= landmarkDefinitions.length) return
-
     const canvas = canvasRef.current
     if (!canvas) return
 
     const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-
-    const newLandmark: Landmark = {
-      id: currentLandmark.id,
-      x,
-      y,
-      label: currentLandmark.label,
-    }
-
-    if (profileType === "front") {
-      setFrontLandmarks([...frontLandmarks, newLandmark])
-    } else {
-      setSideLandmarks([...sideLandmarks, newLandmark])
-    }
-
-    if (currentLandmarkIndex + 1 >= landmarkDefinitions.length) {
-      // Completed current profile
-      if (profileType === "front") {
-        // Move to side profile
-        setTimeout(() => {
-          setProfileType("side")
-          setCurrentLandmarkIndex(0)
-          setImageLoaded(false)
-        }, 500)
+    
+    // Get click coordinates relative to canvas
+    const clickX = e.clientX - rect.left
+    const clickY = e.clientY - rect.top
+    
+    // Calculate image centering offsets
+    const img = new Image()
+    img.src = currentImage
+    img.onload = () => {
+      const imgAspectRatio = img.width / img.height
+      const canvasAspectRatio = canvas.width / canvas.height
+      
+      let drawX, drawY
+      
+      if (imgAspectRatio > canvasAspectRatio) {
+        // Image is wider than canvas
+        const drawHeight = canvas.width / imgAspectRatio
+        drawX = 0
+        drawY = (canvas.height - drawHeight) / 2
       } else {
-        // All done
-        setIsCompleted(true)
+        // Image is taller than canvas
+        const drawWidth = canvas.height * imgAspectRatio
+        drawX = (canvas.width - drawWidth) / 2
+        drawY = 0
       }
-    } else {
-      setCurrentLandmarkIndex(currentLandmarkIndex + 1)
+      
+      // Adjust for zoom, pan, and centering
+      const x = (clickX - panOffset.x) / zoomLevel - drawX
+      const y = (clickY - panOffset.y) / zoomLevel - drawY
+
+      if (editingLandmarkIndex !== null) {
+        // Update existing landmark position
+        const updatedLandmarks = [...currentLandmarks]
+        updatedLandmarks[editingLandmarkIndex] = {
+          ...updatedLandmarks[editingLandmarkIndex],
+          x,
+          y
+        }
+        
+        if (profileType === "front") {
+          setFrontLandmarks(updatedLandmarks)
+        } else {
+          setSideLandmarks(updatedLandmarks)
+        }
+        
+        setEditingLandmarkIndex(null)
+        // Return to the next landmark after editing
+        if (editingLandmarkIndex === currentLandmarkIndex - 1) {
+          setCurrentLandmarkIndex(currentLandmarkIndex)
+        }
+      } else if (currentLandmarkIndex < landmarkDefinitions.length) {
+        // Place new landmark
+        const newLandmark: Landmark = {
+          id: currentLandmark.id,
+          x,
+          y,
+          label: currentLandmark.label,
+        }
+
+        if (profileType === "front") {
+          setFrontLandmarks([...frontLandmarks, newLandmark])
+        } else {
+          setSideLandmarks([...sideLandmarks, newLandmark])
+        }
+
+        if (currentLandmarkIndex + 1 >= landmarkDefinitions.length) {
+          // Completed current profile
+          if (profileType === "front") {
+            // Move to side profile
+            setTimeout(() => {
+              setProfileType("side")
+              setCurrentLandmarkIndex(0)
+              setImageLoaded(false)
+              setZoomLevel(1)
+              setPanOffset({ x: 0, y: 0 })
+            }, 500)
+          } else {
+            // All done
+            setIsCompleted(true)
+          }
+        } else {
+          setCurrentLandmarkIndex(currentLandmarkIndex + 1)
+        }
+      }
+    }
+  }
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (zoomLevel > 1) {
+      setIsPanning(true)
+      setLastMousePos({ x: e.clientX, y: e.clientY })
+    }
+  }
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (isPanning && zoomLevel > 1) {
+      const deltaX = e.clientX - lastMousePos.x
+      const deltaY = e.clientY - lastMousePos.y
+      setPanOffset(prev => ({
+        x: prev.x + deltaX,
+        y: prev.y + deltaY
+      }))
+      setLastMousePos({ x: e.clientX, y: e.clientY })
+    }
+  }
+
+  const handleMouseUp = () => {
+    setIsPanning(false)
+  }
+
+  const handleZoomIn = () => {
+    setZoomLevel(prev => Math.min(prev + 0.25, 3))
+  }
+
+  const handleZoomOut = () => {
+    setZoomLevel(prev => Math.max(prev - 0.25, 0.5))
+  }
+
+  const handleResetZoom = () => {
+    setZoomLevel(1)
+    setPanOffset({ x: 0, y: 0 })
+  }
+
+  const handleLandmarkClick = (index: number) => {
+    if (index < currentLandmarks.length) {
+      // Allow editing of placed landmarks
+      setEditingLandmarkIndex(index)
+      setCurrentLandmarkIndex(index)
+    } else if (index === currentLandmarks.length) {
+      // Clicking on current landmark (not placed yet)
+      setCurrentLandmarkIndex(index)
+      setEditingLandmarkIndex(null)
     }
   }
 
@@ -282,6 +401,9 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
     }
     setCurrentLandmarkIndex(0)
     setIsCompleted(false)
+    setZoomLevel(1)
+    setPanOffset({ x: 0, y: 0 })
+    setEditingLandmarkIndex(null)
   }
 
   const handleBack = () => {
@@ -289,6 +411,9 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
       // Go back to front profile
       setProfileType("front")
       setCurrentLandmarkIndex(frontLandmarks.length)
+      setZoomLevel(1)
+      setPanOffset({ x: 0, y: 0 })
+      setEditingLandmarkIndex(null)
     } else if (currentLandmarkIndex > 0) {
       // Remove last landmark
       if (profileType === "front") {
@@ -297,6 +422,7 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
         setSideLandmarks(sideLandmarks.slice(0, -1))
       }
       setCurrentLandmarkIndex(currentLandmarkIndex - 1)
+      setEditingLandmarkIndex(null)
     } else {
       // Navigate back to previous page
       const genderQuery = initialGender ?? "male"
@@ -320,355 +446,354 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
   const progress = ((currentLandmarkIndex / landmarkDefinitions.length) * 100).toFixed(0)
 
   return (
-    <div className="space-y-6 section-enter">
-      {/* Header with profile tabs */}
-      <div className="space-y-4 section-enter section-delay-1">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Facial Landmark Annotation
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Precisely mark anatomical landmarks on your facial photos for comprehensive analysis
-            </p>
-          </div>
-          
-          {/* Profile type selector */}
-          <div className="flex items-center gap-2 bg-card/50 border border-border/50 rounded-xl p-1">
-            <button
-              onClick={() => {
-                if (profileType !== "front") {
-                  setProfileType("front")
-                  setCurrentLandmarkIndex(frontLandmarks.length)
-                  setImageLoaded(false)
-                }
-              }}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-                profileType === "front"
-                  ? isFemaleAccent
-                    ? "bg-pink-500/20 text-pink-100 shadow-inner"
+    <div className="h-screen flex flex-col bg-background">
+      {/* Header - Professional and clean */}
+      <div className="px-6 py-4 border-b border-border/50 bg-card/50 backdrop-blur-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="text-xl font-bold text-foreground tracking-tight">Facial Landmark Analysis</h1>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Precise anatomical landmark annotation for facial assessment
+              </p>
+            </div>
+            
+            {/* Profile type selector - Professional toggle */}
+            <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-0.5">
+              <button
+                onClick={() => {
+                  if (profileType !== "front") {
+                    setProfileType("front")
+                    setCurrentLandmarkIndex(frontLandmarks.length)
+                    setImageLoaded(false)
+                    setZoomLevel(1)
+                    setPanOffset({ x: 0, y: 0 })
+                    setEditingLandmarkIndex(null)
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 flex items-center gap-1 ${profileType === "front" 
+                  ? isFemaleAccent 
+                    ? "bg-pink-500/20 text-pink-100 shadow-inner" 
                     : "bg-sky-500/20 text-sky-100 shadow-inner"
-                  : "text-muted-foreground hover:bg-secondary/50"
-              }`}
-            >
-              Front Profile
-              {frontLandmarks.length === FRONT_LANDMARKS.length && (
-                <CheckCircle2 className="inline-block ml-2 size-3" />
-              )}
-            </button>
-            <button
-              onClick={() => {
-                if (profileType !== "side" && frontLandmarks.length === FRONT_LANDMARKS.length) {
-                  setProfileType("side")
-                  setCurrentLandmarkIndex(sideLandmarks.length)
-                  setImageLoaded(false)
-                }
-              }}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-                profileType === "side"
-                  ? isFemaleAccent
-                    ? "bg-pink-500/20 text-pink-100 shadow-inner"
+                  : "text-muted-foreground hover:bg-secondary/50"}`}
+              >
+                <span>Front Profile</span>
+                {frontLandmarks.length === FRONT_LANDMARKS.length && (
+                  <CheckCircle2 className="size-3" />
+                )}
+              </button>
+              <div className="w-px h-4 bg-border/50" />
+              <button
+                onClick={() => {
+                  if (profileType !== "side" && frontLandmarks.length === FRONT_LANDMARKS.length) {
+                    setProfileType("side")
+                    setCurrentLandmarkIndex(sideLandmarks.length)
+                    setImageLoaded(false)
+                    setZoomLevel(1)
+                    setPanOffset({ x: 0, y: 0 })
+                    setEditingLandmarkIndex(null)
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 flex items-center gap-1 ${profileType === "side" 
+                  ? isFemaleAccent 
+                    ? "bg-pink-500/20 text-pink-100 shadow-inner" 
                     : "bg-sky-500/20 text-sky-100 shadow-inner"
-                  : frontLandmarks.length === FRONT_LANDMARKS.length
-                  ? "text-muted-foreground hover:bg-secondary/50"
-                  : "text-muted-foreground/50 cursor-not-allowed"
-              }`}
-              disabled={frontLandmarks.length !== FRONT_LANDMARKS.length}
-            >
-              Side Profile
-              {sideLandmarks.length === SIDE_LANDMARKS.length && (
-                <CheckCircle2 className="inline-block ml-2 size-3" />
-              )}
-            </button>
+                  : frontLandmarks.length === FRONT_LANDMARKS.length 
+                    ? "text-muted-foreground hover:bg-secondary/50" 
+                    : "text-muted-foreground/50 cursor-not-allowed"}`}
+                disabled={frontLandmarks.length !== FRONT_LANDMARKS.length}
+              >
+                <span>Side Profile</span>
+                {sideLandmarks.length === SIDE_LANDMARKS.length && (
+                  <CheckCircle2 className="size-3" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Progress bar */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
+        <div className="mt-3">
+          <div className="flex items-center justify-between text-xs mb-1.5">
             <span className="font-medium text-foreground">
-              {profileType === "front" ? "Front Profile" : "Side Profile"} Landmarks
+              {profileType === "front" ? "Front Profile" : "Side Profile"} • Landmark {currentLandmarkIndex + 1} of {landmarkDefinitions.length}
             </span>
-            <span className="text-muted-foreground">
-              {currentLandmarkIndex} of {landmarkDefinitions.length} completed ({progress}%)
-            </span>
+            <span className="text-muted-foreground">{progress}% complete</span>
           </div>
           <div className="h-2 w-full rounded-full bg-secondary/70 overflow-hidden">
             <div
-              className={`h-full transition-all duration-500 ${
-                isFemaleAccent
-                  ? "bg-gradient-to-r from-pink-500 to-rose-500"
-                  : "bg-gradient-to-r from-sky-500 to-blue-500"
-              }`}
+              className={`h-full transition-all duration-300 ${isFemaleAccent 
+                ? "bg-gradient-to-r from-pink-500 to-rose-500" 
+                : "bg-gradient-to-r from-sky-500 to-blue-500"}`}
               style={{ width: `${progress}%` }}
             />
           </div>
         </div>
       </div>
 
-      {/* Main content - redesigned layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left panel - Image and controls */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Image container */}
-          <div className="bg-card/50 border border-border/50 rounded-2xl overflow-hidden">
-            <div className="p-4 border-b border-border/50 bg-card/80">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-foreground">
-                    {profileType === "front" ? "Front Profile Image" : "Side Profile Image"}
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Click on the image to place landmark #{currentLandmarkIndex + 1}: {currentLandmark?.label}
-                  </p>
+      {/* Main content - Full width layout */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-6 gap-2 p-2 overflow-hidden">
+        {/* Left panel - Image (4/6 width for maximum size) */}
+        <div className="lg:col-span-4 flex flex-col">
+          <div className="flex-1 bg-card/30 border border-border/50 rounded-lg overflow-hidden flex flex-col shadow-lg">
+            <div className="p-2 border-b border-border/50 bg-card/50 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">
+                  {editingLandmarkIndex !== null ? "Editing: " : ""}{currentLandmark?.label || "Select a landmark"}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {editingLandmarkIndex !== null 
+                    ? "Click on the image to update the landmark position" 
+                    : `Click on the image to place landmark #${currentLandmarkIndex + 1}`}
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className={`px-1.5 py-0.5 rounded text-xs font-medium ${isFemaleAccent 
+                  ? "bg-pink-500/20 text-pink-100" 
+                  : "bg-sky-500/20 text-sky-100"}`}>
+                  {currentLandmarks.length}/{landmarkDefinitions.length} placed
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    isFemaleAccent 
-                      ? "bg-pink-500/20 text-pink-100" 
-                      : "bg-sky-500/20 text-sky-100"
-                  }`}>
-                    {currentLandmarks.length} / {landmarkDefinitions.length} placed
+                {editingLandmarkIndex !== null && (
+                  <div className="px-1.5 py-0.5 rounded text-xs font-medium bg-amber-500/20 text-amber-100">
+                    Editing Mode
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Image container with zoom controls - Full width */}
+            <div className="flex-1 relative bg-background/5" ref={containerRef}>
+              {/* Zoom controls - Compact and professional */}
+              <div className="absolute top-1.5 left-1.5 z-10">
+                <div className="bg-card/95 backdrop-blur-sm border border-border/50 rounded p-1 shadow-lg">
+                  <div className="flex items-center gap-0.5">
+                    <button
+                      onClick={handleZoomIn}
+                      className="p-0.5 hover:bg-secondary/50 rounded-sm transition-colors flex items-center justify-center"
+                      title="Zoom In"
+                    >
+                      <Plus className="size-3 text-foreground" />
+                    </button>
+                    <button
+                      onClick={handleZoomOut}
+                      className="p-0.5 hover:bg-secondary/50 rounded-sm transition-colors flex items-center justify-center"
+                      title="Zoom Out"
+                    >
+                      <Minus className="size-3 text-foreground" />
+                    </button>
+                    <button
+                      onClick={handleResetZoom}
+                      className="p-0.5 hover:bg-secondary/50 rounded-sm transition-colors flex items-center justify-center"
+                      title="Reset Zoom"
+                    >
+                      <Maximize2 className="size-3 text-foreground" />
+                    </button>
+                    <div className="w-px h-2.5 bg-border/50 mx-0.5" />
+                    <div className="text-xs font-bold text-foreground px-0.5">{Math.round(zoomLevel * 100)}%</div>
                   </div>
                 </div>
               </div>
-            </div>
-            
-            <div
-              ref={containerRef}
-              className="relative bg-background/30 p-4 flex items-center justify-center min-h-[400px]"
-            >
-              <canvas
-                ref={canvasRef}
-                onClick={handleCanvasClick}
-                className={`max-w-full max-h-[500px] cursor-crosshair transition-opacity duration-500 border border-border/30 rounded-lg ${
-                  imageLoaded ? "opacity-100" : "opacity-0"
-                }`}
-                style={{ display: "block" }}
-              />
+
+              {/* Canvas - Maximized size */}
+              <div className="flex items-center justify-center h-full w-full">
+                <canvas
+                  ref={canvasRef}
+                  onClick={handleCanvasClick}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseUp}
+                  className={`cursor-crosshair transition-opacity duration-300 ${imageLoaded ? "opacity-100" : "opacity-0"} ${zoomLevel > 1 ? "cursor-grab active:cursor-grabbing" : ""}`}
+                  style={{ 
+                    display: "block",
+                    maxHeight: "calc(100vh - 150px)",
+                    maxWidth: "100%",
+                    width: "100%",
+                    height: "auto",
+                    borderRadius: "2px"
+                  }}
+                />
+              </div>
 
               {!imageLoaded && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-sm text-muted-foreground">Loading image...</div>
+                  <div className="text-xs text-muted-foreground">Loading image...</div>
                 </div>
               )}
 
-              {/* Current landmark indicator */}
+              {/* Current landmark indicator - Compact */}
               {!isCompleted && currentLandmark && (
-                <div className="absolute top-4 right-4">
-                  <div className={`px-4 py-2 rounded-lg backdrop-blur-sm border ${
-                    isFemaleAccent
-                      ? "bg-pink-500/10 border-pink-500/30 text-pink-100"
-                      : "bg-sky-500/10 border-sky-500/30 text-sky-100"
-                  }`}>
-                    <div className="text-xs font-medium uppercase tracking-wider">Current</div>
-                    <div className="font-bold text-lg">{currentLandmark.label}</div>
-                    <div className="text-xs opacity-80">Click to place</div>
+                <div className="absolute top-1.5 right-1.5">
+                  <div className={`px-1.5 py-1 rounded backdrop-blur-sm border ${isFemaleAccent
+                    ? "bg-pink-500/10 border-pink-500/30 text-pink-100"
+                    : "bg-sky-500/10 border-sky-500/30 text-sky-100"}`}>
+                    <div className="text-xs font-medium">Current</div>
+                    <div className="font-bold text-xs">{currentLandmark.label}</div>
+                    <div className="text-xs opacity-80">#{currentLandmarkIndex + 1}</div>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Image controls */}
-            <div className="p-4 border-t border-border/50 bg-card/80 flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">
-                {profileType === "front" 
-                  ? "Front profile: 52 landmarks total" 
-                  : "Side profile: 31 landmarks total"}
+            {/* Image controls - Compact */}
+            <div className="p-1.5 border-t border-border/50 bg-card/50 flex items-center justify-between">
+              <div className="text-xs text-muted-foreground">
+                {zoomLevel > 1 ? (
+                  <span className="flex items-center gap-0.5">
+                    <MousePointer2 className="size-2.5" />
+                    Drag to pan • Zoom: {Math.round(zoomLevel * 100)}%
+                  </span>
+                ) : (
+                  "Click on the image to place landmarks"
+                )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-0.5">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={handleReset}
-                  className="gap-2"
+                  className="gap-0.5 h-6 text-xs"
                   disabled={currentLandmarks.length === 0}
                 >
-                  <RotateCcw className="size-4" />
-                  Reset {profileType} profile
+                  <RotateCcw className="size-2.5" />
+                  Reset
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={handleBack}
-                  className="gap-2"
+                  className="gap-0.5 h-6 text-xs"
                 >
-                  <ArrowLeft className="size-4" />
+                  <ArrowLeft className="size-2.5" />
                   Back
                 </Button>
+                {editingLandmarkIndex !== null && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditingLandmarkIndex(null)}
+                    className="gap-0.5 h-6 text-xs bg-amber-500/10 border-amber-500/30 text-amber-100 hover:bg-amber-500/20"
+                  >
+                    Cancel Edit
+                  </Button>
+                )}
               </div>
-            </div>
-          </div>
-
-          {/* Quick navigation */}
-          <div className="bg-card/50 border border-border/50 rounded-2xl p-4">
-            <h3 className="font-semibold text-foreground mb-3">Landmark Navigation</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {landmarkDefinitions.slice(0, 6).map((landmark, index) => (
-                <button
-                  key={landmark.id}
-                  onClick={() => {
-                    if (index <= currentLandmarkIndex) {
-                      // Can navigate to completed landmarks
-                      setCurrentLandmarkIndex(index)
-                    }
-                  }}
-                  className={`p-3 rounded-lg text-left transition-all duration-200 ${
-                    index === currentLandmarkIndex
-                      ? isFemaleAccent
-                        ? "bg-pink-500/20 border border-pink-500/40"
-                        : "bg-sky-500/20 border border-sky-500/40"
-                      : index < currentLandmarkIndex
-                      ? "bg-secondary/30 border border-border/30"
-                      : "bg-card/30 border border-border/20 opacity-50 cursor-not-allowed"
-                  }`}
-                  disabled={index > currentLandmarkIndex}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className={`text-xs font-medium ${
-                      index <= currentLandmarkIndex ? "text-foreground" : "text-muted-foreground"
-                    }`}>
-                      #{index + 1}
-                    </span>
-                    {index < currentLandmarkIndex && (
-                      <CheckCircle2 className="size-3 text-emerald-400" />
-                    )}
-                  </div>
-                  <div className="text-sm font-medium truncate">{landmark.label}</div>
-                </button>
-              ))}
-            </div>
-            <div className="mt-3 text-center">
-              <button
-                onClick={() => {
-                  // Show all landmarks modal or expand view
-                }}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                View all {landmarkDefinitions.length} landmarks →
-              </button>
             </div>
           </div>
         </div>
 
-        {/* Right panel - Landmark list and instructions */}
-        <div className="space-y-6">
+        {/* Right panel - Landmark list and instructions (2/6 width) */}
+        <div className="lg:col-span-2 flex flex-col gap-2 overflow-hidden">
           {/* Current landmark instructions */}
-          <div className={`rounded-2xl border p-5 ${
-            isFemaleAccent
-              ? "border-pink-500/40 bg-pink-500/5"
-              : "border-sky-500/40 bg-sky-500/5"
-          }`}>
-            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground mb-4">
-              <Info className="size-4" />
-              Current Landmark Instructions
+          <div className={`rounded-lg border p-2 ${isFemaleAccent
+            ? "border-pink-500/40 bg-pink-500/5"
+            : "border-sky-500/40 bg-sky-500/5"}`}>
+            <div className="flex items-center gap-1 text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1.5">
+              <Info className="size-2.5" />
+              Instructions
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <div className={`px-4 py-2 rounded-full text-lg font-bold ${
-                  isFemaleAccent
-                    ? "bg-pink-500/20 text-pink-100"
-                    : "bg-sky-500/20 text-sky-100"
-                }`}>
+                <div className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${isFemaleAccent
+                  ? "bg-pink-500/20 text-pink-100"
+                  : "bg-sky-500/20 text-sky-100"}`}>
                   #{currentLandmarkIndex + 1}
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {currentLandmarks.length + 1} of {landmarkDefinitions.length}
                 </div>
               </div>
               
-              <h3 className="text-xl font-bold text-foreground">
+              <h3 className="font-bold text-foreground text-sm">
                 {currentLandmark?.label}
               </h3>
               
-              <div className="bg-card/50 rounded-lg p-4 border border-border/30">
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Click on the exact anatomical position of <strong>{currentLandmark?.label}</strong> on your {profileType} profile photo. 
-                  Ensure you're placing it at the precise location for accurate facial analysis.
+              <div className="bg-card/30 rounded p-1.5 border border-border/30">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {editingLandmarkIndex !== null 
+                    ? `Click on the new position for ${currentLandmark?.label}. Use zoom for precise adjustment.`
+                    : `Click on the exact anatomical position of ${currentLandmark?.label}. Use zoom for millimeter-level precision.`}
                 </p>
               </div>
               
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
-                <span>Click directly on the image to place this landmark</span>
+              <div className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                <span>Click any landmark in the list below to edit its position</span>
               </div>
             </div>
           </div>
 
           {/* Landmark progress list */}
-          <div className="rounded-2xl border border-border/50 bg-card/50 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-foreground">Landmark Progress</h3>
-              <div className="text-sm text-muted-foreground">
-                {currentLandmarks.length} placed
+          <div className="flex-1 rounded-lg border border-border/50 bg-card/30 p-2 flex flex-col overflow-hidden shadow-inner">
+            <div className="flex items-center justify-between mb-1.5">
+              <h3 className="font-semibold text-foreground text-sm">Landmark Progress</h3>
+              <div className="text-xs text-muted-foreground">
+                {currentLandmarks.length} placed • {landmarkDefinitions.length - currentLandmarks.length} remaining
               </div>
             </div>
             
-            <div className={`space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar ${
-              isFemaleAccent ? 'custom-scrollbar-pink' : ''
-            }`}>
-              {landmarkDefinitions.map((landmark, index) => (
-                <div
-                  key={landmark.id}
-                  className={`flex items-center gap-3 rounded-lg p-3 transition-all duration-200 landmark-item ${
-                    index === currentLandmarkIndex
+            <div className={`flex-1 overflow-y-auto pr-0.5 custom-scrollbar ${isFemaleAccent ? 'custom-scrollbar-pink' : ''}`}>
+              <div className="space-y-1">
+                {landmarkDefinitions.map((landmark, index) => (
+                  <button
+                    key={landmark.id}
+                    onClick={() => handleLandmarkClick(index)}
+                    className={`w-full flex items-center gap-1.5 rounded-md p-1.5 transition-all duration-200 text-left ${index === currentLandmarkIndex
                       ? isFemaleAccent
                         ? "bg-pink-500/10 border border-pink-500/30"
                         : "bg-sky-500/10 border border-sky-500/30"
                       : index < currentLandmarkIndex
-                      ? "bg-secondary/30 border border-border/30"
-                      : "bg-transparent border border-transparent"
-                  }`}
-                >
-                  <div
-                    className={`flex size-8 items-center justify-center rounded-full text-sm font-semibold ${
-                      index < currentLandmarkIndex
+                      ? "bg-secondary/20 border border-border/30 hover:bg-secondary/30"
+                      : "bg-transparent border border-transparent hover:bg-secondary/10"}`}
+                  >
+                    <div
+                      className={`flex size-5 items-center justify-center rounded-full text-xs font-semibold ${index < currentLandmarkIndex
                         ? "bg-emerald-500/20 text-emerald-100"
                         : index === currentLandmarkIndex
                         ? isFemaleAccent
                           ? "bg-pink-500/20 text-pink-100"
                           : "bg-sky-500/20 text-sky-100"
-                        : "bg-secondary/70 text-muted-foreground"
-                    }`}
-                  >
-                    {index < currentLandmarkIndex ? (
-                      <CheckCircle2 className="size-4" />
-                    ) : (
-                      index + 1
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className={`font-medium truncate ${
-                      index <= currentLandmarkIndex
+                        : "bg-secondary/60 text-muted-foreground"}`}
+                    >
+                      {index < currentLandmarkIndex ? (
+                        <CheckCircle2 className="size-2.5" />
+                      ) : (
+                        index + 1
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className={`font-medium text-xs truncate ${index <= currentLandmarkIndex
                         ? "text-foreground"
-                        : "text-muted-foreground"
-                    }`}>
-                      {landmark.label}
+                        : "text-muted-foreground"}`}>
+                        {landmark.label}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {index < currentLandmarkIndex ? "Placed" : index === currentLandmarkIndex ? "Current" : "Pending"}
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {index < currentLandmarkIndex ? "Placed" : index === currentLandmarkIndex ? "Current" : "Pending"}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
           {/* Completion status */}
           {isCompleted && (
-            <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-6 text-center space-y-4">
+            <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-2 text-center space-y-1.5">
               <div className="flex justify-center">
-                <div className="flex size-16 items-center justify-center rounded-full bg-emerald-500/20">
-                  <CheckCircle2 className="size-8 text-emerald-100" />
+                <div className="flex size-8 items-center justify-center rounded-full bg-emerald-500/20">
+                  <CheckCircle2 className="size-4 text-emerald-100" />
                 </div>
               </div>
-              <h3 className="text-lg font-semibold text-emerald-100">All Landmarks Marked!</h3>
-              <p className="text-sm text-emerald-200/80">
-                You've successfully marked all {landmarkDefinitions.length} landmarks on the {profileType} profile.
-                {profileType === "front" ? " Switch to Side Profile to continue." : " Click continue to proceed with analysis."}
+              <h3 className="font-semibold text-emerald-100 text-xs">All Landmarks Marked!</h3>
+              <p className="text-xs text-emerald-200/80">
+                {profileType === "front" 
+                  ? "Switch to Side Profile to continue." 
+                  : "Click continue to proceed with analysis."}
               </p>
               {profileType === "front" ? (
                 <Button
@@ -677,74 +802,25 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
                     setProfileType("side")
                     setCurrentLandmarkIndex(0)
                     setImageLoaded(false)
+                    setZoomLevel(1)
+                    setPanOffset({ x: 0, y: 0 })
                   }}
-                  className="w-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-100 border border-emerald-500/40"
+                  className="w-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-100 border border-emerald-500/40 text-xs"
                 >
                   Continue to Side Profile
-                  <ArrowRight className="ml-2 size-4" />
+                  <ArrowRight className="ml-1 size-2.5" />
                 </Button>
               ) : (
                 <Button
                   type="button"
                   onClick={handleContinue}
-                  className={
-                    "w-full justify-center gap-2 transform-gpu bg-gradient-to-r text-primary-foreground transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(15,23,42,0.85)] " +
-                    accentGlow
-                  }
+                  className={`w-full justify-center gap-0.5 text-xs ${accentGlow}`}
                 >
                   Complete Analysis
-                  <ArrowRight className="size-4" />
+                  <ArrowRight className="size-2.5" />
                 </Button>
               )}
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Bottom actions */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-border/50">
-        <div className="text-sm text-muted-foreground">
-          {profileType === "front" 
-            ? "Front Profile: " + frontLandmarks.length + " of 52 landmarks placed"
-            : "Side Profile: " + sideLandmarks.length + " of 31 landmarks placed"}
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleBack}
-            className="gap-2"
-          >
-            <ArrowLeft className="size-4" />
-            Back
-          </Button>
-          
-          {!isCompleted && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleReset}
-              className="gap-2"
-              disabled={currentLandmarks.length === 0}
-            >
-              <RotateCcw className="size-4" />
-              Reset Current
-            </Button>
-          )}
-          
-          {isCompleted && profileType === "side" && (
-            <Button
-              type="button"
-              onClick={handleContinue}
-              className={
-                "gap-2 transform-gpu bg-gradient-to-r text-primary-foreground transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(15,23,42,0.85)] " +
-                accentGlow
-              }
-            >
-              Complete Analysis
-              <ArrowRight className="size-4" />
-            </Button>
           )}
         </div>
       </div>
