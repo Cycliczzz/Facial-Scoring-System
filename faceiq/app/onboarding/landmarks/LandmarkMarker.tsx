@@ -320,246 +320,433 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
   const progress = ((currentLandmarkIndex / landmarkDefinitions.length) * 100).toFixed(0)
 
   return (
-    <div className="space-y-3 section-enter">
-      {/* Header */}
-      <div className="space-y-2 text-center section-enter section-delay-1">
-        <div className="flex items-center justify-center gap-3">
-          <div
-            className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium transition-all duration-300 ${
-              profileType === "front"
-                ? isFemaleAccent
-                  ? "bg-pink-500/20 text-pink-100 border border-pink-500/40"
-                  : "bg-sky-500/20 text-sky-100 border border-sky-500/40"
-                : "bg-secondary/50 text-muted-foreground border border-border/50"
-            }`}
-          >
-            {profileType === "front" && <CheckCircle2 className="size-3" />}
-            Front Profile
+    <div className="space-y-6 section-enter">
+      {/* Header with profile tabs */}
+      <div className="space-y-4 section-enter section-delay-1">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Facial Landmark Annotation
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Precisely mark anatomical landmarks on your facial photos for comprehensive analysis
+            </p>
           </div>
-          <ArrowRight className="size-4 text-muted-foreground" />
-          <div
-            className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium transition-all duration-300 ${
-              profileType === "side"
-                ? isFemaleAccent
-                  ? "bg-pink-500/20 text-pink-100 border border-pink-500/40"
-                  : "bg-sky-500/20 text-sky-100 border border-sky-500/40"
-                : "bg-secondary/50 text-muted-foreground border border-border/50"
-            }`}
-          >
-            {isCompleted && <CheckCircle2 className="size-3" />}
-            Side Profile
+          
+          {/* Profile type selector */}
+          <div className="flex items-center gap-2 bg-card/50 border border-border/50 rounded-xl p-1">
+            <button
+              onClick={() => {
+                if (profileType !== "front") {
+                  setProfileType("front")
+                  setCurrentLandmarkIndex(frontLandmarks.length)
+                  setImageLoaded(false)
+                }
+              }}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+                profileType === "front"
+                  ? isFemaleAccent
+                    ? "bg-pink-500/20 text-pink-100 shadow-inner"
+                    : "bg-sky-500/20 text-sky-100 shadow-inner"
+                  : "text-muted-foreground hover:bg-secondary/50"
+              }`}
+            >
+              Front Profile
+              {frontLandmarks.length === FRONT_LANDMARKS.length && (
+                <CheckCircle2 className="inline-block ml-2 size-3" />
+              )}
+            </button>
+            <button
+              onClick={() => {
+                if (profileType !== "side" && frontLandmarks.length === FRONT_LANDMARKS.length) {
+                  setProfileType("side")
+                  setCurrentLandmarkIndex(sideLandmarks.length)
+                  setImageLoaded(false)
+                }
+              }}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+                profileType === "side"
+                  ? isFemaleAccent
+                    ? "bg-pink-500/20 text-pink-100 shadow-inner"
+                    : "bg-sky-500/20 text-sky-100 shadow-inner"
+                  : frontLandmarks.length === FRONT_LANDMARKS.length
+                  ? "text-muted-foreground hover:bg-secondary/50"
+                  : "text-muted-foreground/50 cursor-not-allowed"
+              }`}
+              disabled={frontLandmarks.length !== FRONT_LANDMARKS.length}
+            >
+              Side Profile
+              {sideLandmarks.length === SIDE_LANDMARKS.length && (
+                <CheckCircle2 className="inline-block ml-2 size-3" />
+              )}
+            </button>
           </div>
         </div>
 
-        <h2 className="text-lg font-semibold tracking-tight text-sky-100 sm:text-xl">
-          Mark facial landmarks
-        </h2>
-        <p className="text-xs text-muted-foreground">
-          Click on your {profileType} profile photo to mark the key facial landmarks. Follow the
-          instructions for each point.
-        </p>
+        {/* Progress bar */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium text-foreground">
+              {profileType === "front" ? "Front Profile" : "Side Profile"} Landmarks
+            </span>
+            <span className="text-muted-foreground">
+              {currentLandmarkIndex} of {landmarkDefinitions.length} completed ({progress}%)
+            </span>
+          </div>
+          <div className="h-2 w-full rounded-full bg-secondary/70 overflow-hidden">
+            <div
+              className={`h-full transition-all duration-500 ${
+                isFemaleAccent
+                  ? "bg-gradient-to-r from-pink-500 to-rose-500"
+                  : "bg-gradient-to-r from-sky-500 to-blue-500"
+              }`}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Main content */}
-      <div className="grid gap-4 lg:grid-cols-[1fr,320px]">
-        {/* Canvas area */}
-        <div className="space-y-4 section-enter section-delay-2">
-          <div
-            ref={containerRef}
-            className="canvas-container relative overflow-hidden rounded-2xl border border-border/70 bg-background/70"
-          >
-            <canvas
-              ref={canvasRef}
-              onClick={handleCanvasClick}
-              className={`w-full cursor-crosshair transition-opacity duration-500 ${
-                imageLoaded ? "opacity-100" : "opacity-0"
-              }`}
-              style={{ display: "block" }}
-            />
-
-            {!imageLoaded && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-sm text-muted-foreground">Loading image...</div>
-              </div>
-            )}
-
-            {/* Progress overlay */}
-            {!isCompleted && (
-              <div className="absolute bottom-4 left-4 right-4">
-                <div className="rounded-xl border border-border/70 bg-card/95 backdrop-blur-sm p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium text-foreground">
-                      {currentLandmarkIndex + 1} / {landmarkDefinitions.length}
-                    </span>
-                    <span className="text-xs text-muted-foreground">{progress}%</span>
-                  </div>
-                  <div className="h-1.5 w-full rounded-full bg-secondary/70 overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-500 ${
-                        isFemaleAccent
-                          ? "bg-gradient-to-r from-pink-500 to-rose-500"
-                          : "bg-gradient-to-r from-sky-500 to-blue-500"
-                      }`}
-                      style={{ width: `${progress}%` }}
-                    />
+      {/* Main content - redesigned layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left panel - Image and controls */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Image container */}
+          <div className="bg-card/50 border border-border/50 rounded-2xl overflow-hidden">
+            <div className="p-4 border-b border-border/50 bg-card/80">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-foreground">
+                    {profileType === "front" ? "Front Profile Image" : "Side Profile Image"}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Click on the image to place landmark #{currentLandmarkIndex + 1}: {currentLandmark?.label}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    isFemaleAccent 
+                      ? "bg-pink-500/20 text-pink-100" 
+                      : "bg-sky-500/20 text-sky-100"
+                  }`}>
+                    {currentLandmarks.length} / {landmarkDefinitions.length} placed
                   </div>
                 </div>
               </div>
-            )}
+            </div>
+            
+            <div
+              ref={containerRef}
+              className="relative bg-background/30 p-4 flex items-center justify-center min-h-[400px]"
+            >
+              <canvas
+                ref={canvasRef}
+                onClick={handleCanvasClick}
+                className={`max-w-full max-h-[500px] cursor-crosshair transition-opacity duration-500 border border-border/30 rounded-lg ${
+                  imageLoaded ? "opacity-100" : "opacity-0"
+                }`}
+                style={{ display: "block" }}
+              />
+
+              {!imageLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-sm text-muted-foreground">Loading image...</div>
+                </div>
+              )}
+
+              {/* Current landmark indicator */}
+              {!isCompleted && currentLandmark && (
+                <div className="absolute top-4 right-4">
+                  <div className={`px-4 py-2 rounded-lg backdrop-blur-sm border ${
+                    isFemaleAccent
+                      ? "bg-pink-500/10 border-pink-500/30 text-pink-100"
+                      : "bg-sky-500/10 border-sky-500/30 text-sky-100"
+                  }`}>
+                    <div className="text-xs font-medium uppercase tracking-wider">Current</div>
+                    <div className="font-bold text-lg">{currentLandmark.label}</div>
+                    <div className="text-xs opacity-80">Click to place</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Image controls */}
+            <div className="p-4 border-t border-border/50 bg-card/80 flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                {profileType === "front" 
+                  ? "Front profile: 52 landmarks total" 
+                  : "Side profile: 31 landmarks total"}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReset}
+                  className="gap-2"
+                  disabled={currentLandmarks.length === 0}
+                >
+                  <RotateCcw className="size-4" />
+                  Reset {profileType} profile
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBack}
+                  className="gap-2"
+                >
+                  <ArrowLeft className="size-4" />
+                  Back
+                </Button>
+              </div>
+            </div>
           </div>
 
-          {/* Controls */}
-          <div className="flex items-center justify-between gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleReset}
-              className="gap-2"
-              disabled={currentLandmarks.length === 0}
-            >
-              <RotateCcw className="size-4" />
-              Reset {profileType} profile
-            </Button>
-
-            <div className="text-xs text-muted-foreground">
-              Click to undo: {currentLandmarks.length} landmarks placed
+          {/* Quick navigation */}
+          <div className="bg-card/50 border border-border/50 rounded-2xl p-4">
+            <h3 className="font-semibold text-foreground mb-3">Landmark Navigation</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {landmarkDefinitions.slice(0, 6).map((landmark, index) => (
+                <button
+                  key={landmark.id}
+                  onClick={() => {
+                    if (index <= currentLandmarkIndex) {
+                      // Can navigate to completed landmarks
+                      setCurrentLandmarkIndex(index)
+                    }
+                  }}
+                  className={`p-3 rounded-lg text-left transition-all duration-200 ${
+                    index === currentLandmarkIndex
+                      ? isFemaleAccent
+                        ? "bg-pink-500/20 border border-pink-500/40"
+                        : "bg-sky-500/20 border border-sky-500/40"
+                      : index < currentLandmarkIndex
+                      ? "bg-secondary/30 border border-border/30"
+                      : "bg-card/30 border border-border/20 opacity-50 cursor-not-allowed"
+                  }`}
+                  disabled={index > currentLandmarkIndex}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`text-xs font-medium ${
+                      index <= currentLandmarkIndex ? "text-foreground" : "text-muted-foreground"
+                    }`}>
+                      #{index + 1}
+                    </span>
+                    {index < currentLandmarkIndex && (
+                      <CheckCircle2 className="size-3 text-emerald-400" />
+                    )}
+                  </div>
+                  <div className="text-sm font-medium truncate">{landmark.label}</div>
+                </button>
+              ))}
+            </div>
+            <div className="mt-3 text-center">
+              <button
+                onClick={() => {
+                  // Show all landmarks modal or expand view
+                }}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                View all {landmarkDefinitions.length} landmarks →
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Instructions panel */}
-        <div className="space-y-4">
-          {!isCompleted ? (
-            <>
-              <div
-                className={`rounded-2xl border p-3 transition-all duration-300 ${
+        {/* Right panel - Landmark list and instructions */}
+        <div className="space-y-6">
+          {/* Current landmark instructions */}
+          <div className={`rounded-2xl border p-5 ${
+            isFemaleAccent
+              ? "border-pink-500/40 bg-pink-500/5"
+              : "border-sky-500/40 bg-sky-500/5"
+          }`}>
+            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground mb-4">
+              <Info className="size-4" />
+              Current Landmark Instructions
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className={`px-4 py-2 rounded-full text-lg font-bold ${
                   isFemaleAccent
-                    ? "border-pink-500/40 bg-pink-500/5"
-                    : "border-sky-500/40 bg-sky-500/5"
-                }`}
-              >
-                <div className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                  <Info className="size-4" />
-                  Current landmark
+                    ? "bg-pink-500/20 text-pink-100"
+                    : "bg-sky-500/20 text-sky-100"
+                }`}>
+                  #{currentLandmarkIndex + 1}
                 </div>
+                <div className="text-sm text-muted-foreground">
+                  {currentLandmarks.length + 1} of {landmarkDefinitions.length}
+                </div>
+              </div>
+              
+              <h3 className="text-xl font-bold text-foreground">
+                {currentLandmark?.label}
+              </h3>
+              
+              <div className="bg-card/50 rounded-lg p-4 border border-border/30">
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Click on the exact anatomical position of <strong>{currentLandmark?.label}</strong> on your {profileType} profile photo. 
+                  Ensure you're placing it at the precise location for accurate facial analysis.
+                </p>
+              </div>
+              
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
+                <span>Click directly on the image to place this landmark</span>
+              </div>
+            </div>
+          </div>
 
-                <div className="space-y-3">
+          {/* Landmark progress list */}
+          <div className="rounded-2xl border border-border/50 bg-card/50 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-foreground">Landmark Progress</h3>
+              <div className="text-sm text-muted-foreground">
+                {currentLandmarks.length} placed
+              </div>
+            </div>
+            
+            <div className={`space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar ${
+              isFemaleAccent ? 'custom-scrollbar-pink' : ''
+            }`}>
+              {landmarkDefinitions.map((landmark, index) => (
+                <div
+                  key={landmark.id}
+                  className={`flex items-center gap-3 rounded-lg p-3 transition-all duration-200 landmark-item ${
+                    index === currentLandmarkIndex
+                      ? isFemaleAccent
+                        ? "bg-pink-500/10 border border-pink-500/30"
+                        : "bg-sky-500/10 border border-sky-500/30"
+                      : index < currentLandmarkIndex
+                      ? "bg-secondary/30 border border-border/30"
+                      : "bg-transparent border border-transparent"
+                  }`}
+                >
                   <div
-                    className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-sm font-semibold ${
-                      isFemaleAccent
-                        ? "bg-pink-500/20 text-pink-100"
-                        : "bg-sky-500/20 text-sky-100"
+                    className={`flex size-8 items-center justify-center rounded-full text-sm font-semibold ${
+                      index < currentLandmarkIndex
+                        ? "bg-emerald-500/20 text-emerald-100"
+                        : index === currentLandmarkIndex
+                        ? isFemaleAccent
+                          ? "bg-pink-500/20 text-pink-100"
+                          : "bg-sky-500/20 text-sky-100"
+                        : "bg-secondary/70 text-muted-foreground"
                     }`}
                   >
-                    #{currentLandmarkIndex + 1}
+                    {index < currentLandmarkIndex ? (
+                      <CheckCircle2 className="size-4" />
+                    ) : (
+                      index + 1
+                    )}
                   </div>
-
-                  <h3 className="text-lg font-semibold text-foreground">
-                    {currentLandmark?.label}
-                  </h3>
-
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Click on the exact position of this landmark on your {profileType} profile
-                    photo. Be as precise as possible for accurate analysis.
-                  </p>
-                </div>
-              </div>
-
-              {/* Landmark list */}
-              <div className="rounded-2xl border border-border/70 bg-background/70 p-5">
-                <div className="mb-3 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                  All landmarks
-                </div>
-
-                <div className={`space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar ${isFemaleAccent ? 'custom-scrollbar-pink' : ''}`}>
-                  {landmarkDefinitions.map((landmark, index) => (
-                    <div
-                      key={landmark.id}
-                      className={`flex items-center gap-3 rounded-lg p-2 transition-all duration-200 ${
-                        index === currentLandmarkIndex
-                          ? isFemaleAccent
-                            ? "bg-pink-500/10 border border-pink-500/30"
-                            : "bg-sky-500/10 border border-sky-500/30"
-                          : index < currentLandmarkIndex
-                          ? "bg-secondary/50 border border-border/50"
-                          : "bg-transparent border border-transparent"
-                      }`}
-                    >
-                      <div
-                        className={`flex size-6 items-center justify-center rounded-full text-xs font-semibold ${
-                          index < currentLandmarkIndex
-                            ? "bg-emerald-500/20 text-emerald-100"
-                            : index === currentLandmarkIndex
-                            ? isFemaleAccent
-                              ? "bg-pink-500/20 text-pink-100"
-                              : "bg-sky-500/20 text-sky-100"
-                            : "bg-secondary/70 text-muted-foreground"
-                        }`}
-                      >
-                        {index < currentLandmarkIndex ? (
-                          <CheckCircle2 className="size-3.5" />
-                        ) : (
-                          index + 1
-                        )}
-                      </div>
-                      <span
-                        className={`text-xs ${
-                          index <= currentLandmarkIndex
-                            ? "text-foreground font-medium"
-                            : "text-muted-foreground"
-                        }`}
-                      >
-                        {landmark.label}
-                      </span>
+                  <div className="flex-1 min-w-0">
+                    <div className={`font-medium truncate ${
+                      index <= currentLandmarkIndex
+                        ? "text-foreground"
+                        : "text-muted-foreground"
+                    }`}>
+                      {landmark.label}
                     </div>
-                  ))}
+                    <div className="text-xs text-muted-foreground">
+                      {index < currentLandmarkIndex ? "Placed" : index === currentLandmarkIndex ? "Current" : "Pending"}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </>
-          ) : (
-            <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-6 text-center space-y-3">
+              ))}
+            </div>
+          </div>
+
+          {/* Completion status */}
+          {isCompleted && (
+            <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-6 text-center space-y-4">
               <div className="flex justify-center">
                 <div className="flex size-16 items-center justify-center rounded-full bg-emerald-500/20">
                   <CheckCircle2 className="size-8 text-emerald-100" />
                 </div>
               </div>
-              <h3 className="text-lg font-semibold text-emerald-100">All landmarks marked!</h3>
+              <h3 className="text-lg font-semibold text-emerald-100">All Landmarks Marked!</h3>
               <p className="text-sm text-emerald-200/80">
-                You've successfully marked all facial landmarks on both front and side profiles.
-                Click continue to proceed with the analysis.
+                You've successfully marked all {landmarkDefinitions.length} landmarks on the {profileType} profile.
+                {profileType === "front" ? " Switch to Side Profile to continue." : " Click continue to proceed with analysis."}
               </p>
+              {profileType === "front" ? (
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setProfileType("side")
+                    setCurrentLandmarkIndex(0)
+                    setImageLoaded(false)
+                  }}
+                  className="w-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-100 border border-emerald-500/40"
+                >
+                  Continue to Side Profile
+                  <ArrowRight className="ml-2 size-4" />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleContinue}
+                  className={
+                    "w-full justify-center gap-2 transform-gpu bg-gradient-to-r text-primary-foreground transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(15,23,42,0.85)] " +
+                    accentGlow
+                  }
+                >
+                  Complete Analysis
+                  <ArrowRight className="size-4" />
+                </Button>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      {/* Footer actions */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-4 border-t border-border/50">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleBack}
-          className="w-full justify-center sm:w-auto gap-2"
-        >
-          <ArrowLeft className="size-4" />
-          Back
-        </Button>
-
-        {isCompleted && (
+      {/* Bottom actions */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-border/50">
+        <div className="text-sm text-muted-foreground">
+          {profileType === "front" 
+            ? "Front Profile: " + frontLandmarks.length + " of 52 landmarks placed"
+            : "Side Profile: " + sideLandmarks.length + " of 31 landmarks placed"}
+        </div>
+        
+        <div className="flex items-center gap-3">
           <Button
             type="button"
-            size="lg"
-            onClick={handleContinue}
-            className={
-              "w-full justify-center gap-2 transform-gpu bg-gradient-to-r text-primary-foreground transition-all duration-300 sm:w-auto hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(15,23,42,0.85)] " +
-              accentGlow
-            }
+            variant="outline"
+            onClick={handleBack}
+            className="gap-2"
           >
-            Continue to analysis
-            <ArrowRight className="size-4" />
+            <ArrowLeft className="size-4" />
+            Back
           </Button>
-        )}
+          
+          {!isCompleted && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleReset}
+              className="gap-2"
+              disabled={currentLandmarks.length === 0}
+            >
+              <RotateCcw className="size-4" />
+              Reset Current
+            </Button>
+          )}
+          
+          {isCompleted && profileType === "side" && (
+            <Button
+              type="button"
+              onClick={handleContinue}
+              className={
+                "gap-2 transform-gpu bg-gradient-to-r text-primary-foreground transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(15,23,42,0.85)] " +
+                accentGlow
+              }
+            >
+              Complete Analysis
+              <ArrowRight className="size-4" />
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   )
