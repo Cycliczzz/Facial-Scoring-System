@@ -1,8 +1,16 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { CheckCircle2, Info, RotateCcw, ArrowRight, ArrowLeft, ZoomIn, ZoomOut, Maximize2, Minus, Plus, MousePointer2 } from "lucide-react"
+import { 
+  CheckCircle2, Info, RotateCcw, ArrowRight, ArrowLeft, ZoomIn, ZoomOut, 
+  Maximize2, Minus, Plus, MousePointer2, Target, Crosshair, Ruler, 
+  Grid3x3, Eye, EyeOff, Layers, Move, GripVertical, Settings, 
+  Download, Upload, Save, Trash2, Undo, Redo, Scan, ScanFace,
+  ChevronLeft, ChevronRight, Sparkles, Brain, Smartphone, 
+  Maximize, Minimize, Search, X, Filter, SortAsc, SortDesc,
+  Clock, Calendar, User, Users, Star, Award, Trophy, Crown
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 
@@ -16,97 +24,99 @@ interface Landmark {
   x: number
   y: number
   label: string
+  group?: string
+  color?: string
 }
 
 type ProfileType = "front" | "side"
 
 const FRONT_LANDMARKS = [
-  { id: "hairline", label: "Hairline" },
-  { id: "left_pupil", label: "Left pupil" },
-  { id: "right_pupil", label: "Right pupil" },
-  { id: "left_nose_side", label: "Left nose side" },
-  { id: "right_nose_side", label: "Right nose side" },
-  { id: "lower_lip_center", label: "Lower lip center" },
-  { id: "chin_bottom", label: "Chin bottom" },
-  { id: "left_outer_ear", label: "Left outer ear" },
-  { id: "right_outer_ear", label: "Right outer ear" },
-  { id: "left_temple", label: "Left temple" },
-  { id: "right_temple", label: "Right temple" },
-  { id: "left_medial_canthus", label: "Left medial canthus" },
-  { id: "left_lateral_canthus", label: "Left Lateral Canthus" },
-  { id: "left_upper_eyelid", label: "Left Upper Eyelid" },
-  { id: "left_lower_eyelid", label: "Left Lower Eyelid" },
-  { id: "left_eyelid_hood_end", label: "Left Eyelid Hood End" },
-  { id: "left_brow_head", label: "Left Brow Head" },
-  { id: "left_brow_inner_corner", label: "Left Brow Inner Corner" },
-  { id: "left_brow_arch", label: "Left Brow Arch" },
-  { id: "left_brow_peak", label: "Left Brow Peak" },
-  { id: "left_brow_tail", label: "Left Brow Tail" },
-  { id: "left_upper_eyelid_crease", label: "Left Upper Eyelid Crease" },
-  { id: "right_medial_canthus", label: "Right Medial Canthus" },
-  { id: "right_lateral_canthus", label: "Right Lateral Canthus" },
-  { id: "right_upper_eyelid", label: "Right Upper Eyelid" },
-  { id: "right_lower_eyelid", label: "Right Lower Eyelid" },
-  { id: "right_eyelid_hood_end", label: "Right Eyelid Hood End" },
-  { id: "right_brow_head", label: "Right Brow Head" },
-  { id: "right_brow_inner_corner", label: "Right Brow Inner Corner" },
-  { id: "right_brow_arch", label: "Right Brow Arch" },
-  { id: "right_brow_peak", label: "Right Brow Peak" },
-  { id: "right_brow_tail", label: "Right Brow Tail" },
-  { id: "right_upper_eyelid_crease", label: "Right Upper Eyelid Crease" },
-  { id: "nasal_base", label: "Nasal Base" },
-  { id: "nose_bottom", label: "Nose Bottom" },
-  { id: "left_nose_bridge", label: "Left Nose Bridge" },
-  { id: "right_nose_bridge", label: "Right Nose Bridge" },
-  { id: "left_mouth_corner", label: "Left Mouth Corner" },
-  { id: "right_mouth_corner", label: "Right Mouth Corner" },
-  { id: "cupids_bow", label: "Cupid's Bow" },
-  { id: "inner_cupids_bow", label: "Inner Cupid's Bow" },
-  { id: "mouth_middle", label: "Mouth Middle" },
-  { id: "left_upper_jaw_angle", label: "Left Upper Jaw Angle" },
-  { id: "right_upper_jaw_angle", label: "Right Upper Jaw Angle" },
-  { id: "left_lower_jaw_angle", label: "Left Lower Jaw Angle" },
-  { id: "right_lower_jaw_angle", label: "Right Lower Jaw Angle" },
-  { id: "left_chin", label: "Left Chin" },
-  { id: "right_chin", label: "Right Chin" },
-  { id: "left_neck_point", label: "Left Neck Point" },
-  { id: "right_neck_point", label: "Right Neck Point" },
-  { id: "left_cheekbone", label: "Left Cheekbone" },
-  { id: "right_cheekbone", label: "Right Cheekbone" },
+  { id: "hairline", label: "Hairline", group: "head", color: "#3b82f6" },
+  { id: "left_pupil", label: "Left pupil", group: "eyes", color: "#ef4444" },
+  { id: "right_pupil", label: "Right pupil", group: "eyes", color: "#ef4444" },
+  { id: "left_nose_side", label: "Left nose side", group: "nose", color: "#10b981" },
+  { id: "right_nose_side", label: "Right nose side", group: "nose", color: "#10b981" },
+  { id: "lower_lip_center", label: "Lower lip center", group: "mouth", color: "#8b5cf6" },
+  { id: "chin_bottom", label: "Chin bottom", group: "chin", color: "#f59e0b" },
+  { id: "left_outer_ear", label: "Left outer ear", group: "ears", color: "#ec4899" },
+  { id: "right_outer_ear", label: "Right outer ear", group: "ears", color: "#ec4899" },
+  { id: "left_temple", label: "Left temple", group: "head", color: "#3b82f6" },
+  { id: "right_temple", label: "Right temple", group: "head", color: "#3b82f6" },
+  { id: "left_medial_canthus", label: "Left medial canthus", group: "eyes", color: "#ef4444" },
+  { id: "left_lateral_canthus", label: "Left Lateral Canthus", group: "eyes", color: "#ef4444" },
+  { id: "left_upper_eyelid", label: "Left Upper Eyelid", group: "eyes", color: "#ef4444" },
+  { id: "left_lower_eyelid", label: "Left Lower Eyelid", group: "eyes", color: "#ef4444" },
+  { id: "left_eyelid_hood_end", label: "Left Eyelid Hood End", group: "eyes", color: "#ef4444" },
+  { id: "left_brow_head", label: "Left Brow Head", group: "brows", color: "#f97316" },
+  { id: "left_brow_inner_corner", label: "Left Brow Inner Corner", group: "brows", color: "#f97316" },
+  { id: "left_brow_arch", label: "Left Brow Arch", group: "brows", color: "#f97316" },
+  { id: "left_brow_peak", label: "Left Brow Peak", group: "brows", color: "#f97316" },
+  { id: "left_brow_tail", label: "Left Brow Tail", group: "brows", color: "#f97316" },
+  { id: "left_upper_eyelid_crease", label: "Left Upper Eyelid Crease", group: "eyes", color: "#ef4444" },
+  { id: "right_medial_canthus", label: "Right Medial Canthus", group: "eyes", color: "#ef4444" },
+  { id: "right_lateral_canthus", label: "Right Lateral Canthus", group: "eyes", color: "#ef4444" },
+  { id: "right_upper_eyelid", label: "Right Upper Eyelid", group: "eyes", color: "#ef4444" },
+  { id: "right_lower_eyelid", label: "Right Lower Eyelid", group: "eyes", color: "#ef4444" },
+  { id: "right_eyelid_hood_end", label: "Right Eyelid Hood End", group: "eyes", color: "#ef4444" },
+  { id: "right_brow_head", label: "Right Brow Head", group: "brows", color: "#f97316" },
+  { id: "right_brow_inner_corner", label: "Right Brow Inner Corner", group: "brows", color: "#f97316" },
+  { id: "right_brow_arch", label: "Right Brow Arch", group: "brows", color: "#f97316" },
+  { id: "right_brow_peak", label: "Right Brow Peak", group: "brows", color: "#f97316" },
+  { id: "right_brow_tail", label: "Right Brow Tail", group: "brows", color: "#f97316" },
+  { id: "right_upper_eyelid_crease", label: "Right Upper Eyelid Crease", group: "eyes", color: "#ef4444" },
+  { id: "nasal_base", label: "Nasal Base", group: "nose", color: "#10b981" },
+  { id: "nose_bottom", label: "Nose Bottom", group: "nose", color: "#10b981" },
+  { id: "left_nose_bridge", label: "Left Nose Bridge", group: "nose", color: "#10b981" },
+  { id: "right_nose_bridge", label: "Right Nose Bridge", group: "nose", color: "#10b981" },
+  { id: "left_mouth_corner", label: "Left Mouth Corner", group: "mouth", color: "#8b5cf6" },
+  { id: "right_mouth_corner", label: "Right Mouth Corner", group: "mouth", color: "#8b5cf6" },
+  { id: "cupids_bow", label: "Cupid's Bow", group: "mouth", color: "#8b5cf6" },
+  { id: "inner_cupids_bow", label: "Inner Cupid's Bow", group: "mouth", color: "#8b5cf6" },
+  { id: "mouth_middle", label: "Mouth Middle", group: "mouth", color: "#8b5cf6" },
+  { id: "left_upper_jaw_angle", label: "Left Upper Jaw Angle", group: "jaw", color: "#f59e0b" },
+  { id: "right_upper_jaw_angle", label: "Right Upper Jaw Angle", group: "jaw", color: "#f59e0b" },
+  { id: "left_lower_jaw_angle", label: "Left Lower Jaw Angle", group: "jaw", color: "#f59e0b" },
+  { id: "right_lower_jaw_angle", label: "Right Lower Jaw Angle", group: "jaw", color: "#f59e0b" },
+  { id: "left_chin", label: "Left Chin", group: "chin", color: "#f59e0b" },
+  { id: "right_chin", label: "Right Chin", group: "chin", color: "#f59e0b" },
+  { id: "left_neck_point", label: "Left Neck Point", group: "neck", color: "#6b7280" },
+  { id: "right_neck_point", label: "Right Neck Point", group: "neck", color: "#6b7280" },
+  { id: "left_cheekbone", label: "Left Cheekbone", group: "cheeks", color: "#ec4899" },
+  { id: "right_cheekbone", label: "Right Cheekbone", group: "cheeks", color: "#ec4899" },
 ]
 
 const SIDE_LANDMARKS = [
-  { id: "top_of_head", label: "Top of Head" },
-  { id: "occiput", label: "Occiput" },
-  { id: "nose_tip", label: "Nose Tip" },
-  { id: "neck_point", label: "Neck Point" },
-  { id: "porion", label: "Porion" },
-  { id: "orbitale", label: "Orbitale" },
-  { id: "tragus", label: "Tragus" },
-  { id: "intertragic_notch", label: "Intertragic Notch" },
-  { id: "corneal_apex", label: "Corneal Apex" },
-  { id: "cheekbone", label: "Cheekbone" },
-  { id: "eyelid_end", label: "Eyelid End" },
-  { id: "lower_eyelid", label: "Lower Eyelid" },
-  { id: "hairline_profile", label: "Hairline (Profile)" },
-  { id: "glabella", label: "Glabella" },
-  { id: "forehead", label: "Forehead" },
-  { id: "nasal_bridge_root", label: "Nasal Bridge Root" },
-  { id: "rhinion", label: "Rhinion" },
-  { id: "supratip", label: "Supratip" },
-  { id: "infratip", label: "Infratip" },
-  { id: "columella", label: "Columella" },
-  { id: "subnasale", label: "Subnasale" },
-  { id: "subalare", label: "Subalare" },
-  { id: "upper_lip", label: "Upper Lip" },
-  { id: "mouth_corner", label: "Mouth Corner" },
-  { id: "lower_lip", label: "Lower Lip" },
-  { id: "labiomental_fold", label: "Labiomental Fold" },
-  { id: "chin_point", label: "Chin Point" },
-  { id: "chin_bottom", label: "Chin Bottom" },
-  { id: "cervical_point", label: "Cervical Point" },
-  { id: "upper_jaw_angle", label: "Upper Jaw Angle" },
-  { id: "lower_jaw_angle", label: "Lower Jaw Angle" },
+  { id: "top_of_head", label: "Top of Head", group: "head", color: "#3b82f6" },
+  { id: "occiput", label: "Occiput", group: "head", color: "#3b82f6" },
+  { id: "nose_tip", label: "Nose Tip", group: "nose", color: "#10b981" },
+  { id: "neck_point", label: "Neck Point", group: "neck", color: "#6b7280" },
+  { id: "porion", label: "Porion", group: "ears", color: "#ec4899" },
+  { id: "orbitale", label: "Orbitale", group: "eyes", color: "#ef4444" },
+  { id: "tragus", label: "Tragus", group: "ears", color: "#ec4899" },
+  { id: "intertragic_notch", label: "Intertragic Notch", group: "ears", color: "#ec4899" },
+  { id: "corneal_apex", label: "Corneal Apex", group: "eyes", color: "#ef4444" },
+  { id: "cheekbone", label: "Cheekbone", group: "cheeks", color: "#ec4899" },
+  { id: "eyelid_end", label: "Eyelid End", group: "eyes", color: "#ef4444" },
+  { id: "lower_eyelid", label: "Lower Eyelid", group: "eyes", color: "#ef4444" },
+  { id: "hairline_profile", label: "Hairline (Profile)", group: "head", color: "#3b82f6" },
+  { id: "glabella", label: "Glabella", group: "head", color: "#3b82f6" },
+  { id: "forehead", label: "Forehead", group: "head", color: "#3b82f6" },
+  { id: "nasal_bridge_root", label: "Nasal Bridge Root", group: "nose", color: "#10b981" },
+  { id: "rhinion", label: "Rhinion", group: "nose", color: "#10b981" },
+  { id: "supratip", label: "Supratip", group: "nose", color: "#10b981" },
+  { id: "infratip", label: "Infratip", group: "nose", color: "#10b981" },
+  { id: "columella", label: "Columella", group: "nose", color: "#10b981" },
+  { id: "subnasale", label: "Subnasale", group: "nose", color: "#10b981" },
+  { id: "subalare", label: "Subalare", group: "nose", color: "#10b981" },
+  { id: "upper_lip", label: "Upper Lip", group: "mouth", color: "#8b5cf6" },
+  { id: "mouth_corner", label: "Mouth Corner", group: "mouth", color: "#8b5cf6" },
+  { id: "lower_lip", label: "Lower Lip", group: "mouth", color: "#8b5cf6" },
+  { id: "labiomental_fold", label: "Labiomental Fold", group: "chin", color: "#f59e0b" },
+  { id: "chin_point", label: "Chin Point", group: "chin", color: "#f59e0b" },
+  { id: "chin_bottom", label: "Chin Bottom", group: "chin", color: "#f59e0b" },
+  { id: "cervical_point", label: "Cervical Point", group: "neck", color: "#6b7280" },
+  { id: "upper_jaw_angle", label: "Upper Jaw Angle", group: "jaw", color: "#f59e0b" },
+  { id: "lower_jaw_angle", label: "Lower Jaw Angle", group: "jaw", color: "#f59e0b" },
 ]
 
 export function LandmarkMarker({ initialGender = "male", initialEthnicity }: LandmarkMarkerProps) {
@@ -127,7 +137,9 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 })
   const [editingLandmarkIndex, setEditingLandmarkIndex] = useState<number | null>(null)
   const [draggingLandmarkIndex, setDraggingLandmarkIndex] = useState<number | null>(null)
-  const [workflowMode, setWorkflowMode] = useState<"guided" | "free">("guided")
+  const [showGrid, setShowGrid] = useState(false)
+  const [showCrosshair, setShowCrosshair] = useState(false)
+  const [landmarkSize, setLandmarkSize] = useState(2) // Smaller default size (2px radius)
 
   const isFemaleAccent = initialGender === "female"
 
@@ -174,7 +186,7 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
     if (imageLoaded) {
       drawCanvas()
     }
-  }, [currentLandmarks, currentLandmarkIndex, imageLoaded, zoomLevel, panOffset, editingLandmarkIndex])
+  }, [currentLandmarks, currentLandmarkIndex, imageLoaded, zoomLevel, panOffset, editingLandmarkIndex, showGrid, showCrosshair, landmarkSize])
 
   const drawCanvas = () => {
     const canvas = canvasRef.current
@@ -223,50 +235,85 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
       // Draw image with correct aspect ratio (centered)
       ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight)
 
+      // Draw grid if enabled
+      if (showGrid) {
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.1)"
+        ctx.lineWidth = 1
+        const gridSize = 50
+        
+        // Vertical lines
+        for (let x = drawX; x < drawX + drawWidth; x += gridSize) {
+          ctx.beginPath()
+          ctx.moveTo(x, drawY)
+          ctx.lineTo(x, drawY + drawHeight)
+          ctx.stroke()
+        }
+        
+        // Horizontal lines
+        for (let y = drawY; y < drawY + drawHeight; y += gridSize) {
+          ctx.beginPath()
+          ctx.moveTo(drawX, y)
+          ctx.lineTo(drawX + drawWidth, y)
+          ctx.stroke()
+        }
+      }
+
+      // Draw crosshair if enabled
+      if (showCrosshair) {
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.3)"
+        ctx.lineWidth = 1
+        
+        // Horizontal line
+        ctx.beginPath()
+        ctx.moveTo(drawX, canvas.height / 2)
+        ctx.lineTo(drawX + drawWidth, canvas.height / 2)
+        ctx.stroke()
+        
+        // Vertical line
+        ctx.beginPath()
+        ctx.moveTo(canvas.width / 2, drawY)
+        ctx.lineTo(canvas.width / 2, drawY + drawHeight)
+        ctx.stroke()
+      }
+
       // Draw existing landmarks (with centering offsets and zoom/pan adjustments)
       currentLandmarks.forEach((landmark, index) => {
         const isActive = index === currentLandmarkIndex - 1 || index === editingLandmarkIndex
-        drawLandmark(ctx, landmark.x + drawX, landmark.y + drawY, isActive, index + 1)
+        const isDragging = index === draggingLandmarkIndex
+        
+        // Use smaller landmark size (2px radius by default)
+        const size = landmarkSize
+        const color = landmark.color || (isFemaleAccent ? "#ec4899" : "#38bdf8")
+        const activeColor = isFemaleAccent ? "#f472b6" : "#7dd3fc"
+
+        // Outer glow - smaller for better accuracy
+        ctx.shadowBlur = isDragging ? 12 : 8
+        ctx.shadowColor = isActive ? activeColor : color
+
+        // Draw circle - MUCH smaller for precision (2-3px radius)
+        ctx.beginPath()
+        ctx.arc(landmark.x + drawX, landmark.y + drawY, isDragging ? size + 1 : size, 0, 2 * Math.PI)
+        ctx.fillStyle = isActive ? activeColor : color
+        ctx.fill()
+
+        // Inner circle - even smaller for precision
+        ctx.beginPath()
+        ctx.arc(landmark.x + drawX, landmark.y + drawY, isDragging ? size * 0.6 : size * 0.5, 0, 2 * Math.PI)
+        ctx.fillStyle = "rgba(255, 255, 255, 0.9)"
+        ctx.fill()
+
+        ctx.shadowBlur = 0
+
+        // Draw number - smaller font
+        ctx.font = "bold 10px sans-serif"
+        ctx.fillStyle = "#fff"
+        ctx.textAlign = "center"
+        ctx.textBaseline = "middle"
+        ctx.fillText((index + 1).toString(), landmark.x + drawX, landmark.y + drawY - 15)
       })
 
       ctx.restore()
     }
-  }
-
-  const drawLandmark = (
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    isActive: boolean,
-    number: number
-  ) => {
-    const color = isFemaleAccent ? "#ec4899" : "#38bdf8"
-    const activeColor = isFemaleAccent ? "#f472b6" : "#7dd3fc"
-
-    // Outer glow - smaller for better accuracy
-    ctx.shadowBlur = 8
-    ctx.shadowColor = isActive ? activeColor : color
-
-    // Draw circle - smaller for better accuracy
-    ctx.beginPath()
-    ctx.arc(x, y, isActive ? 6 : 5, 0, 2 * Math.PI)
-    ctx.fillStyle = isActive ? activeColor : color
-    ctx.fill()
-
-    // Inner circle - smaller for better accuracy
-    ctx.beginPath()
-    ctx.arc(x, y, isActive ? 3 : 2.5, 0, 2 * Math.PI)
-    ctx.fillStyle = "rgba(255, 255, 255, 0.9)"
-    ctx.fill()
-
-    ctx.shadowBlur = 0
-
-    // Draw number - smaller font
-    ctx.font = "bold 10px sans-serif"
-    ctx.fillStyle = "#fff"
-    ctx.textAlign = "center"
-    ctx.textBaseline = "middle"
-    ctx.fillText(number.toString(), x, y - 18)
   }
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -286,23 +333,27 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
       const imgAspectRatio = img.width / img.height
       const canvasAspectRatio = canvas.width / canvas.height
       
-      let drawX, drawY
+      let drawX, drawY, drawWidth, drawHeight
       
       if (imgAspectRatio > canvasAspectRatio) {
         // Image is wider than canvas
-        const drawHeight = canvas.width / imgAspectRatio
+        drawWidth = canvas.width
+        drawHeight = drawWidth / imgAspectRatio
         drawX = 0
         drawY = (canvas.height - drawHeight) / 2
       } else {
         // Image is taller than canvas
-        const drawWidth = canvas.height * imgAspectRatio
+        drawHeight = canvas.height
+        drawWidth = drawHeight * imgAspectRatio
         drawX = (canvas.width - drawWidth) / 2
         drawY = 0
       }
       
       // Adjust for zoom, pan, and centering
-      const x = (clickX - panOffset.x) / zoomLevel - drawX
-      const y = (clickY - panOffset.y) / zoomLevel - drawY
+      const zoomCenterX = canvas.width / 2
+      const zoomCenterY = canvas.height / 2
+      const x = ((clickX - panOffset.x - zoomCenterX) / zoomLevel + zoomCenterX - drawX)
+      const y = ((clickY - panOffset.y - zoomCenterY) / zoomLevel + zoomCenterY - drawY)
 
       if (editingLandmarkIndex !== null) {
         // Update existing landmark position
@@ -345,6 +396,8 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
             x,
             y,
             label: currentLandmark.label,
+            group: currentLandmark.group,
+            color: currentLandmark.color,
           }
 
           if (profileType === "front") {
@@ -405,16 +458,18 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
       const imgAspectRatio = img.width / img.height
       const canvasAspectRatio = canvas.width / canvas.height
       
-      let drawX, drawY
+      let drawX, drawY, drawWidth, drawHeight
       
       if (imgAspectRatio > canvasAspectRatio) {
         // Image is wider than canvas
-        const drawHeight = canvas.width / imgAspectRatio
+        drawWidth = canvas.width
+        drawHeight = drawWidth / imgAspectRatio
         drawX = 0
         drawY = (canvas.height - drawHeight) / 2
       } else {
         // Image is taller than canvas
-        const drawWidth = canvas.height * imgAspectRatio
+        drawHeight = canvas.height
+        drawWidth = drawHeight * imgAspectRatio
         drawX = (canvas.width - drawWidth) / 2
         drawY = 0
       }
@@ -436,9 +491,10 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
           Math.pow(clickX - landmarkCanvasX, 2) + Math.pow(clickY - landmarkCanvasY, 2)
         )
         
-        // If click is within 20 pixels of landmark
-        if (distance < 20) {
+        // If click is within 15 pixels of landmark (smaller for precision)
+        if (distance < 15) {
           setDraggingLandmarkIndex(i)
+          setEditingLandmarkIndex(i)
           return
         }
       }
@@ -512,7 +568,7 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
   }
 
   const handleZoomIn = () => {
-    setZoomLevel(prev => Math.min(prev + 0.25, 3))
+    setZoomLevel(prev => Math.min(prev + 0.25, 4)) // Increased max zoom to 4x
   }
 
   const handleZoomOut = () => {
@@ -537,16 +593,18 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
         const imgAspectRatio = img.width / img.height
         const canvasAspectRatio = canvas.width / canvas.height
         
-        let drawX, drawY
+        let drawX, drawY, drawWidth, drawHeight
         
         if (imgAspectRatio > canvasAspectRatio) {
           // Image is wider than canvas
-          const drawHeight = canvas.width / imgAspectRatio
+          drawWidth = canvas.width
+          drawHeight = drawWidth / imgAspectRatio
           drawX = 0
           drawY = (canvas.height - drawHeight) / 2
         } else {
           // Image is taller than canvas
-          const drawWidth = canvas.height * imgAspectRatio
+          drawHeight = canvas.height
+          drawWidth = drawHeight * imgAspectRatio
           drawX = (canvas.width - drawWidth) / 2
           drawY = 0
         }
@@ -555,11 +613,11 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
         const landmarkCanvasX = lastLandmark.x + drawX
         const landmarkCanvasY = lastLandmark.y + drawY
         
-        // Set zoom to 2x and center on the landmark
-        setZoomLevel(2)
+        // Set zoom to 2.5x and center on the landmark
+        setZoomLevel(2.5)
         setPanOffset({
-          x: canvas.width / 2 - landmarkCanvasX * 2,
-          y: canvas.height / 2 - landmarkCanvasY * 2
+          x: canvas.width / 2 - landmarkCanvasX * 2.5,
+          y: canvas.height / 2 - landmarkCanvasY * 2.5
         })
       }
     }
@@ -573,7 +631,7 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
 
   const handleLandmarkClick = (index: number) => {
     setCurrentLandmarkIndex(index)
-    setEditingLandmarkIndex(null)
+    setEditingLandmarkIndex(index)
   }
 
   const handleNextLandmark = () => {
@@ -822,6 +880,38 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
                       <MousePointer2 className="size-2.5 text-foreground" />
                     </button>
                   </div>
+
+                  {/* Precision tools */}
+                  <div className="flex items-center gap-0.5 mt-1 pt-1 border-t border-border/30">
+                    <button
+                      onClick={() => setShowGrid(!showGrid)}
+                      className={`p-0.5 rounded-sm transition-colors flex items-center justify-center ${showGrid ? "bg-secondary/70" : "hover:bg-secondary/50"}`}
+                      title="Toggle Grid"
+                    >
+                      <Grid3x3 className="size-2.5 text-foreground" />
+                    </button>
+                    <button
+                      onClick={() => setShowCrosshair(!showCrosshair)}
+                      className={`p-0.5 rounded-sm transition-colors flex items-center justify-center ${showCrosshair ? "bg-secondary/70" : "hover:bg-secondary/50"}`}
+                      title="Toggle Crosshair"
+                    >
+                      <Crosshair className="size-2.5 text-foreground" />
+                    </button>
+                    <button
+                      onClick={() => setLandmarkSize(Math.max(1, landmarkSize - 0.5))}
+                      className="p-0.5 hover:bg-secondary/50 rounded-sm transition-colors flex items-center justify-center"
+                      title="Decrease Landmark Size"
+                    >
+                      <Minus className="size-2.5 text-foreground" />
+                    </button>
+                    <button
+                      onClick={() => setLandmarkSize(Math.min(5, landmarkSize + 0.5))}
+                      className="p-0.5 hover:bg-secondary/50 rounded-sm transition-colors flex items-center justify-center"
+                      title="Increase Landmark Size"
+                    >
+                      <Plus className="size-2.5 text-foreground" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -872,7 +962,7 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
                 {zoomLevel > 1 ? (
                   <span className="flex items-center gap-0.5">
                     <MousePointer2 className="size-2.5" />
-                    Drag to pan • Zoom: {Math.round(zoomLevel * 100)}%
+                    Drag to pan • Zoom: {Math.round(zoomLevel * 100)}% • Landmark size: {landmarkSize.toFixed(1)}px
                   </span>
                 ) : (
                   "Click on the image to place landmarks"
@@ -963,6 +1053,10 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
                 <div className="flex items-center gap-0.5 text-xs text-muted-foreground">
                   <div className="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
                   <span>Use Next/Previous buttons to navigate between landmarks</span>
+                </div>
+                <div className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400"></div>
+                  <span>Use grid and crosshair for precise alignment</span>
                 </div>
               </div>
 
@@ -1094,3 +1188,6 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
     </div>
   )
 }
+
+
+       
