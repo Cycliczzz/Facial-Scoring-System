@@ -702,10 +702,14 @@ export function LandmarkMarker({ initialGender = "male", initialEthnicity }: Lan
   }
 
   const handleContinue = () => {
-    // TODO: Save landmarks and proceed to analysis
-    console.log("Front landmarks:", frontLandmarks)
-    console.log("Side landmarks:", sideLandmarks)
-    // router.push("/dashboard")
+    // Save landmarks to localStorage for the analysis page
+    localStorage.setItem("frontLandmarks", JSON.stringify(frontLandmarks))
+    localStorage.setItem("sideLandmarks", JSON.stringify(sideLandmarks))
+    
+    // Navigate to analysis page with gender and ethnicity params
+    const genderQuery = initialGender ?? "male"
+    const ethnicityQuery = initialEthnicity ? `&ethnicity=${initialEthnicity}` : ""
+    router.push(`/analysis?gender=${genderQuery}${ethnicityQuery}`)
   }
 
   const accentColor = isFemaleAccent ? "pink" : "sky"

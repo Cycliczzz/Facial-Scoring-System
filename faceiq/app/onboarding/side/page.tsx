@@ -1,15 +1,15 @@
 import { redirect } from "next/navigation"
 import { getServerSession } from "next-auth/next"
 
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth"
 import { Card, CardContent } from "@/components/ui/card"
 import { SidePhotoUploader } from "./SidePhotoUploader"
 
 interface SidePageProps {
-  searchParams?: {
+  searchParams?: Promise<{
     gender?: string
     ethnicity?: string
-  }
+  }>
 }
 
 export default async function SidePage({ searchParams }: SidePageProps) {
@@ -19,8 +19,9 @@ export default async function SidePage({ searchParams }: SidePageProps) {
     redirect("/login")
   }
 
-  const genderParam = searchParams?.gender === "female" ? "female" : "male"
-  const ethnicityParam = searchParams?.ethnicity
+  const params = await searchParams
+  const genderParam = params?.gender === "female" ? "female" : "male"
+  const ethnicityParam = params?.ethnicity
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">

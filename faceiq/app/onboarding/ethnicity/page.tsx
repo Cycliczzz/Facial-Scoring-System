@@ -1,14 +1,14 @@
 import { redirect } from "next/navigation"
 import { getServerSession } from "next-auth/next"
 
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth"
 import { Card, CardContent } from "@/components/ui/card"
 import { EthnicitySelector } from "../EthnicitySelector"
 
 interface EthnicityPageProps {
-  searchParams?: {
+  searchParams?: Promise<{
     gender?: string
-  }
+  }>
 }
 
 export default async function EthnicityPage({ searchParams }: EthnicityPageProps) {
@@ -18,7 +18,8 @@ export default async function EthnicityPage({ searchParams }: EthnicityPageProps
     redirect("/login")
   }
 
-  const genderParam = searchParams?.gender === "female" ? "female" : "male"
+  const params = await searchParams
+  const genderParam = params?.gender === "female" ? "female" : "male"
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
