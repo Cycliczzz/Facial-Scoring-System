@@ -765,10 +765,113 @@ function drawMeasurement(
 }
 
 // ============================================================
+// Sample Landmarks (fallback when no landmarks in localStorage)
+// ============================================================
+
+function getSampleFrontLandmarks(): LandmarkPoint[] {
+  return [
+    // Hairline
+    { id: "hairline", x: 0.5, y: 0.05, label: "Hairline", group: "head" },
+    // Eyes - left
+    { id: "left_pupil", x: 0.35, y: 0.32, label: "L Pupil", group: "eyes" },
+    { id: "left_medial_canthus", x: 0.30, y: 0.32, label: "L Medial", group: "eyes" },
+    { id: "left_lateral_canthus", x: 0.40, y: 0.32, label: "L Lateral", group: "eyes" },
+    { id: "left_upper_eyelid", x: 0.35, y: 0.30, label: "L Upper", group: "eyes" },
+    { id: "left_lower_eyelid", x: 0.35, y: 0.34, label: "L Lower", group: "eyes" },
+    // Eyes - right
+    { id: "right_pupil", x: 0.65, y: 0.32, label: "R Pupil", group: "eyes" },
+    { id: "right_medial_canthus", x: 0.70, y: 0.32, label: "R Medial", group: "eyes" },
+    { id: "right_lateral_canthus", x: 0.60, y: 0.32, label: "R Lateral", group: "eyes" },
+    { id: "right_upper_eyelid", x: 0.65, y: 0.30, label: "R Upper", group: "eyes" },
+    { id: "right_lower_eyelid", x: 0.65, y: 0.34, label: "R Lower", group: "eyes" },
+    // Brows - left
+    { id: "left_brow_head", x: 0.28, y: 0.26, label: "L Brow Head", group: "brows" },
+    { id: "left_brow_arch", x: 0.35, y: 0.24, label: "L Brow Arch", group: "brows" },
+    { id: "left_brow_peak", x: 0.38, y: 0.24, label: "L Brow Peak", group: "brows" },
+    { id: "left_brow_tail", x: 0.42, y: 0.26, label: "L Brow Tail", group: "brows" },
+    // Brows - right
+    { id: "right_brow_head", x: 0.72, y: 0.26, label: "R Brow Head", group: "brows" },
+    { id: "right_brow_arch", x: 0.65, y: 0.24, label: "R Brow Arch", group: "brows" },
+    { id: "right_brow_peak", x: 0.62, y: 0.24, label: "R Brow Peak", group: "brows" },
+    { id: "right_brow_tail", x: 0.58, y: 0.26, label: "R Brow Tail", group: "brows" },
+    // Nose
+    { id: "left_nose_side", x: 0.44, y: 0.48, label: "L Nose", group: "nose" },
+    { id: "right_nose_side", x: 0.56, y: 0.48, label: "R Nose", group: "nose" },
+    { id: "left_nose_bridge", x: 0.47, y: 0.38, label: "L Bridge", group: "nose" },
+    { id: "right_nose_bridge", x: 0.53, y: 0.38, label: "R Bridge", group: "nose" },
+    { id: "nasal_base", x: 0.5, y: 0.44, label: "Nasal Base", group: "nose" },
+    { id: "nose_bottom", x: 0.5, y: 0.52, label: "Nose Bottom", group: "nose" },
+    // Mouth
+    { id: "left_mouth_corner", x: 0.38, y: 0.60, label: "L Mouth", group: "mouth" },
+    { id: "right_mouth_corner", x: 0.62, y: 0.60, label: "R Mouth", group: "mouth" },
+    { id: "cupids_bow", x: 0.5, y: 0.58, label: "Cupid's Bow", group: "mouth" },
+    { id: "inner_cupids_bow", x: 0.5, y: 0.59, label: "Inner Cupid", group: "mouth" },
+    { id: "mouth_middle", x: 0.5, y: 0.61, label: "Mouth Mid", group: "mouth" },
+    { id: "lower_lip_center", x: 0.5, y: 0.63, label: "Lower Lip", group: "mouth" },
+    // Jaw
+    { id: "left_upper_jaw_angle", x: 0.20, y: 0.55, label: "L Upper Jaw", group: "jaw" },
+    { id: "right_upper_jaw_angle", x: 0.80, y: 0.55, label: "R Upper Jaw", group: "jaw" },
+    { id: "left_lower_jaw_angle", x: 0.22, y: 0.70, label: "L Lower Jaw", group: "jaw" },
+    { id: "right_lower_jaw_angle", x: 0.78, y: 0.70, label: "R Lower Jaw", group: "jaw" },
+    { id: "left_chin", x: 0.42, y: 0.82, label: "L Chin", group: "jaw" },
+    { id: "right_chin", x: 0.58, y: 0.82, label: "R Chin", group: "jaw" },
+    { id: "chin_bottom", x: 0.5, y: 0.88, label: "Chin Bottom", group: "jaw" },
+    // Cheeks & temples
+    { id: "left_cheekbone", x: 0.18, y: 0.42, label: "L Cheek", group: "cheeks" },
+    { id: "right_cheekbone", x: 0.82, y: 0.42, label: "R Cheek", group: "cheeks" },
+    { id: "left_temple", x: 0.12, y: 0.28, label: "L Temple", group: "head" },
+    { id: "right_temple", x: 0.88, y: 0.28, label: "R Temple", group: "head" },
+    // Ears
+    { id: "left_outer_ear", x: 0.05, y: 0.35, label: "L Ear", group: "ears" },
+    { id: "right_outer_ear", x: 0.95, y: 0.35, label: "R Ear", group: "ears" },
+    // Neck
+    { id: "left_neck_point", x: 0.30, y: 0.95, label: "L Neck", group: "neck" },
+    { id: "right_neck_point", x: 0.70, y: 0.95, label: "R Neck", group: "neck" },
+  ]
+}
+
+function getSampleSideLandmarks(): LandmarkPoint[] {
+  return [
+    { id: "top_of_head", x: 0.5, y: 0.02, label: "Top", group: "head" },
+    { id: "occiput", x: 0.85, y: 0.30, label: "Occiput", group: "head" },
+    { id: "hairline_profile", x: 0.45, y: 0.08, label: "Hairline", group: "head" },
+    { id: "forehead", x: 0.40, y: 0.18, label: "Forehead", group: "head" },
+    { id: "glabella", x: 0.38, y: 0.25, label: "Glabella", group: "head" },
+    { id: "nasal_bridge_root", x: 0.35, y: 0.32, label: "Nasion", group: "nose" },
+    { id: "rhinion", x: 0.28, y: 0.40, label: "Rhinion", group: "nose" },
+    { id: "supratip", x: 0.22, y: 0.46, label: "Supratip", group: "nose" },
+    { id: "nose_tip", x: 0.18, y: 0.50, label: "Nose Tip", group: "nose" },
+    { id: "infratip", x: 0.20, y: 0.52, label: "Infratip", group: "nose" },
+    { id: "columella", x: 0.25, y: 0.53, label: "Columella", group: "nose" },
+    { id: "subnasale", x: 0.30, y: 0.54, label: "Subnasale", group: "nose" },
+    { id: "subalare", x: 0.28, y: 0.52, label: "Subalare", group: "nose" },
+    { id: "upper_lip", x: 0.32, y: 0.58, label: "Upper Lip", group: "lips" },
+    { id: "mouth_corner", x: 0.35, y: 0.60, label: "Mouth", group: "lips" },
+    { id: "lower_lip", x: 0.33, y: 0.62, label: "Lower Lip", group: "lips" },
+    { id: "labiomental_fold", x: 0.38, y: 0.68, label: "Labiomental", group: "chin" },
+    { id: "chin_point", x: 0.35, y: 0.78, label: "Chin", group: "chin" },
+    { id: "chin_bottom", x: 0.40, y: 0.85, label: "Chin Bottom", group: "chin" },
+    { id: "upper_jaw_angle", x: 0.55, y: 0.55, label: "Upper Jaw", group: "jaw" },
+    { id: "lower_jaw_angle", x: 0.60, y: 0.72, label: "Lower Jaw", group: "jaw" },
+    { id: "porion", x: 0.70, y: 0.30, label: "Porion", group: "head" },
+    { id: "tragus", x: 0.72, y: 0.35, label: "Tragus", group: "ears" },
+    { id: "intertragic_notch", x: 0.74, y: 0.38, label: "Intertragic", group: "ears" },
+    { id: "orbitale", x: 0.45, y: 0.30, label: "Orbitale", group: "eyes" },
+    { id: "corneal_apex", x: 0.42, y: 0.32, label: "Cornea", group: "eyes" },
+    { id: "eyelid_end", x: 0.44, y: 0.33, label: "Eyelid End", group: "eyes" },
+    { id: "lower_eyelid", x: 0.44, y: 0.34, label: "Lower Lid", group: "eyes" },
+    { id: "cheekbone", x: 0.55, y: 0.42, label: "Cheekbone", group: "cheeks" },
+    { id: "cervical_point", x: 0.65, y: 0.88, label: "Cervical", group: "neck" },
+    { id: "neck_point", x: 0.55, y: 0.95, label: "Neck", group: "neck" },
+  ]
+}
+
+// ============================================================
 // MAIN DASHBOARD COMPONENT
 // ============================================================
 
 export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisDashboardProps) {
+
   const searchParams = useSearchParams()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -803,8 +906,22 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
     setFrontImageUrl(frontImg || "/hero-samples/sample-1.jpg")
     setSideImageUrl(sideImg || "/hero-samples/sample-3.jpg")
 
-    if (frontLm) setFrontLandmarks(JSON.parse(frontLm))
-    if (sideLm) setSideLandmarks(JSON.parse(sideLm))
+    if (frontLm) {
+      setFrontLandmarks(JSON.parse(frontLm))
+    } else {
+      // Use sample front landmarks as fallback
+      const sampleFront = getSampleFrontLandmarks()
+      setFrontLandmarks(sampleFront)
+      localStorage.setItem("frontLandmarks", JSON.stringify(sampleFront))
+    }
+    if (sideLm) {
+      setSideLandmarks(JSON.parse(sideLm))
+    } else {
+      // Use sample side landmarks as fallback
+      const sampleSide = getSampleSideLandmarks()
+      setSideLandmarks(sampleSide)
+      localStorage.setItem("sideLandmarks", JSON.stringify(sampleSide))
+    }
   }, [])
 
   // Calculate analysis when landmarks are loaded
@@ -823,15 +940,29 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
   const currentImage = profileView === "front" ? frontImageUrl : sideImageUrl
   const currentLandmarks = profileView === "front" ? frontLandmarks : sideLandmarks
   const currentMeasurements = profileView === "front"
-    ? results?.frontMeasurements || []
-    : results?.sideMeasurements || []
+    ? (results?.frontMeasurements || [])
+    : (results?.sideMeasurements || [])
 
-  const filteredMeasurements = currentMeasurements.filter(m =>
+  // All measurements (front + side) for "All" tab
+  const allMeasurements = [
+    ...(results?.frontMeasurements || []),
+    ...(results?.sideMeasurements || []),
+  ]
+
+  // Filter measurements based on active tab
+  const tabMeasurements = activeTab === "all"
+    ? allMeasurements
+    : activeTab === "front"
+      ? (results?.frontMeasurements || [])
+      : (results?.sideMeasurements || [])
+
+  const filteredMeasurements = tabMeasurements.filter(m =>
     m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     m.category.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   // Draw canvas function - uses a preloaded image
+
   const drawCanvas = useCallback((img: HTMLImageElement) => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -877,7 +1008,7 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
     // Draw image
     ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight)
 
-    // Draw landmarks
+    // Draw landmarks - coordinates are stored as 0-1 ratios, denormalize to pixel positions
     const lmMap: Record<string, LandmarkPoint> = {}
     currentLandmarks.forEach(lm => { lmMap[lm.id] = lm })
 
@@ -885,17 +1016,20 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
       const isSelected = selectedMeasurement?.id === lm.id
       const color = lm.color || (isFemaleAccent ? "#ec4899" : "#38bdf8")
       const size = isSelected ? 4 : 3
+      // Denormalize from 0-1 ratio to pixel coordinates relative to displayed image
+      const px = lm.x * drawWidth + drawX
+      const py = lm.y * drawHeight + drawY
 
       ctx.shadowBlur = isSelected ? 12 : 6
       ctx.shadowColor = color
 
       ctx.beginPath()
-      ctx.arc(lm.x + drawX, lm.y + drawY, size, 0, 2 * Math.PI)
+      ctx.arc(px, py, size, 0, 2 * Math.PI)
       ctx.fillStyle = color
       ctx.fill()
 
       ctx.beginPath()
-      ctx.arc(lm.x + drawX, lm.y + drawY, size * 0.5, 0, 2 * Math.PI)
+      ctx.arc(px, py, size * 0.5, 0, 2 * Math.PI)
       ctx.fillStyle = "rgba(255,255,255,0.9)"
       ctx.fill()
 
@@ -906,7 +1040,7 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
         ctx.fillStyle = "#fff"
         ctx.textAlign = "center"
         ctx.textBaseline = "bottom"
-        ctx.fillText(lm.label, lm.x + drawX, lm.y + drawY - 8)
+        ctx.fillText(lm.label, px, py - 8)
       }
     })
 
@@ -965,7 +1099,22 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
   }
 
   const handleMeasurementClick = (m: MeasurementResult) => {
-    setSelectedMeasurement(prev => prev?.id === m.id ? null : m)
+    // Toggle selection
+    if (selectedMeasurement?.id === m.id) {
+      setSelectedMeasurement(null)
+      return
+    }
+    // Determine which profile this measurement belongs to
+    const isFront = results?.frontMeasurements.some(fm => fm.id === m.id)
+    const targetView: ProfileView = isFront ? "front" : "side"
+    // Switch to the correct profile view
+    if (targetView !== profileView) {
+      setProfileView(targetView)
+      setZoomLevel(1)
+      setPanOffset({ x: 0, y: 0 })
+      setImageLoaded(false)
+    }
+    setSelectedMeasurement(m)
   }
 
   const handleProfileChange = (view: ProfileView) => {
@@ -975,6 +1124,24 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
     setPanOffset({ x: 0, y: 0 })
     setImageLoaded(false)
   }
+
+  const handleTabChange = (tab: "all" | "front" | "side") => {
+    setActiveTab(tab)
+    setSelectedMeasurement(null)
+    // Switch profile view when clicking front/side tab
+    if (tab === "front" && profileView !== "front") {
+      setProfileView("front")
+      setZoomLevel(1)
+      setPanOffset({ x: 0, y: 0 })
+      setImageLoaded(false)
+    } else if (tab === "side" && profileView !== "side") {
+      setProfileView("side")
+      setZoomLevel(1)
+      setPanOffset({ x: 0, y: 0 })
+      setImageLoaded(false)
+    }
+  }
+
 
   // Sort measurements by score
   const sortedMeasurements = [...filteredMeasurements].sort((a, b) => b.score - a.score)
@@ -1073,15 +1240,15 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
             {/* Tab filter */}
             <div className="flex items-center gap-1 bg-card border border-border/50 rounded-lg p-0.5">
               <button
-                onClick={() => setActiveTab("all")}
+                onClick={() => handleTabChange("all")}
                 className={`flex-1 px-2 py-1 rounded text-[10px] font-medium transition-all ${
                   activeTab === "all" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary/50"
                 }`}
               >
-                All ({currentMeasurements.length})
+                All ({allMeasurements.length})
               </button>
               <button
-                onClick={() => setActiveTab("front")}
+                onClick={() => handleTabChange("front")}
                 className={`flex-1 px-2 py-1 rounded text-[10px] font-medium transition-all ${
                   activeTab === "front" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary/50"
                 }`}
@@ -1089,7 +1256,7 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
                 Front ({results?.frontMeasurements.length || 0})
               </button>
               <button
-                onClick={() => setActiveTab("side")}
+                onClick={() => handleTabChange("side")}
                 className={`flex-1 px-2 py-1 rounded text-[10px] font-medium transition-all ${
                   activeTab === "side" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary/50"
                 }`}
@@ -1097,6 +1264,7 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
                 Side ({results?.sideMeasurements.length || 0})
               </button>
             </div>
+
 
             {/* Measurement list */}
             <div className="space-y-1.5 max-h-[calc(100vh-280px)] overflow-y-auto pr-1 custom-scrollbar">

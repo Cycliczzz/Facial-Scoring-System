@@ -97,10 +97,10 @@ export function SidePhotoUploader({ initialGender = "male", initialEthnicity }: 
 
       setSuccess(true)
       
-      // Redirect to landmarks page
+      // Redirect to front landmarks page
       const genderQuery = initialGender ?? "male"
       const ethnicityQuery = initialEthnicity ? `&ethnicity=${initialEthnicity}` : ""
-      router.push(`/onboarding/landmarks?gender=${genderQuery}${ethnicityQuery}`)
+      router.push(`/onboarding/front-landmarks?gender=${genderQuery}${ethnicityQuery}`)
     } catch (err) {
       console.error(err)
       setError("Something went wrong while uploading. Please try again.")
