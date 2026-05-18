@@ -474,6 +474,59 @@
     animation: hero-card-pop-out 0.22s ease-in forwards;
   }
 
+  /* --- Hero Image Report animations --- */
+  .hero-report-open {
+    animation: hero-report-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .hero-report-closing {
+    animation: hero-report-out 0.2s ease-in forwards;
+  }
+
+  @keyframes hero-report-in {
+    0% {
+      opacity: 0;
+      transform: scale(0.92);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes hero-report-out {
+    0% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+  }
+
+  @keyframes scan-dot {
+    0%, 100% {
+      opacity: 0.3;
+      transform: scale(0.8);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.2);
+    }
+  }
+
+  @keyframes fade-slide-up {
+    0% {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   @keyframes hero-image-fade {
     0% {
       opacity: 0;
