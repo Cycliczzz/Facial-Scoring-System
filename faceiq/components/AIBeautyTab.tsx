@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Brain, Sparkles, Activity } from "lucide-react"
+import { Brain, Sparkles, Activity, Shuffle, VenetianMask, LayoutGrid } from "lucide-react"
 
 // ============================================================
 // Types for PyTorch Model Scores
@@ -97,18 +97,16 @@ function AnimatedScoreRing({ score }: { score: number }) {
 
 function ScanCard({
   imageUrl,
-  label,
   scanProgress,
 }: {
   imageUrl: string
-  label: string
   scanProgress: number
 }) {
   return (
-    <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900/50 border border-white/10 shadow-2xl">
-      {/* Background image with blur */}
+    <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900/50 border border-white/10 shadow-2xl [&>*]:rounded-2xl">
+      {/* Background image */}
       <div
-        className="absolute inset-0 scale-110"
+        className="absolute inset-0"
         style={{
           backgroundImage: `url(${imageUrl})`,
           backgroundSize: "cover",
@@ -127,7 +125,7 @@ function ScanCard({
         }}
       />
 
-      {/* Scan line - exact same as HeroImageReport */}
+      {/* Scan line */}
       <div
         className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-purple-400 to-transparent"
         style={{
@@ -138,7 +136,7 @@ function ScanCard({
         }}
       />
 
-      {/* Corner brackets - exact same as HeroImageReport */}
+      {/* Corner brackets */}
       <div className="absolute inset-6 pointer-events-none">
         <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-purple-400/60 rounded-tl-lg" />
         <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-purple-400/60 rounded-tr-lg" />
@@ -146,7 +144,7 @@ function ScanCard({
         <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-purple-400/60 rounded-br-lg" />
       </div>
 
-      {/* Scanning text - exact same as HeroImageReport */}
+      {/* Scanning text */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <div className="relative z-10 text-center space-y-3">
           <div className="inline-flex items-center gap-2 rounded-full bg-purple-500/15 px-4 py-1.5 border border-purple-500/30">
@@ -181,11 +179,65 @@ function ScanCard({
           </p>
         </div>
       </div>
+    </div>
+  )
+}
 
-      {/* Label */}
-      <div className="absolute top-4 left-4 z-20 bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full border border-white/10">
-        <span className="text-[10px] font-medium text-white/60">{label}</span>
+// ============================================================
+// Score Explanation Component
+// ============================================================
+
+const scoreFactors = [
+  {
+    icon: Shuffle,
+    label: "Harmony",
+    description: "Proportional balance between facial thirds, symmetry of bilateral features, and the overall cohesion of facial elements working together.",
+    gradient: "from-emerald-500/20 to-teal-500/20",
+    border: "border-emerald-500/20",
+    iconColor: "text-emerald-300",
+  },
+  {
+    icon: VenetianMask,
+    label: "Sexual Dimorphism",
+    description: "Masculine or feminine markers such as brow ridge prominence, jaw width, chin shape, and cheekbone definition relative to your gender.",
+    gradient: "from-violet-500/20 to-purple-500/20",
+    border: "border-violet-500/20",
+    iconColor: "text-violet-300",
+  },
+  {
+    icon: LayoutGrid,
+    label: "Features & Angularity",
+    description: "Definition of individual features — nose shape, eye spacing, lip fullness — and the angular transitions between facial planes that create structure.",
+    gradient: "from-sky-500/20 to-blue-500/20",
+    border: "border-sky-500/20",
+    iconColor: "text-sky-300",
+  },
+]
+
+function ScoreExplanation() {
+  return (
+    <div className="w-full space-y-2.5 mt-6">
+      <div className="text-[10px] font-medium uppercase tracking-[0.15em] text-white/30 text-center mb-3">
+        What this score evaluates
       </div>
+      {scoreFactors.map((factor) => (
+        <div
+          key={factor.label}
+          className={`group relative rounded-xl bg-gradient-to-br ${factor.gradient} ${factor.border} border p-3 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.03]`}
+        >
+          <div className="flex items-start gap-3">
+            <div className={`mt-0.5 size-7 rounded-lg bg-white/5 flex items-center justify-center shrink-0 ${factor.iconColor}`}>
+              <factor.icon className="size-3.5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[12px] font-semibold text-white/80">{factor.label}</div>
+              <p className="text-[10.5px] leading-relaxed text-white/40 mt-0.5">
+                {factor.description}
+              </p>
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -364,19 +416,20 @@ export default function AIBeautyTab({
 
           {/* Main layout */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-            {/* Left: Score */}
-            <div className="flex flex-col items-center justify-center pt-4">
+            {/* Left: Score + Explanation */}
+            <div className="flex flex-col items-center pt-4">
               <AnimatedScoreRing score={finalScore} />
               <div className="text-center mt-4">
                 <div className="text-sm font-semibold text-white/90">{getAssessment(finalScore)}</div>
               </div>
+              <ScoreExplanation />
             </div>
 
             {/* Right: Scanning images */}
             <div className="grid grid-cols-2 gap-4">
-              <ScanCard imageUrl={frontImage} label="Front Profile" scanProgress={scanProgress} />
+              <ScanCard imageUrl={frontImage} scanProgress={scanProgress} />
               {sideImage && (
-                <ScanCard imageUrl={sideImage} label="Side Profile" scanProgress={scanProgress} />
+                <ScanCard imageUrl={sideImage} scanProgress={scanProgress} />
               )}
             </div>
           </div>
@@ -411,19 +464,20 @@ export default function AIBeautyTab({
 
         {/* Main layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          {/* Left: Score */}
-          <div className="flex flex-col items-center justify-center pt-4">
+          {/* Left: Score + Explanation */}
+          <div className="flex flex-col items-center pt-4">
             <AnimatedScoreRing score={finalScore} />
             <div className="text-center mt-4">
               <div className="text-sm font-semibold text-white/90">{getAssessment(finalScore)}</div>
             </div>
+            <ScoreExplanation />
           </div>
 
           {/* Right: Result images */}
           <div className="grid grid-cols-2 gap-4">
             <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900/50 border border-white/10 shadow-2xl">
               <div
-                className="absolute inset-0 scale-110"
+                className="absolute inset-0"
                 style={{
                   backgroundImage: `url(${frontImage})`,
                   backgroundSize: "cover",
@@ -431,14 +485,11 @@ export default function AIBeautyTab({
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-transparent to-black/40" />
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-sm px-4 py-1.5 rounded-full border border-white/10">
-                <span className="text-[11px] font-medium text-white/70">Front Profile</span>
-              </div>
             </div>
             {sideImage && (
               <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900/50 border border-white/10 shadow-2xl">
                 <div
-                  className="absolute inset-0 scale-110"
+                  className="absolute inset-0"
                   style={{
                     backgroundImage: `url(${sideImage})`,
                     backgroundSize: "cover",
@@ -446,9 +497,6 @@ export default function AIBeautyTab({
                   }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-transparent to-black/40" />
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-sm px-4 py-1.5 rounded-full border border-white/10">
-                  <span className="text-[11px] font-medium text-white/70">Side Profile</span>
-                </div>
               </div>
             )}
           </div>
