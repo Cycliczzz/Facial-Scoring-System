@@ -1,5 +1,5 @@
 {
-  "dependencies": {
-    "typescript": "^6.0.3"
-  }
+  "name": "facial-scoring-system",
+  "private": true,
+  "workspaces": ["faceiq"]
 }

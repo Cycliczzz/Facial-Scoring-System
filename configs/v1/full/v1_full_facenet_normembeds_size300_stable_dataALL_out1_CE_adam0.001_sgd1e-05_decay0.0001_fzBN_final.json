@@ -1,0 +1,10 @@
+{
+    "image_target_size": [
+        300,
+        300
+    ],
+    "backbone": "facenet",
+    "normalize_embeddings": true,
+    "pooling": "avg",
+    "n_outputs": 1
+}

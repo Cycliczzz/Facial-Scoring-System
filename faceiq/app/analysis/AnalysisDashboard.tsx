@@ -8,12 +8,15 @@ import {
   ChevronLeft, ChevronRight, Sparkles, Star, Award, Target,
   Ruler, Activity, BarChart3, PieChart, Sliders, Layers,
   ArrowUp, ArrowDown, Minus, Plus, Crosshair, ScanLine,
-  GripVertical, Move, Maximize, Minimize, Download, Share2
+  GripVertical, Move, Maximize, Minimize, Download, Share2,
+  Brain,
+  Cpu
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { calculateAnalysis } from "@/lib/analysis/calculator"
 import type { AnalysisResults, MeasurementResult, LandmarkPoint } from "@/lib/analysis/types"
 import { FRONT_MEASUREMENTS_META, SIDE_MEASUREMENTS_META } from "@/lib/analysis/idealValues"
+import AIBeautyTab from "@/components/AIBeautyTab"
 
 // ============================================================
 // Types
@@ -24,7 +27,7 @@ interface AnalysisDashboardProps {
   initialEthnicity: string
 }
 
-type ProfileView = "front" | "side"
+type ProfileView = "front" | "side" | "ai"
 
 // ============================================================
 // Color helpers
@@ -64,38 +67,41 @@ function ScoreGauge({ score, label, size = "md" }: { score: number; label: strin
   const progress = Math.min(score / 10, 1)
   const strokeDashoffset = circumference * (1 - progress)
   const strokeWidth = size === "lg" ? 6 : size === "md" ? 5 : 4
+  const svgSize = (radius + strokeWidth) * 2 + 4
 
   return (
     <div className="relative flex flex-col items-center gap-1">
-      <svg width={(radius + strokeWidth) * 2 + 4} height={(radius + strokeWidth) * 2 + 4} className="transform -rotate-90">
-        <circle
-          cx={radius + strokeWidth + 2}
-          cy={radius + strokeWidth + 2}
-          r={radius}
-          fill="none"
-          stroke="rgba(255,255,255,0.08)"
-          strokeWidth={strokeWidth}
-        />
-        <circle
-          cx={radius + strokeWidth + 2}
-          cy={radius + strokeWidth + 2}
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          className={getScoreRing(score)}
-          style={{ transition: "stroke-dashoffset 1.5s ease-in-out" }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={`font-bold ${size === "lg" ? "text-3xl" : size === "md" ? "text-2xl" : "text-lg"} ${getScoreColor(score)}`}>
-          {score.toFixed(1)}
-        </span>
+      <div className="relative" style={{ width: svgSize, height: svgSize }}>
+        <svg width={svgSize} height={svgSize} viewBox={`0 0 ${svgSize} ${svgSize}`} className="transform -rotate-90 absolute inset-0">
+          <circle
+            cx={radius + strokeWidth + 2}
+            cy={radius + strokeWidth + 2}
+            r={radius}
+            fill="none"
+            stroke="rgba(255,255,255,0.08)"
+            strokeWidth={strokeWidth}
+          />
+          <circle
+            cx={radius + strokeWidth + 2}
+            cy={radius + strokeWidth + 2}
+            r={radius}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            className={getScoreRing(score)}
+            style={{ transition: "stroke-dashoffset 1.5s ease-in-out" }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className={`font-bold ${size === "lg" ? "text-3xl" : size === "md" ? "text-2xl" : "text-lg"} ${getScoreColor(score)}`}>
+            {score.toFixed(1)}
+          </span>
+        </div>
       </div>
-      <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-1">{label}</span>
+      <span className="text-[10px] text-muted-foreground font-medium">{label}</span>
     </div>
   )
 }
@@ -1180,6 +1186,20 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
                 >
                   Side
                 </button>
+                <div className="w-px h-4 bg-border/50" />
+                <button
+                  onClick={() => handleProfileChange("ai")}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 ${
+                    profileView === "ai"
+                      ? isFemaleAccent
+                        ? "bg-pink-500/20 text-pink-100"
+                        : "bg-sky-500/20 text-sky-100"
+                      : "text-muted-foreground hover:bg-secondary/50"
+                  }`}
+                >
+                  <Brain className="size-3" />
+                  AI
+                </button>
               </div>
             </div>
 
@@ -1214,6 +1234,20 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
 
       {/* ===== MAIN CONTENT ===== */}
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-4">
+        {/* ===== AI BEAUTY VIEW ===== */}
+        {profileView === "ai" && results && (
+          <AIBeautyTab
+            results={results}
+            frontLandmarks={frontLandmarks}
+            sideLandmarks={sideLandmarks}
+            frontImage={frontImageUrl}
+            sideImage={sideImageUrl}
+            isFemaleAccent={isFemaleAccent}
+          />
+        )}
+
+        {/* ===== FRONT / SIDE VIEW ===== */}
+        {profileView !== "ai" && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* ===== LEFT: MEASUREMENT LIST ===== */}
           <div className="lg:col-span-3 space-y-3">
@@ -1496,7 +1530,8 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
             </div>
           </div>
         </div>
-      </div>
+      )}
+    </div>
     </div>
   )
 }
