@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { execSync } from "child_process"
 import fs from "fs"
 import path from "path"
+import os from "os"
+import crypto from "crypto"
 
 // ============================================================
 // API Route: AI Beauty Score using PyTorch models
@@ -9,6 +11,7 @@ import path from "path"
 // ============================================================
 
 export async function POST(request: NextRequest) {
+  let tempImagePath: string | null = null
   try {
     const formData = await request.formData()
     const image = formData.get("image") as File | null
@@ -18,17 +21,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No image provided" }, { status: 400 })
     }
 
-    // Convert image to base64
+    // Save image to a temp file to avoid ENAMETOOLONG on Windows
     const bytes = await image.arrayBuffer()
     const buffer = Buffer.from(bytes)
-    const base64Image = buffer.toString("base64")
+    const tempDir = os.tmpdir()
+    const uniqueName = `ai_score_${crypto.randomUUID()}.jpg`
+    tempImagePath = path.join(tempDir, uniqueName)
+    fs.writeFileSync(tempImagePath, buffer)
 
     // Path to the Python scorer script
     const scorerScript = path.join(process.cwd(), "lib", "analysis", "ai_model_scorer.py")
 
-    // Call Python subprocess
+    // Call Python subprocess with file path instead of base64
     const stdout = execSync(
-      `python "${scorerScript}" "${base64Image}" "${modelName}"`,
+      `python "${scorerScript}" "${tempImagePath}" "${modelName}"`,
       {
         timeout: 60000,
         encoding: "utf-8",
@@ -57,5 +63,14 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     )
+  } finally {
+    // Clean up temp file
+    if (tempImagePath && fs.existsSync(tempImagePath)) {
+      try {
+        fs.unlinkSync(tempImagePath)
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
   }
 }

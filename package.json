@@ -1,5 +1,10 @@
 {
   "name": "facial-scoring-system",
   "private": true,
-  "workspaces": ["faceiq"]
+  "workspaces": [
+    "faceiq"
+  ],
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.35"
+  }
 }

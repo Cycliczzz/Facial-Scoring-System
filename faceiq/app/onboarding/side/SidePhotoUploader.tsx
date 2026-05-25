@@ -2,9 +2,11 @@
 
 import React, { useState, useRef, DragEvent, ChangeEvent } from "react"
 import { useRouter } from "next/navigation"
-import { ImageIcon, UploadCloud, CheckCircle2 } from "lucide-react"
+import { ImageIcon, UploadCloud, CheckCircle2, Loader2, Brain } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { detectFrontFromImage, detectSideFromImage } from "@/lib/landmarkDetection"
+import type { LandmarkPoint } from "@/lib/analysis/types"
 
 interface SidePhotoUploaderProps {
   initialGender?: "male" | "female"
@@ -18,9 +20,10 @@ export function SidePhotoUploader({ initialGender = "male", initialEthnicity }: 
   const [file, setFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [processingStage, setProcessingStage] = useState<string>("")
 
   const isFemaleAccent = initialGender === "female"
 
@@ -74,38 +77,61 @@ export function SidePhotoUploader({ initialGender = "male", initialEthnicity }: 
     setIsDragging(false)
   }
 
-  const handleUpload = async () => {
+  const handleProcessAndRedirect = async () => {
     if (!file) {
       setError("Please select a side profile photo before continuing.")
       return
     }
 
-    setIsUploading(true)
+    setIsProcessing(true)
     setError(null)
 
     try {
-      // TODO: Replace this with real upload logic to your backend or storage service
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      // Get both images from localStorage
+      const frontImageData = localStorage.getItem("frontProfileImage")
+      const sideImageData = localStorage.getItem("sideProfileImage")
 
-      console.log("Uploaded side profile:", {
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        gender: initialGender,
-        ethnicity: initialEthnicity,
-      })
+      if (!frontImageData) {
+        throw new Error("Front profile image not found. Please go back and upload it first.")
+      }
+      if (!sideImageData) {
+        throw new Error("Side profile image not found.")
+      }
+
+      // Load front image into an HTMLImageElement
+      setProcessingStage("Loading front photo...")
+      const frontImg = await loadImage(frontImageData)
+
+      // Load side image
+      setProcessingStage("Loading side photo...")
+      const sideImg = await loadImage(sideImageData)
+
+      // Detect landmarks using MediaPipe
+      setProcessingStage("Detecting facial landmarks (front)...")
+      const frontLandmarks = await detectFrontFromImage(frontImg)
+
+      setProcessingStage("Detecting facial landmarks (side)...")
+      const sideLandmarks = await detectSideFromImage(sideImg)
+
+      // Save landmarks to localStorage
+      setProcessingStage("Saving results...")
+      localStorage.setItem("frontLandmarks", JSON.stringify(frontLandmarks))
+      localStorage.setItem("sideLandmarks", JSON.stringify(sideLandmarks))
+
+      console.log(`Detected ${frontLandmarks.length} front landmarks and ${sideLandmarks.length} side landmarks`)
 
       setSuccess(true)
-      
-      // Redirect to front landmarks page
+
+      // Redirect to analysis dashboard
       const genderQuery = initialGender ?? "male"
       const ethnicityQuery = initialEthnicity ? `&ethnicity=${initialEthnicity}` : ""
-      router.push(`/onboarding/front-landmarks?gender=${genderQuery}${ethnicityQuery}`)
+      router.push(`/analysis?gender=${genderQuery}${ethnicityQuery}`)
     } catch (err) {
       console.error(err)
-      setError("Something went wrong while uploading. Please try again.")
+      setError(err instanceof Error ? err.message : "Something went wrong during analysis. Please try again.")
     } finally {
-      setIsUploading(false)
+      setIsProcessing(false)
+      setProcessingStage("")
     }
   }
 
@@ -234,10 +260,26 @@ export function SidePhotoUploader({ initialGender = "male", initialEthnicity }: 
             </div>
           </div>
 
-          {success && (
+          {/* Processing indicator */}
+          {isProcessing && (
+            <div className="rounded-xl border border-primary/40 bg-primary/10 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <Loader2 className="size-5 animate-spin text-primary" />
+                <div>
+                  <p className="text-xs font-medium text-foreground">Analyzing your photos...</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">{processingStage}</p>
+                </div>
+              </div>
+              <div className="mt-2 h-1 bg-secondary/50 rounded-full overflow-hidden">
+                <div className="h-full bg-primary rounded-full animate-pulse" style={{ width: "60%" }} />
+              </div>
+            </div>
+          )}
+
+          {success && !isProcessing && (
             <div className="flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
               <CheckCircle2 className="size-4" />
-              <span>Your side profile photo is saved.</span>
+              <span>Landmarks detected! Redirecting to analysis...</span>
             </div>
           )}
 
@@ -254,6 +296,7 @@ export function SidePhotoUploader({ initialGender = "male", initialEthnicity }: 
           type="button"
           variant="outline"
           onClick={handleBack}
+          disabled={isProcessing}
           className="w-full justify-center sm:w-auto"
         >
           Back
@@ -262,19 +305,42 @@ export function SidePhotoUploader({ initialGender = "male", initialEthnicity }: 
         <Button
           type="button"
           size="lg"
-          disabled={isUploading}
-          onClick={handleUpload}
+          disabled={isProcessing}
+          onClick={handleProcessAndRedirect}
           className={
             "w-full justify-center gap-2 transform-gpu bg-gradient-to-r text-primary-foreground transition-all duration-300 sm:w-auto " +
             accentGlow +
-            (isUploading
+            (isProcessing
               ? " opacity-70 cursor-wait hover:translate-y-0 hover:shadow-none"
               : " hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(15,23,42,0.85)]")
           }
         >
-          {isUploading ? "Uploading..." : "Save & continue"}
+          {isProcessing ? (
+            <>
+              <Loader2 className="size-4 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            <>
+              <Brain className="size-4" />
+              Analyze & view results
+            </>
+          )}
         </Button>
       </div>
     </div>
   )
+}
+
+/**
+ * Helper to load a data URL into an HTMLImageElement
+ */
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = "anonymous"
+    img.onload = () => resolve(img)
+    img.onerror = () => reject(new Error("Failed to load image"))
+    img.src = src
+  })
 }

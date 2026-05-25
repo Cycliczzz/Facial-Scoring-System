@@ -298,14 +298,16 @@ def score_with_ensemble(image_data):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print(json.dumps({"error": "Usage: python ai_model_scorer.py <base64_image> [model_name]"}))
+        print(json.dumps({"error": "Usage: python ai_model_scorer.py <image_path> [model_name]"}))
         sys.exit(1)
 
-    image_b64 = sys.argv[1]
+    image_path = sys.argv[1]
     model_name = sys.argv[2] if len(sys.argv) > 2 else "ensemble"
 
     try:
-        image_data = base64.b64decode(image_b64)
+        # Read image from file path instead of base64 to avoid ENAMETOOLONG on Windows
+        with open(image_path, "rb") as f:
+            image_data = f.read()
 
         if model_name == "ensemble":
             result = score_with_ensemble(image_data)
