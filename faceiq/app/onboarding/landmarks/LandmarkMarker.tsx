@@ -38,8 +38,6 @@ const FRONT_LANDMARKS = [
   { id: "right_nose_side", label: "Right nose side", group: "nose", color: "#10b981" },
   { id: "lower_lip_center", label: "Lower lip center", group: "mouth", color: "#8b5cf6" },
   { id: "chin_bottom", label: "Chin bottom", group: "chin", color: "#f59e0b" },
-  { id: "left_outer_ear", label: "Left outer ear", group: "ears", color: "#ec4899" },
-  { id: "right_outer_ear", label: "Right outer ear", group: "ears", color: "#ec4899" },
   { id: "left_temple", label: "Left temple", group: "head", color: "#3b82f6" },
   { id: "right_temple", label: "Right temple", group: "head", color: "#3b82f6" },
   { id: "left_medial_canthus", label: "Left medial canthus", group: "eyes", color: "#ef4444" },
@@ -79,8 +77,6 @@ const FRONT_LANDMARKS = [
   { id: "right_lower_jaw_angle", label: "Right Lower Jaw Angle", group: "jaw", color: "#f59e0b" },
   { id: "left_chin", label: "Left Chin", group: "chin", color: "#f59e0b" },
   { id: "right_chin", label: "Right Chin", group: "chin", color: "#f59e0b" },
-  { id: "left_neck_point", label: "Left Neck Point", group: "neck", color: "#6b7280" },
-  { id: "right_neck_point", label: "Right Neck Point", group: "neck", color: "#6b7280" },
   { id: "left_cheekbone", label: "Left Cheekbone", group: "cheeks", color: "#ec4899" },
   { id: "right_cheekbone", label: "Right Cheekbone", group: "cheeks", color: "#ec4899" },
 ]

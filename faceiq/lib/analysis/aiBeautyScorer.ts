@@ -235,8 +235,6 @@ function calculateFaceHeautyScore(
     ["left_chin", "right_chin"],
     ["left_cheekbone", "right_cheekbone"],
     ["left_temple", "right_temple"],
-    ["left_outer_ear", "right_outer_ear"],
-    ["left_neck_point", "right_neck_point"],
   ]
 
   const lmMap = new Map<string, LandmarkPoint>()

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>MediaPipe Mesh Viewer</title>
+<style>
+body{margin:0;background:#111;color:#eee;font-family:system-ui,sans-serif;display:flex;height:100vh}
+#left{flex:1;display:flex;flex-direction:column;position:relative}
+#canvasWrap{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;padding:8px}
+canvas{cursor:crosshair}
+#upload{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.8);z-index:10;gap:12px}
+#upload.hidden{display:none}
+#upload .box{border:2px dashed #555;border-radius:12px;padding:30px 50px;text-align:center;cursor:pointer}
+#upload .box:hover{border-color:#88f}
+#upload .box .icon{font-size:40px}
+#upload .box p{color:#aaa;font-size:13px}
+#upload .box .sub{color:#666;font-size:11px;margin-top:6px}
+#right{width:300px;background:#1a1a1a;border-left:1px solid #333;display:flex;flex-direction:column}
+#right .head{padding:10px 14px;border-bottom:1px solid #333;font-size:12px;color:#888}
+#search{padding:6px 10px;border-bottom:1px solid #333}
+#search input{width:100%;background:#222;border:1px solid #444;border-radius:4px;padding:5px 8px;color:#ddd;font-size:12px;outline:none}
+#search input:focus{border-color:#88f}
+#filters{display:flex;gap:2px;padding:4px 8px;border-bottom:1px solid #333;flex-wrap:wrap}
+#filters button{padding:2px 7px;border-radius:3px;font-size:10px;background:transparent;color:#666;border:1px solid transparent;cursor:pointer}
+#filters button.active{color:#88f;border-color:#88f;background:rgba(100,100,255,.1)}
+#list{flex:1;overflow-y:auto;font-size:11px}
+#list .item{padding:4px 10px;cursor:pointer;display:flex;align-items:center;gap:6px;border-bottom:1px solid rgba(255,255,255,.03)}
+#list .item:hover{background:rgba(255,255,255,.03)}
+#list .item.active{background:rgba(100,100,255,.12)}
+#list .item .idx{color:#88f;font-weight:600;min-width:28px;font-family:monospace}
+#list .item .pos{color:#555;font-family:monospace;font-size:9px;margin-left:auto}
+#detail{padding:10px 14px;border-top:1px solid #333;background:#151515;font-size:12px}
+#detail .title{color:#88f;font-weight:600;margin-bottom:4px}
+#detail .info{color:#888;font-size:11px;font-family:monospace}
+#bottom{padding:6px 10px;border-top:1px solid #333;display:flex;gap:4px}
+#bottom button{padding:4px 10px;border-radius:4px;border:1px solid #444;background:transparent;color:#aaa;cursor:pointer;font-size:10px}
+#bottom button:hover{background:#333}
+#bottom .exp{background:#66f;color:#fff;border-color:#66f}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#222;border:1px solid #444;padding:8px 16px;border-radius:6px;font-size:12px;z-index:99;opacity:0;transition:.3s;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="left">
+  <div id="canvasWrap">
+    <canvas id="c"></canvas>
+    <div id="upload">
+      <div class="box" onclick="document.getElementById('f').click()">
+        <div class="icon">📤</div>
+        <p>Upload ảnh mặt của bạn</p>
+        <div class="sub">Click để chọn hoặc kéo thả ảnh vào đây</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="right">
+  <div class="head">MediaPipe Points <span id="cnt" style="color:#555">(0)</span></div>
+  <div id="search"><input id="s" placeholder="Search index..." oninput="renderList()"></div>
+  <div id="filters">
+    <button class="active" onclick="setFilter('all',this)">All</button>
+    <button onclick="setFilter('left_eye',this)">👁️L</button>
+    <button onclick="setFilter('right_eye',this)">👁️R</button>
+    <button onclick="setFilter('left_eyebrow',this)">✏️L</button>
+    <button onclick="setFilter('right_eyebrow',this)">✏️R</button>
+    <button onclick="setFilter('nose',this)">👃</button>
+    <button onclick="setFilter('lips',this)">👄</button>
+    <button onclick="setFilter('face_oval',this)">🔵</button>
+  </div>
+  <div id="list"></div>
+  <div id="detail">
+    <div class="title" id="dt">Click a point</div>
+    <div class="info" id="di"></div>
+  </div>
+  <div id="bottom">
+    <button onclick="exportOne()">📤 1 điểm</button>
+    <button class="exp" onclick="exportAll()">📤 Tất cả</button>
+  </div>
+</div>
+<input type="file" id="f" accept="image/*" style="display:none" onchange="loadFile(event)">
+<div class="toast" id="t"></div>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm/vision_bundle.js"></script>
+<script>
+let img=null,pts=[],sel=null,filter='all',hl=new Set();
+const c=document.getElementById('c'),cx=c.getContext('2d');
+let fl=null;
+async function initMP(){
+  try{
+    const{FaceLandmarker,FilesetResolver}=window;
+    const v=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm');
+    fl=await FaceLandmarker.createFromOptions(v,{
+      baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task',delegate:'GPU'},
+      outputFaceBlendshapes:false,runningMode:'IMAGE',numFaces:1
+    });
+  }catch(e){show('⚠️ Lỗi load MediaPipe')}
+}
+async function loadFile(e){
+  const f=e.target.files[0];if(!f)return;
+  const i=new Image();
+  i.onload=async()=>{img=i;document.getElementById('upload').classList.add('hidden');await detect(i)};
+  i.src=URL.createObjectURL(f);
+}
+const w=document.getElementById('canvasWrap');
+w.addEventListener('dragover',e=>{e.preventDefault();w.style.outline='2px dashed #88f'});
+w.addEventListener('dragleave',()=>{w.style.outline='none'});
+w.addEventListener('drop',e=>{
+  e.preventDefault();w.style.outline='none';
+  const f=e.dataTransfer.files[0];
+  if(f&&f.type.startsWith('image/')){
+    const i=new Image();
+    i.onload=async()=>{img=i;document.getElementById('upload').classList.add('hidden');await detect(i)};
+    i.src=URL.createObjectURL(f);
+  }
+});
+async function detect(i){
+  if(!fl)await initMP();if(!fl)return;
+  try{
+    const r=fl.detect(i);
+    if(r.faceLandmarks&&r.faceLandmarks.length>0){pts=r.faceLandmarks[0];show('✅ '+pts.length+' landmarks')}
+    else{pts=[];show('⚠️ Không thấy mặt')}
+  }catch(e){pts=[];show('❌ Lỗi')}
+  render();renderList();
+}
+function render(){
+  if(!img)return;
+  const mw=w.clientWidth-16,mh=w.clientHeight-16;
+  const s=Math.min(mw/img.naturalWidth,mh/img.naturalHeight,1);
+  const ww=img.naturalWidth*s,hh=img.naturalHeight*s;
+  c.width=ww;c.height=hh;c.style.width=ww+'px';c.style.height=hh+'px';
+  cx.clearRect(0,0,ww,hh);cx.drawImage(img,0,0,ww,hh);
+  pts.forEach((p,i)=>{
+    const x=p.x*ww,y=p.y*hh;
+    const isSel=i===sel,isHl=hl.has(i);
+    let cl='rgba(255,255,255,.4)';
+    if(isSel)cl='#ff0';else if(isHl)cl='#4f4';
+    else cl=getColor(i);
+    const sz=isSel?5:isHl?4:2;
+    cx.beginPath();cx.arc(x,y,sz,0,Math.PI*2);cx.fillStyle=cl;cx.fill();
+    if(isSel){cx.strokeStyle='#fff';cx.lineWidth=2;cx.stroke()}
+    const t=String(i);
+    cx.font='bold 9px monospace';cx.textAlign='center';cx.textBaseline='bottom';
+    const m=cx.measureText(t);
+    cx.fillStyle=isSel?'rgba(255,255,0,.8)':'rgba(0,0,0,.5)';
+    cx.fillRect(x-m.width/2-2,y-13,m.width+4,11);
+    cx.fillStyle=isSel?'#000':'#fff';
+    cx.fillText(t,x,y-4);
+  });
+}
+const REG={
+  left_eye:[33,7,163,144,145,153,154,155,133,173,157,158,159,160,161,246,130,25,110,24,23,22,26,112,243,190,56,28,27,29,30,247,226,31,228,229,230,231,232,233,244,245,122,6,351,468,469,470,471,472],
+  right_eye:[263,249,390,373,374,380,381,382,362,398,384,385,386,387,388,466,227,137,177,215,138,135,136,150,149,176,148,152,377,378,379,416,473,474,475,476,477],
+  left_eyebrow:[46,53,52,65,55,70,63,105,66,107,69,108,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104],
+  right_eyebrow:[276,283,282,295,285,300,293,334,296,336,299,337,301,302,303,304,305,306,307,308,309,310,311,312,313,314,315,316,317,318,319,320,321,322,323,324,325,326,327,328,329,330,331,332,333],
+  nose:[1,2,3,4,5,6,19,20,21,45,44,43,42,41,40,39,38,37,36,35,34,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255,256,257,258,259,260,261,262,263,264,265,266,267,268,269,270,271,272,273,274,275,276,277,278,279,280,281,282,283,284,285,286,287,288,289,290,291,292,293,294,295,296,297,298,299,300,301,302,303,304,305,306,307,308,309,310,311,312,313,314,315,316,317,318,319,320,321,322,323,324,325,326,327,328,329,330,331,332,333,334,335,336,337,338,339,340,341,342,343,344,345,346,347,348,349,350,351,352,353,354,355,356,357,358,359,360,361,362,363,364,365,366,367,368,369,370,371,372,373,374,375,376,377,378,379,380,381,382,383,384,385,386,387,388,389,390,391,392,393,394,395,396,397,398,399,400,401,402,403,404,405,406,407,408,409,410,411,412,413,414,415,416,417,418,419,420,421,422,423,424,425,426,427,428,429,430,431,432,433,434,435,436,437,438,439,440,441,442,443,444,445,446,447,448,449,450,451,452,453,454,455,456,457,458,459,460,461,462,463,464,465,466,467,468,469,470,471,472,473,474,475,476,477],
+  lips:[0,37,39,40,185,61,146,91,181,84,17,314,405,321,375,291,308,324,318,402,317,14,87,178,88,95,78,191,80,81,82,13,312,311,310,415],
+  face_oval:[10,338,297,332,284,251,389,356,454,323,361,288,397,365,379,378,400,377,152,148,176,149,150,136,172,58,132,93,234,127,162,21,54,103,67,109,10]
+};
+function inReg(i,r){return REG[r]&&REG[r].includes(i)}
+function getReg(i){for(const[r,v]of Object.entries(REG))if(v.includes(i))return r;return'other'}
+function getColor(i){
+  if(inReg(i,'left_eye')||inReg(i,'right_eye'))return '#38bdf8';
+  if(inReg(i,'left_eyebrow')||inReg(i,'right_eyebrow'))return '#f59e0b';
+  if(inReg(i,'nose'))return '#f97316';
+  if(inReg(i,'lips'))return '#ec4899';
+  if(inReg(i,'face_oval'))return '#8b5cf6';
+  return '#a78bfa';
+}
+function renderList(){
+  const el=document.getElementById('list');
+  let idx=pts.map((_,i)=>i);
+  if(filter!=='all')idx=idx.filter(i=>inReg(i,filter));
+  const q=parseInt(document.getElementById('s').value);
+  if(!isNaN(q))idx=idx.filter(i=>i===q);
+  el.innerHTML=idx.map(i=>{
+    const p=pts[i];
+    return '<div class="item'+(i===sel?' active':'')+'" onclick="select('+i+')">'+
+      '<span class="idx">#'+i+'</span>'+
+      '<span style="color:#555;font-size:9px">'+getReg(i).replace('_',' ')+'</span>'+
+      '<span class="pos">'+(p.x*100).toFixed(1)+'%,'+(p.y*100).toFixed(1)+'%</span></div>';
+  }).join('');
+  document.getElementById('cnt').textContent='('+idx.length+')';
+}
+function select(i){
+  sel=i;hl.clear();hl.add(i);
+  renderList();render();updateDetail();
+}
+function updateDetail(){
+  if(sel===null||!pts[sel]){document.getElementById('dt').textContent='Click a point';document.getElementById('di').textContent='';return}
+  const p=pts[sel];
+  document.getElementById('dt').textContent='Point #'+sel+' ('+getReg(sel)+')';
+  document.getElementById('di').innerHTML='x='+(p.x*100).toFixed(2)+'% y='+(p.y*100).toFixed(2)+'%<br>('+p.x.toFixed(4)+', '+p.y.toFixed(4)+')';
+}
+function setFilter(m,b){
+  filter=m;
+  document.querySelectorAll('#filters button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');renderList();
+}
+c.addEventListener('click',e=>{
+  if(!img||!pts.length)return;
+  const r=c.getBoundingClientRect();
+  const cx2=(e.clientX-r.left)/c.width,cy=(e.clientY-r.top)/c.height;
+  let bi=0,bd=Infinity;
+  pts.forEach((p,i)=>{const d=Math.hypot(p.x-cx2,p.y-cy);if(d<bd){bd=d;bi=i}});
+  if(bd<.05)select(bi);
+});
+function exportOne(){
+  if(sel===null){show('⚠️ Chọn 1 điểm trước');return}
+  const p=pts[sel];
+  const d={mediapipeIndex:sel,region:getReg(sel),x:+p.x.toFixed(4),y:+p.y.toFixed(4),z:p.z?+p.z.toFixed(4):null};
+  copy(JSON.stringify(d,null,2));
+}
+function exportAll(){
+  const d={};
+  pts.forEach((p,i)=>{d[i]={region:getReg(i),x:+p.x.toFixed(4),y:+p.y.toFixed(4),z:p.z?+p.z.toFixed(4):null}});
+  copy(JSON.stringify(d,null,2));
+}
+function copy(t){
+  navigator.clipboard.writeText(t).then(()=>show('📋 Copied!')).catch(()=>show('❌ Copy failed'));
+}
+function show(m){
+  const e=document.getElementById('t');e.textContent=m;e.classList.add('show');
+  setTimeout(()=>e.classList.remove('show'),2000);
+}
+window.addEventListener('resize',()=>{if(img)render()});
+initMP();
+</script>
+</body>
+</html>

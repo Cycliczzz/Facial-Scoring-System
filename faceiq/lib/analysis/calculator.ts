@@ -1,6 +1,6 @@
 // ============================================================
 // Facial Analysis Calculator
-// Implements all 65 aesthetic indices with proper formulas
+// Implements aesthetic indices with proper formulas
 // Based on cephalometric and anthropometric research
 // ============================================================
 // Landmark ID Mapping (from LandmarkPlacer.tsx):
@@ -15,8 +15,8 @@
 //        left_mouth_corner, right_mouth_corner, cupids_bow, inner_cupids_bow, mouth_middle, lower_lip_center,
 //        left_upper_jaw_angle, right_upper_jaw_angle, left_lower_jaw_angle, right_lower_jaw_angle,
 //        left_chin, right_chin, chin_bottom,
-//        left_cheekbone, right_cheekbone, left_temple, right_temple,
-//        left_outer_ear, right_outer_ear, left_neck_point, right_neck_point
+//        left_cheekbone, right_cheekbone, left_temple, right_temple
+//        (left_outer_ear, right_outer_ear, left_neck_point, right_neck_point REMOVED)
 // Side: top_of_head, occiput, hairline_profile, forehead, glabella,
 //       nasal_bridge_root, rhinion, supratip, nose_tip, infratip,
 //       columella, subnasale, subalare,
@@ -151,7 +151,10 @@ function createMeasurement(
 }
 
 // ============================================================
-// FRONT PROFILE CALCULATIONS (33 Metrics)
+// FRONT PROFILE CALCULATIONS (29 Metrics)
+// Note: 4 measurements removed (neck_width, ear_protrusion_angle,
+// ear_protrusion_ratio, total_facial_width_to_height) as they
+// depend on the removed landmarks (left/right_outer_ear, left/right_neck_point)
 // ============================================================
 
 function calculateFrontMeasurements(
@@ -220,10 +223,6 @@ function calculateFrontMeasurements(
   const rightCheekbone = L("right_cheekbone")
   const leftTemple = L("left_temple")
   const rightTemple = L("right_temple")
-  const leftOuterEar = L("left_outer_ear")
-  const rightOuterEar = L("right_outer_ear")
-  const leftNeck = L("left_neck_point")
-  const rightNeck = L("right_neck_point")
 
   // ---- 1. Lateral Canthal Tilt ----
   // Angle between medial→lateral canthus and horizontal
@@ -262,33 +261,7 @@ function calculateFrontMeasurements(
       "Distance between left and right temples. Measures upper face width.")
   }
 
-  // ---- 4. Neck Width ----
-  // Formula: D(Left Neck Point, Right Neck Point) — absolute distance
-  if (leftNeck && rightNeck) {
-    const neckW = dist(leftNeck, rightNeck)
-    addMeasurement("neck_width", "Neck Width", neckW, "mm", "Neck",
-      "Distance between left and right neck points. Measures neck width.")
-  }
-
-  // ---- 5. Ear Protrusion Angle ----
-  // Angle between (Temple→Ear) and vertical (0,1)
-  // Average both ears
-  let epaSum = 0
-  let epaCount = 0
-  if (leftTemple && leftOuterEar) {
-    epaSum += angleFromVertical(leftTemple, leftOuterEar)
-    epaCount++
-  }
-  if (rightTemple && rightOuterEar) {
-    epaSum += angleFromVertical(rightTemple, rightOuterEar)
-    epaCount++
-  }
-  if (epaCount > 0) {
-    addMeasurement("ear_protrusion_angle", "Ear Protrusion Angle", epaSum / epaCount, "degrees", "Ears",
-      "Angle of ear protrusion from the head relative to vertical. Measures how much the ears stick out.")
-  }
-
-  // ---- 6. Cheekbone Height ----
+  // ---- 4. Cheekbone Height ----
   // Formula: |y_Cheekbone - y_NasalBase| — vertical distance, average both sides
   let chSum = 0
   let chCount = 0
@@ -305,7 +278,7 @@ function calculateFrontMeasurements(
       "Vertical distance from cheekbone to nasal base. Higher values indicate higher cheekbones.")
   }
 
-  // ---- 7. Cupid's Bow Depth ----
+  // ---- 5. Cupid's Bow Depth ----
   // Formula: |y_CupidBow - y_MouthMiddle|
   if (cupidsBow && mouthMiddle) {
     const depth = Math.abs(cupidsBow.y - mouthMiddle.y)
@@ -313,7 +286,7 @@ function calculateFrontMeasurements(
       "Depth of Cupid's bow curvature from mouth center. Measures the prominence of the upper lip's M-shape.")
   }
 
-  // ---- 8. Bigonial Width ----
+  // ---- 6. Bigonial Width ----
   // Formula: D(Left Lower Jaw Angle, Right Lower Jaw Angle) — absolute distance
   if (leftLowerJaw && rightLowerJaw) {
     const bigonial = dist(leftLowerJaw, rightLowerJaw)
@@ -321,7 +294,7 @@ function calculateFrontMeasurements(
       "Distance between left and right lower jaw angles. Measures lower jaw width.")
   }
 
-  // ---- 9. Jaw Slope ----
+  // ---- 7. Jaw Slope ----
   // Formula: atan2(y_Chin - y_Jaw, x_Chin - x_Jaw) from horizontal, average both sides
   let jsSum = 0
   let jsCount = 0
@@ -338,29 +311,7 @@ function calculateFrontMeasurements(
       "Angle of jaw line relative to horizontal. Steeper angles indicate a more V-shaped jaw.")
   }
 
-  // ---- 10. Ear Protrusion Ratio ----
-  // Formula: (Temple→Ear Distance) / Bitemporal Width
-  // Average both sides
-  let epDistSum = 0
-  let epDistCount = 0
-  if (leftTemple && leftOuterEar) {
-    epDistSum += dist(leftTemple, leftOuterEar)
-    epDistCount++
-  }
-  if (rightTemple && rightOuterEar) {
-    epDistSum += dist(rightTemple, rightOuterEar)
-    epDistCount++
-  }
-  if (epDistCount > 0 && leftTemple && rightTemple) {
-    const avgEarProtrusion = epDistSum / epDistCount
-    const bitempW = dist(leftTemple, rightTemple)
-    if (bitempW > 0) {
-      addMeasurement("ear_protrusion_ratio", "Ear Protrusion Ratio", avgEarProtrusion / bitempW, "ratio", "Ears",
-        "Ratio of ear protrusion distance to bitemporal width. Higher values indicate more prominent ears.")
-    }
-  }
-
-  // ---- 11. Middle Third ----
+  // ---- 8. Middle Third ----
   // Formula: |y_Hairline - y_NasalBase| — absolute distance
   if (hairline && nasalBase) {
     const midThird = Math.abs(hairline.y - nasalBase.y)
@@ -368,7 +319,7 @@ function calculateFrontMeasurements(
       "Vertical distance from hairline to nasal base. Represents the middle third of the face.")
   }
 
-  // ---- 12. Eye Aspect Ratio ----
+  // ---- 9. Eye Aspect Ratio ----
   // Formula: Eye Width / Eye Height = D(Medial Canthus, Lateral Canthus) / D(Upper Eyelid, Lower Eyelid)
   // Average both eyes
   let earSum = 0
@@ -388,7 +339,7 @@ function calculateFrontMeasurements(
       "Ratio of eye width to eye height. Higher values indicate wider, more horizontally-oriented eyes.")
   }
 
-  // ---- 13. Mouth Corner Position ----
+  // ---- 10. Mouth Corner Position ----
   // Formula: y_MouthCorner - y_MouthMiddle, average both sides
   let mcpSum = 0
   let mcpCount = 0
@@ -405,7 +356,7 @@ function calculateFrontMeasurements(
       "Vertical offset of mouth corners from mouth center. Negative values indicate corners below center.")
   }
 
-  // ---- 14. Eye Separation Ratio ----
+  // ---- 11. Eye Separation Ratio ----
   // Formula: D(Left Medial Canthus, Right Medial Canthus) / Eye Width
   if (leftMedial && rightMedial && leftLateral) {
     const intercanthal = dist(leftMedial, rightMedial)
@@ -416,7 +367,7 @@ function calculateFrontMeasurements(
     }
   }
 
-  // ---- 15. Eyebrow Tilt ----
+  // ---- 12. Eyebrow Tilt ----
   // Formula: atan2(y_Tail - y_Head, x_Tail - x_Head) from horizontal
   // Average both sides
   let ebtSum = 0
@@ -434,7 +385,7 @@ function calculateFrontMeasurements(
       "Angle of eyebrow tilt from horizontal. Positive values indicate upward tilt (tail higher than head).")
   }
 
-  // ---- 16. Lower Third ----
+  // ---- 13. Lower Third ----
   // Formula: |y_NasalBase - y_ChinBottom| — absolute distance
   if (nasalBase && chinBottom) {
     const lowerThird = Math.abs(nasalBase.y - chinBottom.y)
@@ -442,7 +393,7 @@ function calculateFrontMeasurements(
       "Vertical distance from nasal base to chin bottom. Represents the lower third of the face.")
   }
 
-  // ---- 17. Face Width to Height Ratio ----
+  // ---- 14. Face Width to Height Ratio ----
   // Formula: D(Left Cheekbone, Right Cheekbone) / D(Hairline, ChinBottom)
   if (leftCheekbone && rightCheekbone && hairline && chinBottom) {
     const fw = dist(leftCheekbone, rightCheekbone)
@@ -453,7 +404,7 @@ function calculateFrontMeasurements(
     }
   }
 
-  // ---- 18. Interpupillary-Mouth Width Ratio ----
+  // ---- 15. Interpupillary-Mouth Width Ratio ----
   // Formula: D(Pupils) / D(Mouth Corners)
   if (leftPupil && rightPupil && leftMouthCorner && rightMouthCorner) {
     const ipd = dist(leftPupil, rightPupil)
@@ -464,7 +415,7 @@ function calculateFrontMeasurements(
     }
   }
 
-  // ---- 19. Jaw Frontal Angle ----
+  // ---- 16. Jaw Frontal Angle ----
   // Angle formed: Left Jaw Angle → Chin → Right Jaw Angle
   if (leftLowerJaw && rightLowerJaw && chinBottom) {
     const jfa = angle(leftLowerJaw, chinBottom, rightLowerJaw)
@@ -472,7 +423,7 @@ function calculateFrontMeasurements(
       "Angle formed at chin between left and right jaw angles. Wider angles indicate a broader jaw.")
   }
 
-  // ---- 20. Intercanthal-Nasal Width Ratio ----
+  // ---- 17. Intercanthal-Nasal Width Ratio ----
   // Formula: D(Medial Canthi) / D(Nose Sides)
   if (leftMedial && rightMedial && leftNoseSide && rightNoseSide) {
     const icw = dist(leftMedial, rightMedial)
@@ -483,7 +434,7 @@ function calculateFrontMeasurements(
     }
   }
 
-  // ---- 21. Top Third ----
+  // ---- 18. Top Third ----
   // Formula: |y_Hairline - y_Brows| where brows = midpoint of brow heads
   if (hairline && leftBrowHead && rightBrowHead) {
     const browMid = midpoint(leftBrowHead, rightBrowHead)
@@ -492,7 +443,7 @@ function calculateFrontMeasurements(
       "Vertical distance from hairline to brow midpoint. Represents the upper third of the face.")
   }
 
-  // ---- 22. One Eye Apart Test ----
+  // ---- 19. One Eye Apart Test ----
   // Formula: Intercanthal Width / Eye Width
   if (leftMedial && rightMedial && leftLateral) {
     const icw = dist(leftMedial, rightMedial)
@@ -503,7 +454,7 @@ function calculateFrontMeasurements(
     }
   }
 
-  // ---- 23. Midface Ratio ----
+  // ---- 20. Midface Ratio ----
   // Formula: (Hairline→NasalBase) / (NasalBase→ChinBottom)
   if (hairline && nasalBase && chinBottom) {
     const upper = Math.abs(hairline.y - nasalBase.y)
@@ -514,7 +465,7 @@ function calculateFrontMeasurements(
     }
   }
 
-  // ---- 24. Ipsilateral Alar Angle ----
+  // ---- 21. Ipsilateral Alar Angle ----
   // Angle between (Nose Side → Mouth Corner) and vertical, compute left and right separately
   let iaaSum = 0
   let iaaCount = 0
@@ -531,7 +482,7 @@ function calculateFrontMeasurements(
       "Angle between nose side to mouth corner line and vertical. Measures the slope of the nasolabial fold area.")
   }
 
-  // ---- 25. Mouth Width to Nose Width Ratio ----
+  // ---- 22. Mouth Width to Nose Width Ratio ----
   // Formula: D(Mouth Corners) / D(Nose Sides)
   if (leftMouthCorner && rightMouthCorner && leftNoseSide && rightNoseSide) {
     const mw2 = dist(leftMouthCorner, rightMouthCorner)
@@ -542,18 +493,7 @@ function calculateFrontMeasurements(
     }
   }
 
-  // ---- 26. Total Facial Width to Height Ratio ----
-  // Formula: D(Left Outer Ear, Right Outer Ear) / D(Hairline, ChinBottom)
-  if (leftOuterEar && rightOuterEar && hairline && chinBottom) {
-    const earSpan = dist(leftOuterEar, rightOuterEar)
-    const fh2 = dist(hairline, chinBottom)
-    if (fh2 > 0) {
-      addMeasurement("total_facial_width_to_height", "Total Facial Width to Height Ratio", earSpan / fh2, "ratio", "Proportions",
-        "Ratio of total facial width (ear-to-ear span) to facial height.")
-    }
-  }
-
-  // ---- 27. Chin to Philtrum Ratio ----
+  // ---- 23. Chin to Philtrum Ratio ----
   // Formula: D(LowerLipCenter, ChinBottom) / D(Subnasale, CupidBow)
   if (lowerLipCenter && chinBottom && nasalBase && cupidsBow) {
     const chinH = dist(lowerLipCenter, chinBottom)
@@ -564,7 +504,7 @@ function calculateFrontMeasurements(
     }
   }
 
-  // ---- 28. Eyebrow Low Setedness ----
+  // ---- 24. Eyebrow Low Setedness ----
   // Formula: |y_Brows - y_Eyes| — absolute distance
   if (leftBrowArch && leftUpperEyelid) {
     const blDist = Math.abs(leftBrowArch.y - leftUpperEyelid.y)
@@ -572,7 +512,7 @@ function calculateFrontMeasurements(
       "Vertical distance from brow arch to upper eyelid. Smaller values indicate lower-set brows.")
   }
 
-  // ---- 29. Brow Length to Face Width Ratio ----
+  // ---- 25. Brow Length to Face Width Ratio ----
   // Formula: D(BrowHead, BrowTail) / FaceWidth
   if (leftBrowHead && leftBrowTail && leftCheekbone && rightCheekbone) {
     const browLen = dist(leftBrowHead, leftBrowTail)
@@ -583,7 +523,7 @@ function calculateFrontMeasurements(
     }
   }
 
-  // ---- 30. Nose Tip Position ----
+  // ---- 26. Nose Tip Position ----
   // Formula: x_NoseTip - x_FacePlane (horizontal protrusion)
   // Face plane approximated by midpoint of cheekbones
   if (noseBottom && leftCheekbone && rightCheekbone) {
@@ -593,7 +533,7 @@ function calculateFrontMeasurements(
       "Horizontal protrusion of nose tip from the facial plane. Positive values indicate a more projected nose.")
   }
 
-  // ---- 31. Deviation of IAA & JFA ----
+  // ---- 27. Deviation of IAA & JFA ----
   // Formula: |IAA - JFA|
   // IAA = ipsilateral alar angle, JFA = jaw frontal angle
   let iaaVal = 0
@@ -614,7 +554,7 @@ function calculateFrontMeasurements(
       "Absolute difference between Ipsilateral Alar Angle and Jaw Frontal Angle. Lower values indicate better facial symmetry.")
   }
 
-  // ---- 32. Lower Lip to Upper Lip Ratio ----
+  // ---- 28. Lower Lip to Upper Lip Ratio ----
   // Formula: LowerLipThickness / UpperLipThickness (vertical thicknesses)
   if (lowerLipCenter && mouthMiddle && cupidsBow) {
     const upperLipThick = Math.abs(cupidsBow.y - mouthMiddle.y)
@@ -625,7 +565,7 @@ function calculateFrontMeasurements(
     }
   }
 
-  // ---- 33. Lower Third Proportion ----
+  // ---- 29. Lower Third Proportion ----
   // Formula: (Subnasale→UpperLip) / (Subnasale→ChinBottom)
   if (nasalBase && mouthMiddle && chinBottom) {
     const upperLipH = Math.abs(nasalBase.y - mouthMiddle.y)
