@@ -461,7 +461,7 @@ export async function detectFrontFromImage(
     const landmarker = await getFaceLandmarker()
     const result = landmarker.detect(imageElement)
 
-    if (!result.faceLandmarks || result.faceLandmarks.length === 0) {
+    if (!result || !result.faceLandmarks || result.faceLandmarks.length === 0) {
       console.warn("No face detected in front image")
       return []
     }
@@ -481,7 +481,7 @@ export async function detectSideFromImage(
     const landmarker = await getFaceLandmarker()
     const result = landmarker.detect(imageElement)
 
-    if (!result.faceLandmarks || result.faceLandmarks.length === 0) {
+    if (!result || !result.faceLandmarks || result.faceLandmarks.length === 0) {
       console.warn("No face detected in side image")
       return []
     }
