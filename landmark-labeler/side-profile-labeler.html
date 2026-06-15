@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Side Profile Landmark Labeler</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f0f13; color: #e0e0e0; min-height: 100vh; }
+
+  .header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #2a2a3e; }
+  .header h1 { font-size: 18px; font-weight: 600; color: #10b981; }
+  .header .subtitle { font-size: 12px; color: #888; margin-top: 2px; }
+  .header .stats { font-size: 13px; color: #aaa; }
+
+  .main-container { display: flex; gap: 0; height: calc(100vh - 60px); }
+
+  /* Left panel - Image */
+  .image-panel { flex: 1; display: flex; flex-direction: column; position: relative; background: #0a0a0f; }
+  .image-panel .toolbar { display: flex; gap: 8px; padding: 8px 12px; background: #16161f; border-bottom: 1px solid #2a2a3e; flex-wrap: wrap; align-items: center; }
+  .image-panel .toolbar button { padding: 6px 14px; border-radius: 6px; border: 1px solid #333; cursor: pointer; font-size: 12px; transition: all 0.2s; background: #2a2a3e; color: #ccc; display: flex; align-items: center; gap: 4px; }
+  .image-panel .toolbar button:hover { background: #3a3a4e; border-color: #555; }
+  .image-panel .toolbar button.primary { background: #059669; color: white; border-color: #059669; }
+  .image-panel .toolbar button.primary:hover { background: #047857; }
+  .image-panel .toolbar button.warn { background: #7c3aed; color: white; border-color: #7c3aed; }
+  .image-panel .toolbar button.warn:hover { background: #6d28d9; }
+  .image-panel .toolbar .sep { width: 1px; height: 24px; background: #333; margin: 0 4px; }
+  .image-panel .toolbar .info-badge { font-size: 11px; color: #888; padding: 4px 10px; background: #1a1a28; border-radius: 4px; border: 1px solid #2a2a3e; }
+  .image-panel .toolbar .info-badge.green { color: #4ade80; border-color: rgba(74,222,128,0.3); background: rgba(74,222,128,0.05); }
+
+  .canvas-wrapper { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .canvas-wrapper canvas { max-width: 100%; max-height: 100%; cursor: crosshair; }
+
+  .upload-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); z-index: 10; }
+  .upload-overlay.hidden { display: none; }
+  .upload-overlay .drop-zone { border: 2px dashed #444; border-radius: 16px; padding: 40px 60px; text-align: center; cursor: pointer; transition: all 0.3s; }
+  .upload-overlay .drop-zone:hover { border-color: #10b981; background: rgba(16,185,129,0.05); }
+  .upload-overlay .drop-zone .icon { font-size: 48px; margin-bottom: 12px; }
+  .upload-overlay .drop-zone p { color: #aaa; font-size: 14px; }
+  .upload-overlay .drop-zone .hint { color: #666; font-size: 12px; margin-top: 8px; }
+
+  /* Right panel - Landmarks */
+  .landmark-panel { width: 380px; display: flex; flex-direction: column; background: #12121a; border-left: 1px solid #2a2a3e; }
+  .landmark-panel .panel-header { padding: 12px 16px; border-bottom: 1px solid #2a2a3e; font-size: 13px; color: #888; display: flex; justify-content: space-between; align-items: center; }
+  .landmark-panel .panel-header .nav-buttons { display: flex; gap: 6px; }
+  .landmark-panel .panel-header button { background: #2a2a3e; border: none; color: #ccc; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+  .landmark-panel .panel-header button:hover { background: #3a3a4e; }
+  .landmark-panel .panel-header button:disabled { opacity: 0.3; cursor: default; }
+
+  .landmark-list { flex: 1; overflow-y: auto; padding: 8px; }
+  .landmark-list::-webkit-scrollbar { width: 6px; }
+  .landmark-list::-webkit-scrollbar-track { background: transparent; }
+  .landmark-list::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+  .landmark-item { padding: 8px 10px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: all 0.15s; margin-bottom: 2px; }
+  .landmark-item:hover { background: rgba(255,255,255,0.03); }
+  .landmark-item.active { background: rgba(16,185,129,0.12); outline: 1px solid rgba(16,185,129,0.3); }
+  .landmark-item .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.2); }
+  .landmark-item .dot.mapped { border-color: #4ade80; box-shadow: 0 0 4px rgba(74,222,128,0.4); }
+  .landmark-item .dot.custom { border-color: #fbbf24; box-shadow: 0 0 4px rgba(251,191,36,0.4); }
+  .landmark-item .info { flex: 1; min-width: 0; }
+  .landmark-item .info .name { font-size: 13px; color: #ddd; }
+  .landmark-item .info .source { font-size: 11px; color: #666; margin-top: 1px; }
+  .landmark-item .status { font-size: 11px; padding: 2px 6px; border-radius: 3px; flex-shrink: 0; }
+  .landmark-item .status.done { background: rgba(74,222,128,0.15); color: #4ade80; }
+  .landmark-item .status.pending { background: rgba(251,191,36,0.15); color: #fbbf24; }
+  .landmark-item .status.missing { background: rgba(239,68,68,0.15); color: #ef4444; }
+
+  .landmark-detail { padding: 12px 16px; border-top: 1px solid #2a2a3e; background: #0e0e16; }
+  .landmark-detail .detail-title { font-size: 14px; font-weight: 600; color: #10b981; margin-bottom: 4px; }
+  .landmark-detail .detail-desc { font-size: 12px; color: #888; margin-bottom: 10px; line-height: 1.4; }
+  .landmark-detail .detail-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .landmark-detail .detail-actions button { padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; transition: all 0.2s; }
+  .landmark-detail .detail-actions .btn-auto { background: #059669; color: white; }
+  .landmark-detail .detail-actions .btn-auto:hover { background: #047857; }
+  .landmark-detail .detail-actions .btn-custom { background: #2a2a3e; color: #ccc; border: 1px solid #444; }
+  .landmark-detail .detail-actions .btn-custom:hover { background: #3a3a4e; }
+  .landmark-detail .detail-actions .btn-clear { background: transparent; color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+  .landmark-detail .detail-actions .btn-clear:hover { background: rgba(239,68,68,0.1); }
+  .landmark-detail .detail-actions .btn-next { background: #059669; color: white; }
+  .landmark-detail .detail-actions .btn-next:hover { background: #047857; }
+
+  .candidate-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .candidate-chip { padding: 3px 8px; border-radius: 4px; font-size: 11px; background: #1e1e2e; color: #aaa; cursor: pointer; border: 1px solid #333; transition: all 0.15s; }
+  .candidate-chip:hover { border-color: #10b981; color: #fff; }
+  .candidate-chip.selected { background: rgba(16,185,129,0.2); border-color: #10b981; color: #10b981; }
+
+  .bottom-bar { padding: 10px 16px; border-top: 1px solid #2a2a3e; display: flex; gap: 8px; align-items: center; }
+  .bottom-bar button { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+  .bottom-bar .btn-save { background: #059669; color: white; flex: 1; }
+  .bottom-bar .btn-save:hover { background: #047857; }
+  .bottom-bar .btn-export { background: #2a2a3e; color: #ccc; border: 1px solid #444; }
+  .bottom-bar .btn-export:hover { background: #3a3a4e; }
+  .bottom-bar .btn-reset { background: transparent; color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+  .bottom-bar .btn-reset:hover { background: rgba(239,68,68,0.1); }
+  .bottom-bar .progress-text { font-size: 12px; color: #888; margin-left: auto; }
+
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1a1a2e; border: 1px solid #333; padding: 10px 20px; border-radius: 8px; font-size: 13px; z-index: 100; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 50; }
+  .modal-overlay.hidden { display: none; }
+  .modal { background: #1a1a2e; border: 1px solid #333; border-radius: 12px; padding: 24px; max-width: 550px; width: 90%; max-height: 80vh; overflow-y: auto; }
+  .modal h2 { font-size: 16px; color: #10b981; margin-bottom: 12px; }
+  .modal p { font-size: 13px; color: #aaa; margin-bottom: 16px; line-height: 1.5; }
+  .modal textarea { width: 100%; min-height: 300px; background: #0f0f13; border: 1px solid #333; border-radius: 6px; color: #ddd; padding: 10px; font-family: monospace; font-size: 12px; resize: vertical; }
+  .modal .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+  .modal .modal-actions button { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; }
+  .modal .modal-actions .btn-close { background: #2a2a3e; color: #ccc; }
+  .modal .modal-actions .btn-copy { background: #059669; color: white; }
+
+  .search-box { padding: 8px 12px; border-bottom: 1px solid #2a2a3e; }
+  .search-box input { width: 100%; background: #0f0f13; border: 1px solid #333; border-radius: 6px; padding: 6px 10px; color: #ddd; font-size: 12px; outline: none; }
+  .search-box input:focus { border-color: #10b981; }
+
+  .filter-bar { display: flex; gap: 4px; padding: 4px 12px; border-bottom: 1px solid #2a2a3e; }
+  .filter-bar .filter-btn { padding: 3px 8px; border-radius: 4px; font-size: 11px; background: transparent; color: #666; border: 1px solid transparent; cursor: pointer; }
+  .filter-bar .filter-btn.active { background: rgba(16,185,129,0.1); color: #10b981; border-color: rgba(16,185,129,0.3); }
+  .filter-bar .filter-btn:hover { color: #aaa; }
+
+  .detection-source { padding: 6px 12px; font-size: 11px; color: #888; border-bottom: 1px solid #2a2a3e; display: flex; gap: 8px; align-items: center; }
+  .detection-source .source-badge { padding: 2px 8px; border-radius: 3px; font-weight: 600; }
+  .detection-source .source-badge.mp { background: rgba(59,130,246,0.15); color: #3b82f6; }
+  .detection-source .source-badge.pt { background: rgba(16,185,129,0.15); color: #10b981; }
+  .detection-source .source-badge.none { background: rgba(239,68,68,0.15); color: #ef4444; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>🧠 Side Profile Landmark Labeler</h1>
+    <div class="subtitle">Map detected points (MediaPipe 478 or PyTorch-Face 39) to 31 custom side landmarks</div>
+  </div>
+  <div class="stats" id="headerStats">0 / 31 landmarks labeled</div>
+</div>
+
+<div class="main-container">
+  <!-- LEFT: Image Panel -->
+  <div class="image-panel">
+    <div class="toolbar">
+      <button onclick="document.getElementById('fileInput').click()">📁 Open Side Photo</button>
+      <button onclick="loadDetectionJson()" class="warn" title="Load pytorch_face_landmark detection JSON (run side_detect.py first)">🤖 Load PT Detection</button>
+      <button onclick="runMediaPipeDetection()" id="btnMP" disabled>🔍 MediaPipe Detect</button>
+      <span class="sep"></span>
+      <span class="info-badge" id="sourceBadge">Source: None</span>
+      <span class="info-badge" id="pointCount">0 detected points</span>
+      <span class="info-badge green" id="facingLabel">Facing: --</span>
+    </div>
+    <div class="canvas-wrapper" id="canvasWrapper">
+      <canvas id="mainCanvas"></canvas>
+      <div class="upload-overlay" id="uploadOverlay">
+        <div class="drop-zone" onclick="document.getElementById('fileInput').click()">
+          <div class="icon">📤</div>
+          <p>Upload a SIDE PROFILE face photo</p>
+          <div class="hint">Click to browse or drag & drop a profile image<br/>Then run MediaPipe detection or load PyTorch-Face JSON</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Landmark Panel -->
+  <div class="landmark-panel">
+    <div class="panel-header">
+      <span>Landmarks <span id="landmarkCount" style="color:#666;font-size:11px;">(0/31)</span></span>
+      <div class="nav-buttons">
+        <button onclick="goToPrev()" id="prevBtn" disabled>◀ Prev</button>
+        <button onclick="goToNext()" id="nextBtn">Next ▶</button>
+      </div>
+    </div>
+
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Search landmarks..." oninput="filterLandmarks()">
+    </div>
+
+    <div class="filter-bar">
+      <button class="filter-btn active" data-filter="all" onclick="setFilter('all', this)">All</button>
+      <button class="filter-btn" data-filter="pending" onclick="setFilter('pending', this)">⏳ Pending</button>
+      <button class="filter-btn" data-filter="done" onclick="setFilter('done', this)">✅ Done</button>
+      <button class="filter-btn" data-filter="custom" onclick="setFilter('custom', this)">✏️ Custom</button>
+    </div>
+
+    <div class="detection-source">
+      <span>Detection:</span>
+      <span class="source-badge none" id="detSourceLabel">None</span>
+      <span style="margin-left:auto;font-size:10px;" id="ptLabelInfo"></span>
+    </div>
+
+    <div class="landmark-list" id="landmarkList"></div>
+
+    <div class="landmark-detail" id="landmarkDetail">
+      <div class="detail-title" id="detailTitle">Select a landmark</div>
+      <div class="detail-desc" id="detailDesc">Click on a landmark from the list to start labeling it. You can auto-detect with MediaPipe, load PyTorch-Face 39-point detection, or place points manually.</div>
+      <div class="detail-actions" id="detailActions">
+        <button class="btn-auto" onclick="autoAssign()">🤖 Auto-assign</button>
+        <button class="btn-custom" onclick="enableCustomPlacement()">✏️ Place manually</button>
+        <button class="btn-clear" onclick="clearLandmark()">🗑️ Clear</button>
+        <button class="btn-next" onclick="goToNext()">Next →</button>
+      </div>
+      <div id="candidateContainer"></div>
+    </div>
+
+    <div class="bottom-bar">
+      <button class="btn-save" onclick="saveMapping()">💾 Save Mapping</button>
+      <button class="btn-export" onclick="exportMapping()">📤 Export JSON</button>
+      <button class="btn-reset" onclick="resetAll()">↺ Reset</button>
+      <span class="progress-text" id="progressText">0% complete</span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Export Modal -->
+<div class="modal-overlay hidden" id="exportModal">
+  <div class="modal">
+    <h2>📤 Export Side Landmark Mapping</h2>
+    <p>JSON mapping between detected points and 31 custom side profile landmarks.</p>
+    <textarea id="exportText" readonly></textarea>
+    <div class="modal-actions">
+      <button class="btn-close" onclick="closeExportModal()">Close</button>
+      <button class="btn-copy" onclick="copyExport()">📋 Copy to Clipboard</button>
+    </div>
+  </div>
+</div>
+
+<!-- Instructions Modal -->
+<div class="modal-overlay hidden" id="helpModal">
+  <div class="modal">
+    <h2>📖 How to Use Side Profile Labeler</h2>
+    <div style="font-size:13px;color:#aaa;line-height:1.6;">
+      <p><strong style="color:#10b981;">Method A: MediaPipe Auto-Detect (Browser)</strong><br/>
+      1. Upload a side profile photo<br/>
+      2. Click "MediaPipe Detect" to run face mesh (478 points)<br/>
+      3. For each custom landmark, select the best matching detected point<br/>
+      4. Or use "Auto-assign" for heuristic-based matching</p>
+      <p><strong style="color:#7c3aed;">Method B: PyTorch Face Landmark (39-point profile)</strong><br/>
+      1. Run: <code style="color:#a78bfa;">python side_detect.py your_photo.jpg</code><br/>
+      2. This outputs <code style="color:#a78bfa;">side_detection.json</code> with 39 profile points<br/>
+      3. Upload same photo here, click "Load PT Detection"<br/>
+      4. Select the JSON file → 39 green points appear<br/>
+      5. Map custom landmarks to those 39 points</p>
+      <p><strong style="color:#fbbf24;">Method C: Manual Placement</strong><br/>
+      1. Upload a side profile photo<br/>
+      2. Select each landmark and click "Place manually"<br/>
+      3. Click on the image to position the point</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-close" onclick="document.getElementById('helpModal').classList.add('hidden')">Close</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFileUpload(event)">
+<input type="file" id="jsonFileInput" accept=".json" style="display:none" onchange="handleJsonUpload(event)">
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm/vision_bundle.js"></script>
+<script>
+// ============================================================
+// SIDE PROFILE LANDMARK DEFINITIONS (31 points from README)
+// ============================================================
+
+const SIDE_LANDMARKS = [
+  { id: "top_of_head", label: "Top of Head", color: "#6b7280", desc: "Điểm cao nhất hộp sọ (trên ảnh profile)" },
+  { id: "occiput", label: "Occiput", color: "#6b7280", desc: "Điểm nhô ra sau đầu nhất" },
+  { id: "hairline_profile", label: "Hairline (Profile)", color: "#f59e0b", desc: "Đường chân tóc phía trước (profile view)" },
+  { id: "glabella", label: "Glabella", color: "#f59e0b", desc: "Điểm giữa trán, giữa hai chân mày" },
+  { id: "forehead", label: "Forehead", color: "#f59e0b", desc: "Điểm trán (nơi nhô nhất phía trước)" },
+  { id: "nasal_bridge_root", label: "Nasal Bridge Root", color: "#f97316", desc: "Gốc sống mũi (điểm lõm giữa trán và mũi)" },
+  { id: "rhinion", label: "Rhinion", color: "#f97316", desc: "Điểm thấp nhất phần xương mũi (chỗ chuyển từ xương sang sụn)" },
+  { id: "supratip", label: "Supratip", color: "#f97316", desc: "Điểm ngay trên chóp mũi" },
+  { id: "nose_tip", label: "Nose Tip", color: "#f97316", desc: "Chóp mũi - điểm nhô ra nhất của mũi" },
+  { id: "infratip", label: "Infratip", color: "#f97316", desc: "Điểm ngay dưới chóp mũi" },
+  { id: "columella", label: "Columella", color: "#f97316", desc: "Trụ mũi (phần giữa hai lỗ mũi)" },
+  { id: "subnasale", label: "Subnasale", color: "#f97316", desc: "Điểm gốc mũi - nơi mũi tiếp xúc môi trên" },
+  { id: "subalare", label: "Subalare", color: "#f97316", desc: "Điểm dưới cánh mũi" },
+  { id: "upper_lip", label: "Upper Lip", color: "#ec4899", desc: "Điểm nhô nhất môi trên" },
+  { id: "lower_lip", label: "Lower Lip", color: "#ec4899", desc: "Điểm nhô nhất môi dưới" },
+  { id: "mouth_corner", label: "Mouth Corner", color: "#ec4899", desc: "Khóe miệng (profile view)" },
+  { id: "labiomental_fold", label: "Labiomental Fold", color: "#8b5cf6", desc: "Rãnh môi-cằm (nếp lõm giữa môi dưới và cằm)" },
+  { id: "chin_point", label: "Chin Point", color: "#8b5cf6", desc: "Đỉnh cằm - điểm nhô ra nhất của cằm" },
+  { id: "chin_bottom", label: "Chin Bottom", color: "#8b5cf6", desc: "Điểm thấp nhất của cằm" },
+  { id: "corneal_apex", label: "Corneal Apex", color: "#38bdf8", desc: "Điểm lồi nhất giác mạc (mắt)" },
+  { id: "eyelid_end", label: "Eyelid End", color: "#38bdf8", desc: "Đuôi mắt - khóe mắt ngoài" },
+  { id: "lower_eyelid", label: "Lower Eyelid", color: "#38bdf8", desc: "Điểm thấp nhất mí dưới" },
+  { id: "orbitale", label: "Orbitale", color: "#38bdf8", desc: "Điểm thấp nhất ổ mắt (xương)" },
+  { id: "tragus", label: "Tragus", color: "#6b7280", desc: "Nắp tai (tragus) - điểm nhô trước ống tai" },
+  { id: "intertragic_notch", label: "Intertragic Notch", color: "#6b7280", desc: "Khe giữa tragus và antitragus" },
+  { id: "porion", label: "Porion", color: "#6b7280", desc: "Điểm cao nhất lỗ tai ngoài (Frankfort plane)" },
+  { id: "cheekbone", label: "Cheekbone", color: "#a78bfa", desc: "Điểm gò má nhô nhất (profile)" },
+  { id: "upper_jaw_angle", label: "Upper Jaw Angle", color: "#8b5cf6", desc: "Góc hàm trên" },
+  { id: "lower_jaw_angle", label: "Lower Jaw Angle", color: "#8b5cf6", desc: "Góc hàm dưới (Gonial angle) - điểm góc xương hàm" },
+  { id: "cervical_point", label: "Cervical Point", color: "#6b7280", desc: "Điểm cổ trước (nơi cổ gặp cằm)" },
+  { id: "neck_point", label: "Neck Point", color: "#6b7280", desc: "Điểm cổ (phía trước cổ)" },
+];
+
+// ============================================================
+// STATE
+// ============================================================
+
+let currentImage = null;
+let detectedPoints = [];  // All detected points (from MediaPipe or PT Face Landmark)
+let detectionSource = null; // 'mediapipe' | 'pytorch_face' | null
+let mapping = {}; // { landmarkId: { x, y, source: 'detected'|'custom', ptIndex?: number } }
+let selectedLandmarkId = null;
+let customPlacementMode = false;
+let filterMode = 'all';
+let searchQuery = '';
+let isFacingLeft = true; // Determined from nose tip position
+
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+
+// ============================================================
+// MEDIAPIPE INIT
+// ============================================================
+
+let faceLandmarker = null;
+
+async function initMediaPipe() {
+  try {
+    const { FaceLandmarker, FilesetResolver } = window;
+    const vision = await FilesetResolver.forVisionTasks(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+    );
+    faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task',
+        delegate: 'GPU',
+      },
+      outputFaceBlendshapes: false,
+      runningMode: 'IMAGE',
+      numFaces: 1,
+    });
+    document.getElementById('btnMP').disabled = false;
+    console.log('MediaPipe FaceLandmarker initialized');
+  } catch (error) {
+    console.error('Failed to initialize MediaPipe:', error);
+    showToast('⚠️ Failed to load MediaPipe. Check internet connection.');
+  }
+}
+
+// ============================================================
+// FILE HANDLING
+// ============================================================
+
+async function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const img = new Image();
+  img.onload = async () => {
+    currentImage = img;
+    document.getElementById('uploadOverlay').classList.add('hidden');
+    resetMapping();
+    renderCanvas();
+  };
+  img.src = URL.createObjectURL(file);
+}
+
+// Drag & drop
+const canvasWrapper = document.getElementById('canvasWrapper');
+canvasWrapper.addEventListener('dragover', (e) => { e.preventDefault(); canvasWrapper.style.outline = '2px dashed #10b981'; });
+canvasWrapper.addEventListener('dragleave', () => { canvasWrapper.style.outline = 'none'; });
+canvasWrapper.addEventListener('drop', (e) => {
+  e.preventDefault();
+  canvasWrapper.style.outline = 'none';
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    const img = new Image();
+    img.onload = async () => {
+      currentImage = img;
+      document.getElementById('uploadOverlay').classList.add('hidden');
+      resetMapping();
+      renderCanvas();
+    };
+    img.src = URL.createObjectURL(file);
+  }
+});
+
+// JSON detection file upload
+function loadDetectionJson() {
+  document.getElementById('jsonFileInput').click();
+}
+
+function handleJsonUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+
+      // Support multiple JSON formats
+      if (data.landmarks && Array.isArray(data.landmarks)) {
+        // Format: { "landmarks": [{"x":0.5,"y":0.3}, ...] }
+        detectedPoints = data.landmarks.map(l => ({ x: l.x, y: l.y }));
+        detectionSource = 'pytorch_face';
+      } else if (Array.isArray(data)) {
+        // Format: [{x, y}, ...]
+        detectedPoints = data.map(l => ({ x: l.x, y: l.y }));
+        detectionSource = 'pytorch_face';
+      } else if (data.points && Array.isArray(data.points)) {
+        // Format: { "points": [...] }
+        detectedPoints = data.points.map(l => ({ x: l.x, y: l.y }));
+        detectionSource = 'pytorch_face';
+      } else {
+        // Try to extract any array
+        const arr = Object.values(data).find(v => Array.isArray(v));
+        if (arr && arr.length > 0 && arr[0].x !== undefined) {
+          detectedPoints = arr.map(l => ({ x: l.x, y: l.y }));
+          detectionSource = 'pytorch_face';
+        } else {
+          throw new Error('Unknown JSON format');
+        }
+      }
+
+      // Determine facing direction from nose tip if available
+      if (detectedPoints.length > 30) {
+        // PyTorch Face Landmark profile: point 30 is typically nose tip
+        const noseCandidate = detectedPoints[Math.min(30, detectedPoints.length - 1)];
+        if (noseCandidate) isFacingLeft = noseCandidate.x < 0.5;
+      }
+
+      updateDetectionUI();
+      resetMapping();
+      renderCanvas();
+      showToast(`✅ Loaded ${detectedPoints.length} PyTorch-Face profile points`);
+    } catch (err) {
+      console.error('JSON parse error:', err);
+      showToast('❌ Invalid detection JSON. Run side_detect.py first to generate.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ============================================================
+// MEDIAPIPE DETECTION
+// ============================================================
+
+async function runMediaPipeDetection() {
+  if (!currentImage) { showToast('⚠️ Upload an image first'); return; }
+  if (!faceLandmarker) await initMediaPipe();
+  if (!faceLandmarker) return;
+
+  try {
+    const result = faceLandmarker.detect(currentImage);
+    if (result.faceLandmarks && result.faceLandmarks.length > 0) {
+      const mpLandmarks = result.faceLandmarks[0];
+      detectedPoints = mpLandmarks.map(lm => ({ x: lm.x, y: lm.y }));
+
+      // Determine facing: nose tip (index 1) should be left or right of center
+      if (mpLandmarks.length > 1) {
+        isFacingLeft = mpLandmarks[1].x < 0.5;
+      }
+      detectionSource = 'mediapipe';
+
+      updateDetectionUI();
+      resetMapping();
+      renderCanvas();
+      showToast(`✅ Detected ${detectedPoints.length} MediaPipe landmarks (${isFacingLeft ? 'left-facing' : 'right-facing'})`);
+    } else {
+      showToast('⚠️ No face detected in image');
+    }
+  } catch (error) {
+    console.error('Detection error:', error);
+    showToast('❌ MediaPipe detection failed');
+  }
+}
+
+function updateDetectionUI() {
+  const srcLabel = document.getElementById('detSourceLabel');
+  const srcBadge = document.getElementById('sourceBadge');
+  const facingLabel = document.getElementById('facingLabel');
+  const ptCount = document.getElementById('pointCount');
+  const ptLabel = document.getElementById('ptLabelInfo');
+
+  if (detectionSource === 'mediapipe') {
+    srcLabel.textContent = 'MediaPipe';
+    srcLabel.className = 'source-badge mp';
+    srcBadge.textContent = 'Source: MediaPipe 478';
+    ptLabel.textContent = '(MP indices: 0-477)';
+  } else if (detectionSource === 'pytorch_face') {
+    srcLabel.textContent = 'PyTorch-Face';
+    srcLabel.className = 'source-badge pt';
+    srcBadge.textContent = 'Source: PyTorch-Face 39';
+    ptLabel.textContent = '(PT indices: 0-38)';
+  } else {
+    srcLabel.textContent = 'None';
+    srcLabel.className = 'source-badge none';
+    srcBadge.textContent = 'Source: None';
+    ptLabel.textContent = '';
+  }
+
+  ptCount.textContent = `${detectedPoints.length} detected points`;
+  facingLabel.textContent = `Facing: ${isFacingLeft ? 'Left ←' : '→ Right'}`;
+}
+
+function resetMapping() {
+  mapping = {};
+  selectedLandmarkId = null;
+  customPlacementMode = false;
+  renderLandmarkList();
+  updateDetail();
+  updateStats();
+  updateNavButtons();
+}
+
+// ============================================================
+// CANVAS RENDERING
+// ============================================================
+
+function renderCanvas() {
+  if (!currentImage) return;
+
+  const wrapper = document.getElementById('canvasWrapper');
+  const maxW = wrapper.clientWidth;
+  const maxH = wrapper.clientHeight - 10;
+
+  const scale = Math.min(maxW / currentImage.naturalWidth, maxH / currentImage.naturalHeight, 1);
+  const w = currentImage.naturalWidth * scale;
+  const h = currentImage.naturalHeight * scale;
+
+  canvas.width = w;
+  canvas.height = h;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.drawImage(currentImage, 0, 0, w, h);
+
+  // Draw detected points (small dots)
+  detectedPoints.forEach((pt, i) => {
+    const x = pt.x * w;
+    const y = pt.y * h;
+
+    if (detectionSource === 'pytorch_face') {
+      // Green dots for PyTorch-Face points
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.7)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(16, 185, 129, 0.3)';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    } else {
+      // Default white/blue dots for MediaPipe
+      ctx.beginPath();
+      ctx.arc(x, y, 2, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(100, 180, 255, 0.35)';
+      ctx.fill();
+    }
+
+    // Show index numbers for every 5th point
+    if (detectionSource === 'pytorch_face' && i % 5 === 0) {
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.6)';
+      ctx.font = '8px monospace';
+      ctx.fillText(i, x + 4, y - 4);
+    }
+    if (detectionSource === 'mediapipe' && i % 30 === 0) {
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.font = '8px monospace';
+      ctx.fillText(i, x + 3, y - 3);
+    }
+  });
+
+  // Draw mapped landmarks
+  Object.entries(mapping).forEach(([id, m]) => {
+    const def = SIDE_LANDMARKS.find(l => l.id === id);
+    if (!def) return;
+
+    const x = m.x * w;
+    const y = m.y * h;
+    const color = def.color;
+
+    // Outer glow
+    ctx.beginPath();
+    ctx.arc(x, y, 8, 0, Math.PI * 2);
+    ctx.fillStyle = color + '30';
+    ctx.fill();
+
+    // Dot
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Label
+    ctx.fillStyle = '#fff';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(def.label, x, y - 10);
+  });
+
+  // Highlight selected landmark
+  if (selectedLandmarkId && mapping[selectedLandmarkId]) {
+    const m = mapping[selectedLandmarkId];
+    const x = m.x * w;
+    const y = m.y * h;
+
+    ctx.beginPath();
+    ctx.arc(x, y, 12, 0, Math.PI * 2);
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+
+// ============================================================
+// LANDMARK LIST
+// ============================================================
+
+function renderLandmarkList() {
+  const container = document.getElementById('landmarkList');
+
+  let filtered = SIDE_LANDMARKS.filter(d => {
+    if (searchQuery && !d.label.toLowerCase().includes(searchQuery.toLowerCase()) && !d.id.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (filterMode === 'done') return !!mapping[d.id];
+    if (filterMode === 'pending') return !mapping[d.id];
+    if (filterMode === 'custom') {
+      const m = mapping[d.id];
+      return m && m.source === 'custom';
+    }
+    return true;
+  });
+
+  container.innerHTML = filtered.map(d => {
+    const m = mapping[d.id];
+    const isActive = d.id === selectedLandmarkId;
+    let statusClass = 'pending';
+    let statusText = '⏳';
+    let dotClass = '';
+
+    if (m) {
+      if (m.source === 'detected') {
+        statusClass = 'done';
+        statusText = detectedPoints.length <= 39 ? `✅ PT#${m.ptIndex}` : `✅ MP#${m.ptIndex}`;
+        dotClass = 'mapped';
+      } else {
+        statusClass = 'done';
+        statusText = '✏️ Custom';
+        dotClass = 'custom';
+      }
+    }
+
+    return `
+      <div class="landmark-item ${isActive ? 'active' : ''}" onclick="selectLandmark('${d.id}')">
+        <div class="dot ${dotClass}" style="background:${d.color}"></div>
+        <div class="info">
+          <div class="name">${d.label}</div>
+          <div class="source">${m ? `(${Math.round(m.x*1000)/10}%, ${Math.round(m.y*1000)/10}%)` : 'Not set'}</div>
+        </div>
+        <div class="status ${statusClass}">${statusText}</div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('landmarkCount').textContent = `(${Object.keys(mapping).length}/31)`;
+}
+
+// ============================================================
+// LANDMARK SELECTION & DETAIL
+// ============================================================
+
+function selectLandmark(id) {
+  selectedLandmarkId = id;
+  customPlacementMode = false;
+  canvas.style.cursor = 'crosshair';
+  renderLandmarkList();
+  renderCanvas();
+  updateDetail();
+  updateNavButtons();
+}
+
+function updateDetail() {
+  const def = SIDE_LANDMARKS.find(d => d.id === selectedLandmarkId);
+  const m = mapping[selectedLandmarkId];
+
+  if (!def) {
+    document.getElementById('detailTitle').textContent = 'Select a landmark';
+    document.getElementById('detailDesc').textContent = 'Click on a landmark from the list to start labeling it.';
+    document.getElementById('candidateContainer').innerHTML = '';
+    return;
+  }
+
+  document.getElementById('detailTitle').textContent = `${def.label}`;
+  document.getElementById('detailDesc').textContent = def.desc;
+
+  let candidatesHtml = '';
+  if (m && m.source === 'detected') {
+    const srcLabel = detectionSource === 'pytorch_face' ? 'PT' : 'MP';
+    candidatesHtml = `<div style="font-size:11px;color:#4ade80;margin-top:6px;">✅ Mapped to ${srcLabel} index #${m.ptIndex} (${Math.round(m.x*1000)/10}%, ${Math.round(m.y*1000)/10}%)</div>`;
+  } else if (m && m.source === 'custom') {
+    candidatesHtml = `<div style="font-size:11px;color:#fbbf24;margin-top:6px;">✏️ Custom placed point (${Math.round(m.x*1000)/10}%, ${Math.round(m.y*1000)/10}%)</div>`;
+  }
+
+  // Show nearby detected points as candidates
+  if (detectedPoints.length > 0 && !m) {
+    const w = canvas.width;
+    const h = canvas.height;
+    const cx = m ? m.x * w : w / 2;
+    const cy = m ? m.y * h : h / 2;
+
+    const candidates = detectedPoints.map((pt, i) => ({
+      index: i,
+      dist: Math.sqrt((pt.x * w - cx) ** 2 + (pt.y * h - cy) ** 2),
+      x: pt.x,
+      y: pt.y
+    })).sort((a, b) => a.dist - b.dist).slice(0, 10);
+
+    if (candidates.length > 0) {
+      const srcLabel = detectionSource === 'pytorch_face' ? 'PT' : 'MP';
+      candidatesHtml += `<div style="font-size:11px;color:#888;margin-top:8px;margin-bottom:4px;">Nearby ${srcLabel} points:</div>`;
+      candidatesHtml += '<div class="candidate-list">';
+      candidates.forEach(c => {
+        candidatesHtml += `<div class="candidate-chip" onclick="assignDetected(${c.index})" title="${srcLabel}#${c.index} (${Math.round(c.x*1000)/10}%, ${Math.round(c.y*1000)/10}%)">
+          #${c.index} ${c.dist < 20 ? '⭐' : ''}
+        </div>`;
+      });
+      candidatesHtml += '</div>';
+    }
+  }
+
+  document.getElementById('candidateContainer').innerHTML = candidatesHtml;
+}
+
+// ============================================================
+// ACTIONS
+// ============================================================
+
+function assignDetected(ptIndex) {
+  if (!selectedLandmarkId || ptIndex >= detectedPoints.length) return;
+  const pt = detectedPoints[ptIndex];
+  if (!pt) return;
+
+  mapping[selectedLandmarkId] = {
+    x: pt.x,
+    y: pt.y,
+    source: 'detected',
+    ptIndex: ptIndex
+  };
+
+  const def = SIDE_LANDMARKS.find(d => d.id === selectedLandmarkId);
+  const srcLabel = detectionSource === 'pytorch_face' ? 'PT' : 'MP';
+  showToast(`✅ ${def?.label} → ${srcLabel}#${ptIndex}`);
+  renderCanvas();
+  renderLandmarkList();
+  updateDetail();
+  updateStats();
+  updateNavButtons();
+}
+
+/**
+ * Auto-assign using heuristic matching from landmarkDetection.ts
+ */
+function autoAssign() {
+  if (!selectedLandmarkId || detectedPoints.length === 0) {
+    showToast('⚠️ No detected points available. Run detection first.');
+    return;
+  }
+
+  const def = SIDE_LANDMARKS.find(d => d.id === selectedLandmarkId);
+  if (!def) return;
+
+  // Use the same heuristic logic from landmarkDetection.ts
+  const heuristicMap = getSideHeuristicMapping();
+  const expectedPtIndex = heuristicMap[selectedLandmarkId];
+
+  if (expectedPtIndex !== undefined && expectedPtIndex >= 0 && expectedPtIndex < detectedPoints.length) {
+    assignDetected(expectedPtIndex);
+    showToast(`🤖 Auto-assigned ${def.label} → #${expectedPtIndex}`);
+  } else {
+    // Fallback: find nearest point based on landmark type
+    let cx = 0.5, cy = 0.5;
+    if (selectedLandmarkId.includes('top_of_head')) { cx = 0.5; cy = 0.02; }
+    else if (selectedLandmarkId.includes('hairline')) { cx = 0.5; cy = 0.08; }
+    else if (selectedLandmarkId.includes('forehead')) { cx = 0.55; cy = 0.12; }
+    else if (selectedLandmarkId.includes('glabella')) { cx = 0.52; cy = 0.22; }
+    else if (selectedLandmarkId.includes('nasal_bridge')) { cx = 0.5; cy = 0.28; }
+    else if (selectedLandmarkId.includes('rhinion')) { cx = 0.48; cy = 0.36; }
+    else if (selectedLandmarkId.includes('nose_tip') || selectedLandmarkId === 'nose_tip') { cx = 0.45; cy = 0.52; }
+    else if (selectedLandmarkId.includes('supratip')) { cx = 0.45; cy = 0.48; }
+    else if (selectedLandmarkId.includes('infratip')) { cx = 0.45; cy = 0.55; }
+    else if (selectedLandmarkId.includes('columella')) { cx = 0.4; cy = 0.58; }
+    else if (selectedLandmarkId.includes('subnasale')) { cx = 0.38; cy = 0.60; }
+    else if (selectedLandmarkId.includes('subalare')) { cx = 0.42; cy = 0.58; }
+    else if (selectedLandmarkId.includes('upper_lip')) { cx = 0.38; cy = 0.64; }
+    else if (selectedLandmarkId.includes('lower_lip')) { cx = 0.35; cy = 0.68; }
+    else if (selectedLandmarkId.includes('mouth_corner')) { cx = 0.38; cy = 0.66; }
+    else if (selectedLandmarkId.includes('labiomental')) { cx = 0.36; cy = 0.71; }
+    else if (selectedLandmarkId.includes('chin_point')) { cx = 0.4; cy = 0.73; }
+    else if (selectedLandmarkId.includes('chin_bottom')) { cx = 0.45; cy = 0.76; }
+    else if (selectedLandmarkId.includes('ociput')) { cx = 0.05; cy = 0.35; }
+    else if (selectedLandmarkId.includes('corneal_apex')) { cx = 0.5; cy = 0.32; }
+    else if (selectedLandmarkId.includes('eyelid_end')) { cx = 0.55; cy = 0.32; }
+    else if (selectedLandmarkId.includes('lower_eyelid')) { cx = 0.5; cy = 0.34; }
+    else if (selectedLandmarkId.includes('orbitale')) { cx = 0.48; cy = 0.36; }
+    else if (selectedLandmarkId.includes('tragus') || selectedLandmarkId.includes('porion')) { cx = 0.15; cy = 0.3; }
+    else if (selectedLandmarkId.includes('cheekbone')) { cx = 0.55; cy = 0.42; }
+    else if (selectedLandmarkId.includes('upper_jaw')) { cx = 0.25; cy = 0.68; }
+    else if (selectedLandmarkId.includes('lower_jaw')) { cx = 0.1; cy = 0.75; }
+    else if (selectedLandmarkId.includes('cervical') || selectedLandmarkId.includes('neck')) { cx = 0.3; cy = 0.82; }
+
+    if (isFacingLeft === false) cx = 1 - cx;
+
+    let bestIdx = 0;
+    let bestDist = Infinity;
+    detectedPoints.forEach((pt, i) => {
+      const d = Math.sqrt((pt.x - cx) ** 2 + (pt.y - cy) ** 2);
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
+    });
+
+    assignDetected(bestIdx);
+    showToast(`🤖 Auto-assigned ${def.label} → #${bestIdx} (nearest match)`);
+  }
+}
+
+function enableCustomPlacement() {
+  if (!selectedLandmarkId) return;
+  customPlacementMode = true;
+  showToast('✏️ Click on the image to place this landmark');
+  canvas.style.cursor = 'crosshair';
+}
+
+function clearLandmark() {
+  if (!selectedLandmarkId) return;
+  delete mapping[selectedLandmarkId];
+  const def = SIDE_LANDMARKS.find(d => d.id === selectedLandmarkId);
+  showToast(`🗑️ Cleared ${def?.label}`);
+  renderCanvas();
+  renderLandmarkList();
+  updateDetail();
+  updateStats();
+  updateNavButtons();
+}
+
+// Canvas click for custom placement
+canvas.addEventListener('click', (e) => {
+  if (!customPlacementMode || !selectedLandmarkId) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / canvas.width;
+  const y = (e.clientY - rect.top) / canvas.height;
+
+  mapping[selectedLandmarkId] = {
+    x: Math.max(0, Math.min(1, x)),
+    y: Math.max(0, Math.min(1, y)),
+    source: 'custom'
+  };
+
+  customPlacementMode = false;
+  canvas.style.cursor = 'crosshair';
+
+  const def = SIDE_LANDMARKS.find(d => d.id === selectedLandmarkId);
+  showToast(`✏️ Placed ${def?.label} at (${Math.round(x*1000)/10}%, ${Math.round(y*1000)/10}%)`);
+  renderCanvas();
+  renderLandmarkList();
+  updateDetail();
+  updateStats();
+  updateNavButtons();
+});
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+
+function goToNext() {
+  const currentIdx = SIDE_LANDMARKS.findIndex(d => d.id === selectedLandmarkId);
+  if (currentIdx < SIDE_LANDMARKS.length - 1) {
+    selectLandmark(SIDE_LANDMARKS[currentIdx + 1].id);
+  }
+}
+
+function goToPrev() {
+  const currentIdx = SIDE_LANDMARKS.findIndex(d => d.id === selectedLandmarkId);
+  if (currentIdx > 0) {
+    selectLandmark(SIDE_LANDMARKS[currentIdx - 1].id);
+  }
+}
+
+function updateNavButtons() {
+  const currentIdx = SIDE_LANDMARKS.findIndex(d => d.id === selectedLandmarkId);
+  document.getElementById('prevBtn').disabled = currentIdx <= 0;
+  document.getElementById('nextBtn').disabled = currentIdx >= SIDE_LANDMARKS.length - 1;
+}
+
+// ============================================================
+// FILTER & SEARCH
+// ============================================================
+
+function setFilter(mode, btn) {
+  filterMode = mode;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLandmarkList();
+}
+
+function filterLandmarks() {
+  searchQuery = document.getElementById('searchInput').value;
+  renderLandmarkList();
+}
+
+// ============================================================
+// STATS
+// ============================================================
+
+function updateStats() {
+  const done = Object.keys(mapping).length;
+  const total = SIDE_LANDMARKS.length;
+  const pct = total > 0 ? Math.round(done / total * 100) : 0;
+
+  document.getElementById('headerStats').textContent = `${done} / ${total} landmarks labeled`;
+  document.getElementById('progressText').textContent = `${pct}% complete`;
+}
+
+// ============================================================
+// SAVE / EXPORT / RESET
+// ============================================================
+
+function saveMapping() {
+  const data = {
+    type: 'side',
+    timestamp: new Date().toISOString(),
+    imageSize: currentImage ? { w: currentImage.naturalWidth, h: currentImage.naturalHeight } : null,
+    detectionSource: detectionSource,
+    facingDirection: isFacingLeft ? 'left' : 'right',
+    detectedPointCount: detectedPoints.length,
+    mapping: mapping,
+  };
+
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `side-landmark-mapping-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  showToast('💾 Mapping saved!');
+}
+
+function exportMapping() {
+  const exportData = {
+    type: 'side',
+    timestamp: new Date().toISOString(),
+    detectionSource: detectionSource,
+    facingDirection: isFacingLeft ? 'left' : 'right',
+    mappings: {}
+  };
+
+  SIDE_LANDMARKS.forEach(d => {
+    const m = mapping[d.id];
+    if (m) {
+      exportData.mappings[d.id] = {
+        label: d.label,
+        detectedPtIndex: m.source === 'detected' ? m.ptIndex : null,
+        source: m.source,
+        position: { x: Math.round(m.x * 10000) / 10000, y: Math.round(m.y * 10000) / 10000 }
+      };
+    } else {
+      exportData.mappings[d.id] = {
+        label: d.label,
+        detectedPtIndex: null,
+        source: null,
+        position: null
+      };
+    }
+  });
+
+  document.getElementById('exportText').value = JSON.stringify(exportData, null, 2);
+  document.getElementById('exportModal').classList.remove('hidden');
+}
+
+function closeExportModal() {
+  document.getElementById('exportModal').classList.add('hidden');
+}
+
+function copyExport() {
+  const text = document.getElementById('exportText');
+  text.select();
+  navigator.clipboard.writeText(text.value).then(() => {
+    showToast('📋 Copied to clipboard!');
+  }).catch(() => {
+    document.execCommand('copy');
+    showToast('📋 Copied!');
+  });
+}
+
+function resetAll() {
+  if (!confirm('Reset all landmark mappings? This cannot be undone.')) return;
+  mapping = {};
+  selectedLandmarkId = null;
+  customPlacementMode = false;
+  renderCanvas();
+  renderLandmarkList();
+  updateDetail();
+  updateStats();
+  updateNavButtons();
+  showToast('↺ All mappings reset');
+}
+
+// ============================================================
+// HEURISTIC MAPPING for MediaPipe 478-point side profile
+// Based on landmarkDetection.ts detectSideLandmarks()
+// ============================================================
+
+function getSideHeuristicMapping() {
+  if (detectionSource === 'pytorch_face') {
+    // For 39-point PyTorch Face Landmark profile mode
+    // These indices approximate the 39-point profile detection
+    // Actual mapping depends on the model version, user should verify
+    return {
+      'top_of_head': 0,
+      'forehead': 1,
+      'glabella': 2,
+      'nasal_bridge_root': 3,
+      'rhinion': 4,
+      'nose_tip': 5,
+      'subnasale': 6,
+      'upper_lip': 7,
+      'lower_lip': 8,
+      'chin_point': 9,
+      'chin_bottom': 10,
+      'cervical_point': 11,
+      'corneal_apex': 17,
+      'eyelid_end': 18,
+      'lower_eyelid': 19,
+      'orbitale': 20,
+      'tragus': 21,
+      'porion': 22,
+      'cheekbone': 23,
+      'lower_jaw_angle': 24,
+      'occiput': 25,
+      'upper_jaw_angle': 26,
+      'intertragic_notch': 27,
+      'subalare': 28,
+      'supratip': 29,
+      'infratip': 30,
+      'columella': 31,
+      'mouth_corner': 32,
+      'labiomental_fold': 33,
+      'neck_point': 34,
+      'hairline_profile': 35,
+    };
+  }
+
+  // For MediaPipe 478-point detection, use the same heuristic as index.html
+  return {
+    'nose_tip': 1,
+    'nose_bottom': 2,
+    'nasal_bridge_root': 6,
+    'glabella': 8,
+    'forehead': 10,
+    'hairline_profile': 10,
+    'top_of_head': 10,
+    'upper_lip': 13,
+    'lower_lip': 14,
+    'subnasale': 94,
+    'chin_point': 152,
+    'chin_bottom': 199,
+    'rhinion': 168,
+    'neck_point': 172,
+    'cervical_point': 172,
+    'columella': 195,
+    'subalare': 49,
+    'cheekbone': 50,
+    'corneal_apex': 468,
+    'lower_eyelid': 145,
+    'orbitale': 145,
+    'eyelid_end': 33,
+    'mouth_corner': 61,
+    'porion': 234,
+    'tragus': 234,
+    'intertragic_notch': 234,
+    'occiput': 234,
+    'upper_jaw_angle': 172,
+    'lower_jaw_angle': 4,
+    'supratip': 1,
+    'infratip': 195,
+    'labiomental_fold': 152,
+  };
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ============================================================
+// HELP MODAL
+// ============================================================
+
+function showHelp() {
+  document.getElementById('helpModal').classList.remove('hidden');
+}
+
+// ============================================================
+// KEYBOARD SHORTCUTS
+// ============================================================
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+  switch (e.key) {
+    case 'ArrowDown':
+    case 'j':
+      goToNext();
+      break;
+    case 'ArrowUp':
+    case 'k':
+      goToPrev();
+      break;
+    case 'Escape':
+      customPlacementMode = false;
+      canvas.style.cursor = 'crosshair';
+      showToast('🚫 Custom placement cancelled');
+      break;
+    case 'a':
+      if (e.ctrlKey || e.metaKey) break;
+      autoAssign();
+      break;
+    case 'p':
+      if (e.ctrlKey || e.metaKey) break;
+      enableCustomPlacement();
+      break;
+    case 'c':
+      if (e.ctrlKey || e.metaKey) break;
+      clearLandmark();
+      break;
+    case '?':
+      showHelp();
+      break;
+  }
+});
+
+// ============================================================
+// WINDOW RESIZE
+// ============================================================
+
+window.addEventListener('resize', () => {
+  if (currentImage) renderCanvas();
+});
+
+// ============================================================
+// INIT
+// ============================================================
+
+initMediaPipe();
+renderLandmarkList();
+updateStats();
+updateNavButtons();
+
+console.log('🧠 Side Profile Landmark Labeler ready');
+console.log('  - Upload a side profile image');
+console.log('  - Run MediaPipe detection or load PyTorch-Face JSON');
+console.log('  - Map 31 custom landmarks to detected points');
+console.log('  - Press ? for help');
+</script>
+</body>
+</html>

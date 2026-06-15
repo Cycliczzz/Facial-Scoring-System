@@ -1,38 +1,38 @@
 # Facial-Scoring-System
-Front profile:
-1. Lateral Canthal Tilt
-2. Nose Bridge to Nose Width
-3. Bitemporal Width
-4. Neck Width
-5. Ear Protrusion Angle
-6. Cheekbone height
-7. Cupid'Bow Depth
-8. Bigonial width
-9. Jaw Slope
-10. Ear Protrusion Ratio
-11. Middle Third
-12. Eye Aspect Ratio
-13. Mouth Corner Position
-14. Eye Separation Ratio
-15. Eyebrow Tilt
-16. Lower Third
-17. Face Width to Height Ratio
-18. Interpupillary-Mouth Width Ratio
-19. Jaw Frontal Angle
-20. Intercanthal-Nasal Width Ratio
-21. Top Third
-22. One Eye Apart Test
-23. Midface Ratio
-24. Ipsilateral Alar Angle
-25. Mouth width to nose width ratio
-26. Total Facial Width to Height Ratio
-27. Chin to Philtrum Ratio
-28. Eyebrow Low Setedness
-29. Brow Length to Face Width Ratio
-30. Nose Tip Position
-31. Deviation of IAA(Ipsilateral alar angle) & JFA(jaw frontal angle)
-32. Lower Lip to Upper Lip Ratio
-33. Lower Third Proportion
+Front profile measurements:
+1. Lateral Canthal Tilt: số đo góc nhọn của đoạn thẳng nối left lateral canthus và left medial canthus với phương ngang,tương tự với bên mắt phải
+2. Nose Bridge to Nose Width: a/b trong đó a = khoảng cách từ Left nose side đến right nose side ; b = khoảng cách từ Left Nose Bridge đến right Nose Bridge
+3. Bitemporal Width: tỉ lệ tính theo phần trăm của a/b trong đó a = khoảng cách từ left temple đến right temple ; b = khoảng cách giữa left cheekbone và right cheekbone
+4. Neck Width:xóa measurement này
+5. Ear Protrusion Angle:xóa measurement này
+6. Cheekbone height: tỉ lệ giữa khoảng cách từ Cupid's Bow đến đoạn thẳng nối Left Cheekbone và right Cheekbone chia cho khoảng cách từ Cupid's Bow đến đoạn thẳng nối Left pupil và right pupil(tính bằng phần trăm)
+7. Cupid'Bow Depth: khoảng cách giữa cupid's bow và inner cupid's bow(theo phương thẳng đứng)
+8. Bigonial width: tỉ lệ tính bằng phần trăm a/b trong đó a = khoảng cách giữa left upper jaw angle và right upper jaw angle ; b = khoảng cách giữa left cheekbone và right cheekbone
+9. Jaw Slope: (a+b)/2 trong đó a là góc tạo bởi đoạn thẳng nối(left cheekbone,left upper jaw angle) và đoạn thẳng nối(left lower jaw angle,left chin) ; b là góc tạo bởi đoạn thẳng nối(right cheekbone,right upper jaw angle) và đoạn thẳng nối(right lower jaw angle,right chin)
+10. Ear Protrusion Ratio:xóa measurement này
+11. Middle Third: tỉ lệ tính bằng phần trăm của a/b, trong đó a = khoảng cách từ trung điểm đoạn thẳng nối trung điểm(right brow head,right brow inner corner) và trung điểm (left brow head,left brow inner corner) đến nasal base , b = khoảng cách từ hairline đến chin bottom
+12. Eye Aspect Ratio: ((a/b)+(c/d))/2  trong đó a = khoảng cách theo phương ngang của left medial canthus và left lateral canthus ; b = khoảng cách giữa left upper eye lid và left lower eyelid ; c = khoảng cách theo phương ngang của right medial canthus và right lateral canthus ; d = khoảng cách giữa right upper eye lid và right lower eyelid
+13. Mouth Corner Position: trung bình cộng của khoảng cách từ left mouth corner đến đường thẳng nằm ngang đi qua điểm mouth middle và khoảng cách từ right mouth corner đến đường thẳng nằm ngang đi qua điểm mouth middle
+14. Eye Separation Ratio: tỉ lệ tính bằng phần trăm của a/b, trong đó a = khoảng cách từ left pupil đến right pupil ; b = khoảng cách từ left cheekbone đến right cheekbone
+15. Eyebrow Tilt: (a+b)/2 , trong đó a = góc nhọn của đoạn thẳng nối trung điểm(right brow head,right brow inner corner) và trung điểm(right brow arc,right brow peak) với phương ngang ; b = góc nhọn của đoạn thẳng nối trung điểm(left brow head,left brow inner corner) và trung điểm(left brow arc,left brow peak) với phương ngang
+16. Lower Third: tỉ lệ tính bằng phần trăm của a/b, trong đó a = khoảng cách từ chin bottom đến nasal base , b = khoảng cách từ hairline đến chin bottom
+17. Face Width to Height Ratio: a/b trong đó a = khoảng cách giữa left cheekbone và right cheekbone ; b = khoảng cách từ cupid's bow đến trung điểm của đoạn thẳng nối trung điểm(right brow head,right brow inner corner) và trung điểm (left brow head,left brow inner corner)   
+18. Interpupillary-Mouth Width Ratio: a/b trong đó a = khoảng cách từ left mouth corner đến right mouth corner ; b = khoảng cách từ left pupil đến right pupil
+19. Jaw Frontal Angle:góc tạo bởi đường thẳng nối Left Lower Jaw Angle đến left chin và đường thẳng nối right Lower Jaw Angle đến right chin
+20. Intercanthal-Nasal Width Ratio: a/b trong đó a = khoảng cách giữa left nose side và right nose side ; b = khoảng cách giữa left medial canthus và right medial canthus
+21. Top Third: a/b, trong đó a = khoảng cách từ hairline đến trung điểm đoạn thẳng nối trung điểm(right brow head,right brow inner corner) và trung điểm (left brow head,left brow inner corner) ; b = khoảng cách từ hairline đến chin bottom
+22. One Eye Apart Test: c/((a+b)/2),trong đó a = khoảng cách từ left medial canthus đến Left Eyelid Hood End ,b = khoảng cách từ right medial canthus đến right Eyelid Hood End , c = khoảng cách giữa left medial canthus và right medial canthus
+23. Midface Ratio:khoảng cách giữa left pupil và right pupil chia khoảng cách từ inner cupid's bow đến đoạn thẳng nối left pupil và right pupil 
+24. Ipsilateral Alar Angle:góc tạo bởi đoạn thẳng nối Nasal Base đến Left Eyelid Hood End và Nasal Base đến right Eyelid Hood End
+25. Mouth width to nose width ratio: tỉ lệ khoảng cách từ Left Mouth Corner đến right Mouth Corner và khoảng cách từ left nose side đến right nose side
+26. Total Facial Width to Height Ratio: a/b trong đó a = khoảng cách từ hairline đến chin bottom ; b = khoảng cách từ left cheekbone đến right cheekbone
+27. Chin to Philtrum Ratio:tỉ lệ khoảng cách từ chin bottom đến lower lips center và khoảng cách từ Cupid's Bow đến nasal base
+28. Eyebrow Low Setedness: đặt a = khoảng cách từ left lower eyelid đến left upper eyelid ; b = khoảng cách từ right lower eyelid đến right upper eyelid ; c = khoảng cách từ left brow inner corner đến right brow inner corner, d = đoạn thẳng nối trung điểm của khoảng cách hai left,right pupils và trung điểm của đoạn thẳng nối từ left brow inner corner đến right brow inner corner,Eyebrow Low Setedness là tỉ lệ d/((a+b)/2)
+29. Brow Length to Face Width Ratio: (a+b)/c, trong đó a = khoảng cách từ Left Brow Inner Corner đến đường thẳng đứng(90 độ so với phương ngang) đi qua left brow tail ; b = khoảng cách từ right Brow Inner Corner đến đường thẳng đứng(90 độ so với phương ngang) đi qua right brow tail ; c = khoảng cách giữa left cheekbone và right cheekbone
+30. Nose Tip Position: khoảng cách từ nasal base đến nose bottom
+31. Deviation of IAA(Ipsilateral alar angle) & JFA(jaw frontal angle): lấy JFA trừ đi IAA
+32. Lower Lip to Upper Lip Ratio: a/b ,trong đó a = khoảng cách từ lower lips center đến mouth middle ; b = khoảng cách từ mouth middle đến cupid's bow
+33. Lower Third Proportion: tỉ lệ tính bằng phần trăm a/b trong đó a = khoảng cách từ nasal base đến mouth middle ; b = khoảng cách từ nasal base đến chin bottom
 
 
 
@@ -128,34 +128,34 @@ Front profile landmarks:
 
 
 Side profile landmarks:
-1. Top of Head
-2. Occiput
-3. Nose Tip
-4. Neck Point
-5. Porion
-6. Orbitale
-7. Tragus
-8. Intertragic Notch
-9. Corneal Apex
-10. Cheekbone
-11. Eyelid End
-12. Lower Eyelid
-13. Hairline (Profile)
-14. Glabella
-15. Forehead
-16. Nasal Bridge Root
-17. Rhinion
-18. Supratip
-19. Infratip
-20. Columella
-21. Subnasale
-22. Subalare
-23. Upper Lip
-24. Mouth Corner
-25. Lower Lip
-26. Labiomental Fold
-27. Chin Point
-28. Chin Bottom
-29. Cervical Point
-30. Upper Jaw Angle
-31. Lower Jaw Angle
+1. Top of Head - 
+2. Occiput -
+3. Nose Tip - 30 (2d sparse)
+4. Neck Point - 
+5. Porion - Lùi lại phía sau đầu so với 17327 một tí (2d dense)
+6. Orbitale - 10855 (2d dense)
+7. Tragus - Lùi lại phía sau đầu so với 17331 một tí (2d dense)
+8. Intertragic Notch - 17109 (2d dense)
+9. Corneal Apex - 37 (2d sparse)
+10. Cheekbone - 22478 (2d dense)
+11. Eyelid End - 1961 (2d dense)
+12. Lower Eyelid - 41 (2d sparse)
+13. Hairline (Profile) - giao điểm của đường thẳng nối 2 điểm 31615 và 31670 với đoạn thẳng trên cùng cạnh hình chữ nhật của khung detect gương mặt
+14. Glabella - 31324 (2d dense)
+15. Forehead - 31172 (2d dense)
+16. Nasal Bridge Root - 27 (2d sparse)
+17. Rhinion - 28 (2d sparse)
+18. Supratip - 29 (2d sparse)
+19. Infratip - 8195 (2d dense)
+20. Columella - 8197 (2d dense)
+21. Subnasale - 33 (2d sparse)
+22. Subalare - 13727 (2d dense)
+23. Upper Lip - 51 (2d sparse)
+24. Mouth Corner - 48 (2d sparse) 
+25. Lower Lip - 57 (2d sparse)
+26. Labiomental Fold - 8843 (2d dense)
+27. Chin Point - 36160 (2d dense)
+28. Chin Bottom - 36143 (2d dense)
+29. Cervical Point - 35587 (2d dense)
+30. Upper Jaw Angle - 3 (2d sparse)
+31. Lower Jaw Angle - 5 (2d sparse)

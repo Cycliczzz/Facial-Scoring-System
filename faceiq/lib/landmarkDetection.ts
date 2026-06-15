@@ -1,5 +1,6 @@
 // ============================================================
-// MediaPipe Face Landmark Detection
+// MediaPipe Face Landmark Detection (fallback)
+// + 3DDFA_V2 Server-side Detection (primary for hairline & side)
 // ============================================================
 
 import type { LandmarkPoint } from "./analysis/types"
@@ -11,7 +12,7 @@ interface MPFaceLandmark {
 }
 
 // ============================================================
-// FRONT PROFILE LANDMARK DETECTION (52 landmarks)
+// FRONT PROFILE LANDMARK DETECTION (48 landmarks using MediaPipe)
 // ============================================================
 
 const FRONT_LANDMARK_INDICES: Record<string, {
@@ -21,7 +22,8 @@ const FRONT_LANDMARK_INDICES: Record<string, {
   color: string
   extremumType?: 'minX' | 'maxX' | 'minY' | 'maxY'
 }> = {
-  // 1. Hairline - điểm cao nhất của đường chân tóc (thường nằm trên điểm 10 của mesh một tí)
+  // 1. Hairline - sẽ được ghi đè bởi 3DDFA_V2 (trung điểm cạnh trên của face bounding box)
+  // MediaPipe fallback: dùng index 10 (forehead)
   hairline: { type: 'single', indices: [10], label: 'Hairline', color: '#3b82f6' },
   
   // 2. Left pupil - 468
@@ -227,7 +229,7 @@ function detectFrontLandmarks(
 }
 
 // ============================================================
-// SIDE PROFILE LANDMARK DETECTION (31 landmarks)
+// SIDE PROFILE LANDMARK DETECTION (31 landmarks via MediaPipe fallback)
 // ============================================================
 
 function detectSideLandmarks(
@@ -420,12 +422,137 @@ function detectSideLandmarks(
 }
 
 // ============================================================
+// 3DDFA_V2 SERVER-SIDE LANDMARK DETECTION
+// ============================================================
+
+interface DDFAFrontResult {
+  mode: "front"
+  image_size: { w: number; h: number }
+  face_box: { x1: number; y1: number; x2: number; y2: number }
+  hairline: { x: number; y: number }
+  total_mesh_points: number
+  mesh_points?: Array<{ index: number; x: number; y: number }>
+  error?: string
+}
+
+interface DDFASideResult {
+  mode: "side"
+  image_size: { w: number; h: number }
+  facing_direction: "left" | "right"
+  original_facing?: "left" | "right"
+  was_mirrored?: boolean
+  original_image_size?: { w: number; h: number }
+  total_dense_points?: number
+  total_sparse_points?: number
+  total_mesh_points?: number
+  landmarks: Record<string, {
+    id: string
+    label: string
+    x: number
+    y: number
+    mesh_index: number
+    model_type?: string
+  }>
+  mesh_points?: Array<{ index: number; x: number; y: number }>
+  error?: string
+}
+
+/**
+ * Call the 3DDFA_V2 server API for front or side landmark detection.
+ */
+async function callDDFAAPI(
+  imageBlob: Blob,
+  mode: "front" | "side"
+): Promise<DDFAFrontResult | DDFASideResult | null> {
+  try {
+    const formData = new FormData()
+    formData.append("image", imageBlob, "image.jpg")
+    formData.append("mode", mode)
+
+    const response = await fetch("/api/detect-landmarks", {
+      method: "POST",
+      body: formData,
+    })
+
+    if (!response.ok) {
+      console.warn(`3DDFA_V2 API returned ${response.status}`)
+      return null
+    }
+
+    const result = await response.json()
+    if (result.error) {
+      console.warn(`3DDFA_V2 API error: ${result.error}`)
+      return null
+    }
+
+    return result as DDFAFrontResult | DDFASideResult
+  } catch (error) {
+    console.warn("3DDFA_V2 API call failed:", error)
+    return null
+  }
+}
+
+// ============================================================
+// Side profile color mapping
+// ============================================================
+const SIDE_COLORS: Record<string, string> = {
+  top_of_head: "#6b7280",
+  occiput: "#6b7280",
+  hairline_profile: "#f59e0b",
+  forehead: "#f59e0b",
+  glabella: "#f59e0b",
+  nasal_bridge_root: "#f97316",
+  rhinion: "#f97316",
+  supratip: "#f97316",
+  nose_tip: "#f97316",
+  infratip: "#f97316",
+  columella: "#f97316",
+  subnasale: "#f97316",
+  subalare: "#f97316",
+  upper_lip: "#ec4899",
+  mouth_corner: "#ec4899",
+  lower_lip: "#ec4899",
+  labiomental_fold: "#8b5cf6",
+  chin_point: "#8b5cf6",
+  chin_bottom: "#8b5cf6",
+  upper_jaw_angle: "#f59e0b",
+  lower_jaw_angle: "#8b5cf6",
+  porion: "#6b7280",
+  tragus: "#6b7280",
+  intertragic_notch: "#6b7280",
+  orbitale: "#38bdf8",
+  corneal_apex: "#38bdf8",
+  eyelid_end: "#38bdf8",
+  lower_eyelid: "#38bdf8",
+  cheekbone: "#ec4899",
+  cervical_point: "#6b7280",
+  neck_point: "#6b7280",
+}
+
+// ============================================================
 // MediaPipe Face Landmarker initialization
 // ============================================================
 
 let faceLandmarker: any = null
+let landmarkerCreationFailed: boolean = false
+
+/**
+ * MediaPipe WASM detect() crashes on some systems (XNNPACK/SIMD issues).
+ * The crash leaks through JS try/catch into the browser console.
+ * Once we detect a crash, persist it to sessionStorage so we skip
+ * MediaPipe on page reload too.
+ */
+function wasMediaPipeCrashDetected(): boolean {
+  try {
+    return sessionStorage.getItem("mp_front_detect_crashed") === "1"
+  } catch { return false }
+}
+function markMediaPipeCrashed(): void {
+  try { sessionStorage.setItem("mp_front_detect_crashed", "1") } catch { /* ignore */ }
+}
 
 async function getFaceLandmarker(): Promise<any> {
+  if (landmarkerCreationFailed || wasMediaPipeCrashDetected()) return null // Don't retry if creation/detection fails
   if (faceLandmarker) return faceLandmarker
 
   const { FaceLandmarker, FilesetResolver } = await import(
@@ -436,60 +563,283 @@ async function getFaceLandmarker(): Promise<any> {
     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
   )
 
-  faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
-    baseOptions: {
-      modelAssetPath:
-        "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
-      delegate: "GPU",
-    },
-    outputFaceBlendshapes: false,
-    runningMode: "IMAGE",
-    numFaces: 1,
-  })
+  // Try GPU first, fall back to CPU if GPU creation fails
+  for (const delegate of ["GPU", "CPU"] as const) {
+    try {
+      faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath:
+            "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
+          delegate,
+        },
+        outputFaceBlendshapes: false,
+        runningMode: "IMAGE",
+        numFaces: 1,
+      })
 
-  return faceLandmarker
+      console.log(`✅ MediaPipe FaceLandmarker initialized with ${delegate} delegate`)
+      return faceLandmarker
+    } catch (createErr) {
+      console.warn(`⚠️  MediaPipe FaceLandmarker creation failed with ${delegate} delegate:`, createErr)
+      if (delegate === "GPU") continue // Try CPU
+    }
+  }
+
+  // Both GPU and CPU creation failed — mark as permanently failed
+  console.error("❌ MediaPipe FaceLandmarker: both GPU and CPU creation failed. Front landmark detection will be unavailable.")
+  landmarkerCreationFailed = true
+  faceLandmarker = null
+  return null
 }
 
 // ============================================================
 // Main detection functions (exported)
 // ============================================================
 
+/**
+ * Helper: try to get hairline from 3DDFA_V2 front detection.
+ * Returns a single hairline LandmarkPoint or null.
+ */
+async function getDDFAFrontHairline(
+  imageElement: HTMLImageElement
+): Promise<LandmarkPoint | null> {
+  try {
+    const canvas = document.createElement("canvas")
+    canvas.width = imageElement.naturalWidth
+    canvas.height = imageElement.naturalHeight
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return null
+    ctx.drawImage(imageElement, 0, 0)
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.9)
+    )
+    if (!blob) return null
+    const ddfaResult = await callDDFAAPI(blob, "front")
+    if (ddfaResult && ddfaResult.mode === "front" && !ddfaResult.error) {
+      return {
+        id: "hairline",
+        label: "Hairline (3DDFA)",
+        x: ddfaResult.hairline.x,
+        y: ddfaResult.hairline.y,
+        color: "#3b82f6",
+      }
+    }
+  } catch {
+    // Ignore failures
+  }
+  return null
+}
+
+/**
+ * Detect front profile landmarks.
+ * Uses 3DDFA_V2 for hairline (midpoint of top edge of face bounding box),
+ * and MediaPipe for all other 47 landmarks.
+ * Falls back to MediaPipe-only if 3DDFA_V2 API fails.
+ */
 export async function detectFrontFromImage(
   imageElement: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement
 ): Promise<LandmarkPoint[]> {
   try {
     const landmarker = await getFaceLandmarker()
-    const result = landmarker.detect(imageElement)
-
-    if (!result || !result.faceLandmarks || result.faceLandmarks.length === 0) {
-      console.warn("No face detected in front image")
+    if (!landmarker) {
+      console.warn("⚠️  MediaPipe FaceLandmarker unavailable – skipping front landmark detection (will rely on 3DDFA_V2 only)")
+      // Still try to get hairline from 3DDFA_V2 even without MediaPipe
+      if (imageElement instanceof HTMLImageElement) {
+        try {
+          const ddfaResult = await getDDFAFrontHairline(imageElement)
+          if (ddfaResult) {
+            return [ddfaResult]
+          }
+        } catch { /* ignore */ }
+      }
       return []
     }
 
-    const mpLandmarks = result.faceLandmarks[0]
-    return detectFrontLandmarks(mpLandmarks)
+    // MediaPipe detect() may crash internally in WASM (e.g. missing WebGL, SIMD mismatch).
+    // Catch the error gracefully so the rest of the pipeline can continue.
+    // Once we see a crash, permanently disable MediaPipe to avoid recurring console errors.
+    let detectResult: any = null
+    try {
+      detectResult = landmarker.detect(imageElement)
+    } catch (_detectErr) {
+      // Mark detection as crashed so we skip MediaPipe entirely on subsequent calls
+      markMediaPipeCrashed()
+      faceLandmarker = null
+      console.warn("⚠️  MediaPipe WASM detect() crashed – disabled permanently, using 3DDFA_V2 fallback")
+    }
+
+    if (!detectResult || !detectResult.faceLandmarks || detectResult.faceLandmarks.length === 0) {
+      console.warn("⚠️  MediaPipe detect() returned no face landmarks – trying 3DDFA_V2 hairline fallback")
+      // Try 3DDFA_V2 for at least the hairline
+      if (imageElement instanceof HTMLImageElement) {
+        try {
+          const ddfaResult = await getDDFAFrontHairline(imageElement)
+          if (ddfaResult) {
+            return [ddfaResult]
+          }
+        } catch { /* ignore */ }
+      }
+      return []
+    }
+
+    const mpLandmarks = detectResult.faceLandmarks[0]
+    const landmarks = detectFrontLandmarks(mpLandmarks)
+
+    // Try to get hairline from 3DDFA_V2 (midpoint of top edge of face bounding box)
+    if (imageElement instanceof HTMLImageElement) {
+      try {
+        const canvas = document.createElement("canvas")
+        canvas.width = imageElement.naturalWidth
+        canvas.height = imageElement.naturalHeight
+        const ctx = canvas.getContext("2d")
+        if (ctx) {
+          ctx.drawImage(imageElement, 0, 0)
+          const blob = await new Promise<Blob | null>((resolve) =>
+            canvas.toBlob((b) => resolve(b), "image/jpeg", 0.9)
+          )
+          if (blob) {
+            const ddfaResult = await callDDFAAPI(blob, "front")
+            if (ddfaResult && ddfaResult.mode === "front" && !ddfaResult.error) {
+              // Override hairline with 3DDFA_V2 face box midpoint
+              const hairlineIdx = landmarks.findIndex(l => l.id === "hairline")
+              if (hairlineIdx >= 0) {
+                landmarks[hairlineIdx] = {
+                  id: "hairline",
+                  label: "Hairline (3DDFA)",
+                  x: ddfaResult.hairline.x,
+                  y: ddfaResult.hairline.y,
+                  color: "#3b82f6",
+                }
+              } else {
+                landmarks.push({
+                  id: "hairline",
+                  label: "Hairline (3DDFA)",
+                  x: ddfaResult.hairline.x,
+                  y: ddfaResult.hairline.y,
+                  color: "#3b82f6",
+                })
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("3DDFA_V2 front detection failed, using MediaPipe hairline:", e)
+      }
+    }
+
+    return landmarks
   } catch (error) {
     console.error("Front landmark detection error:", error)
     return []
   }
 }
 
+export interface SideDetectionResult {
+  landmarks: LandmarkPoint[]
+  /** Whether the original image was mirrored for detection (facing was left, now right) */
+  wasMirrored: boolean
+  /** Original facing direction before any mirroring */
+  originalFacing: "left" | "right" | "unknown"
+}
+
+/**
+ * Detect side profile landmarks.
+ * PRIMARY: Uses 3DDFA_V2 2D Dense mode (38,365 mesh points) with specific indices.
+ * FALLBACK: Uses MediaPipe 478-point detection if 3DDFA_V2 fails.
+ */
 export async function detectSideFromImage(
   imageElement: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement
-): Promise<LandmarkPoint[]> {
-  try {
-    const landmarker = await getFaceLandmarker()
-    const result = landmarker.detect(imageElement)
+): Promise<SideDetectionResult> {
+  // Try 3DDFA_V2 first (primary method for side profile)
+  if (imageElement instanceof HTMLImageElement) {
+    try {
+      const canvas = document.createElement("canvas")
+      canvas.width = imageElement.naturalWidth
+      canvas.height = imageElement.naturalHeight
+      const ctx = canvas.getContext("2d")
+      if (ctx) {
+        ctx.drawImage(imageElement, 0, 0)
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob((b) => resolve(b), "image/jpeg", 0.9)
+        )
 
-    if (!result || !result.faceLandmarks || result.faceLandmarks.length === 0) {
-      console.warn("No face detected in side image")
-      return []
+        if (blob) {
+          const ddfaResult = await callDDFAAPI(blob, "side")
+          if (ddfaResult && ddfaResult.mode === "side" && !ddfaResult.error && ddfaResult.landmarks) {
+            const landmarks: LandmarkPoint[] = []
+            for (const [id, data] of Object.entries(ddfaResult.landmarks)) {
+              landmarks.push({
+                id,
+                label: data.label,
+                x: data.x,
+                y: data.y,
+                color: SIDE_COLORS[id] || "#6b7280",
+              })
+            }
+            console.log(`✅ 3DDFA_V2 side: detected ${landmarks.length} landmarks (${ddfaResult.facing_direction})${ddfaResult.was_mirrored ? " [MIRRORED from left-facing]" : ""}`)
+            return {
+              landmarks,
+              wasMirrored: ddfaResult.was_mirrored ?? false,
+              originalFacing: ddfaResult.original_facing || ddfaResult.facing_direction,
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("3DDFA_V2 side detection failed, falling back to MediaPipe:", e)
     }
-
-    const mpLandmarks = result.faceLandmarks[0]
-    return detectSideLandmarks(mpLandmarks)
-  } catch (error) {
-    console.error("Side landmark detection error:", error)
-    return []
   }
+
+  // MediaPipe fallback removed – side profile ONLY uses 3DDFA_V2 with exact user-specified
+  // sparse/dense indices. Fallback landmarks would produce incorrect index mappings.
+  console.warn("⚠️  3DDFA_V2 side detection unavailable – no side landmarks returned")
+  return { landmarks: [], wasMirrored: false, originalFacing: "unknown" }
+}
+
+/**
+ * Mirror a data URL image horizontally (used when side profile was facing left).
+ * Returns a new data URL with the flipped image.
+ */
+export function mirrorImageDataUrl(dataUrl: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement("canvas")
+      canvas.width = img.naturalWidth
+      canvas.height = img.naturalHeight
+      const ctx = canvas.getContext("2d")
+      if (!ctx) {
+        reject(new Error("Failed to get canvas context"))
+        return
+      }
+      // Flip horizontally
+      ctx.translate(canvas.width, 0)
+      ctx.scale(-1, 1)
+      ctx.drawImage(img, 0, 0)
+      resolve(canvas.toDataURL("image/jpeg", 0.95))
+    }
+    img.onerror = () => reject(new Error("Failed to load image for mirroring"))
+    img.src = dataUrl
+  })
+}
+
+/**
+ * Converts an HTMLImageElement to a Blob for API calls.
+ */
+export function imageElementToBlob(
+  imageElement: HTMLImageElement,
+  quality = 0.9
+): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    const canvas = document.createElement("canvas")
+    canvas.width = imageElement.naturalWidth
+    canvas.height = imageElement.naturalHeight
+    const ctx = canvas.getContext("2d")
+    if (!ctx) {
+      resolve(null)
+      return
+    }
+    ctx.drawImage(imageElement, 0, 0)
+    canvas.toBlob((b) => resolve(b), "image/jpeg", quality)
+  })
 }

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { ImageIcon, UploadCloud, CheckCircle2, Loader2, Brain } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { detectFrontFromImage, detectSideFromImage } from "@/lib/landmarkDetection"
+import { detectFrontFromImage, detectSideFromImage, mirrorImageDataUrl } from "@/lib/landmarkDetection"
 import type { LandmarkPoint } from "@/lib/analysis/types"
 
 interface SidePhotoUploaderProps {
@@ -110,15 +110,38 @@ export function SidePhotoUploader({ initialGender = "male", initialEthnicity }: 
       setProcessingStage("Detecting facial landmarks (front)...")
       const frontLandmarks = await detectFrontFromImage(frontImg)
 
+      if (frontLandmarks.length === 0) {
+        console.warn("⚠️  Front landmark detection returned 0 landmarks – analysis results may be limited")
+        // Don't block the user — still continue with side detection
+      }
+
       setProcessingStage("Detecting facial landmarks (side)...")
-      const sideLandmarks = await detectSideFromImage(sideImg)
+      const sideResult = await detectSideFromImage(sideImg)
+
+      if (sideResult.landmarks.length === 0) {
+        console.warn("⚠️  Side landmark detection returned 0 landmarks – analysis results may be limited")
+        // Don't block the user — still continue
+      }
+
+      // If the side image was mirrored during detection (facing was left),
+      // mirror the stored image so the dashboard shows the correctly-oriented photo
+      if (sideResult.wasMirrored && sideImageData) {
+        setProcessingStage("Normalizing side image orientation...")
+        try {
+          const mirroredUrl = await mirrorImageDataUrl(sideImageData)
+          localStorage.setItem("sideProfileImage", mirroredUrl)
+          console.log("🔄 Side image mirrored to face right for display")
+        } catch (mirrorErr) {
+          console.warn("Failed to mirror side image:", mirrorErr)
+        }
+      }
 
       // Save landmarks to localStorage
       setProcessingStage("Saving results...")
       localStorage.setItem("frontLandmarks", JSON.stringify(frontLandmarks))
-      localStorage.setItem("sideLandmarks", JSON.stringify(sideLandmarks))
+      localStorage.setItem("sideLandmarks", JSON.stringify(sideResult.landmarks))
 
-      console.log(`Detected ${frontLandmarks.length} front landmarks and ${sideLandmarks.length} side landmarks`)
+      console.log(`Detected ${frontLandmarks.length} front landmarks and ${sideResult.landmarks.length} side landmarks`)
 
       setSuccess(true)
 
