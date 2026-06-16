@@ -262,8 +262,45 @@ function drawMeasurement(
 
   switch (measurementId) {
     case "lateral_canthal_tilt": {
-      const m = L("left_medial_canthus", "left_pupil"), l = L("left_lateral_canthus")
-      if (m && l) drawMeasurementLine(ctx, m.x + dx, m.y + dy, l.x + dx, l.y + dy, WHITE, alpha, "LCT")
+      const GLOW = "rgba(255,255,255,0.95)"
+      const DASHED = "rgba(255,255,255,0.5)"
+      // Left eye: line (10,11) + dashed horizontal from 10 going left
+      const lmc = L("left_medial_canthus"), llc = L("left_lateral_canthus")
+      if (lmc && llc) {
+        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(255,255,255,0.8)"
+        drawMeasurementLine(ctx, lmc.x + dx, lmc.y + dy, llc.x + dx, llc.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        // Dashed horizontal from left medial canthus going left 60px
+        ctx.setLineDash([5, 5])
+        ctx.strokeStyle = DASHED; ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.moveTo(lmc.x + dx, lmc.y + dy); ctx.lineTo(lmc.x + dx - 60, lmc.y + dy); ctx.stroke()
+        ctx.setLineDash([])
+        // Normalize to 0-1 space to avoid aspect ratio distortion
+        const lx1 = lmc.x / dw, ly1 = lmc.y / dh
+        const lx2 = llc.x / dw, ly2 = llc.y / dh
+        const lDeg = Math.abs(Math.atan2(ly2 - ly1, lx2 - lx1) * (180 / Math.PI))
+        const lAngle = lDeg > 90 ? 180 - lDeg : lDeg
+        ctx.font = "bold 11px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+        ctx.fillText(`${lAngle.toFixed(1)}°`, lmc.x + dx - 70, lmc.y + dy - 12)
+      }
+      // Right eye: line (21,22) + dashed horizontal from 21 going right
+      const rmc = L("right_medial_canthus"), rlc = L("right_lateral_canthus")
+      if (rmc && rlc) {
+        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(255,255,255,0.8)"
+        drawMeasurementLine(ctx, rmc.x + dx, rmc.y + dy, rlc.x + dx, rlc.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        ctx.setLineDash([5, 5])
+        ctx.strokeStyle = DASHED; ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.moveTo(rmc.x + dx, rmc.y + dy); ctx.lineTo(rmc.x + dx + 60, rmc.y + dy); ctx.stroke()
+        ctx.setLineDash([])
+        // Normalize to 0-1 space to avoid aspect ratio distortion
+        const rx1 = rmc.x / dw, ry1 = rmc.y / dh
+        const rx2 = rlc.x / dw, ry2 = rlc.y / dh
+        const rDeg = Math.abs(Math.atan2(ry2 - ry1, rx2 - rx1) * (180 / Math.PI))
+        const rAngle = rDeg > 90 ? 180 - rDeg : rDeg
+        ctx.font = "bold 11px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "right"; ctx.textBaseline = "middle"
+        ctx.fillText(`${rAngle.toFixed(1)}°`, rmc.x + dx + 70, rmc.y + dy - 12)
+      }
       break
     }
     case "nose_bridge_to_width": {
@@ -279,14 +316,36 @@ function drawMeasurement(
       break
     }
     case "cheekbone_height": {
+      const GLOW = "rgba(255,255,255,0.95)"
+      const DASHED = "rgba(255,255,255,0.35)"
+      const DIM = "rgba(255,255,255,0.4)"
       const lc = L("left_cheekbone"), rc = L("right_cheekbone")
       const lp = L("left_pupil"), rp = L("right_pupil")
       const cb = L("cupids_bow")
-      if (lc && rc) drawMeasurementLine(ctx, lc.x + dx, lc.y + dy, rc.x + dx, rc.y + dy, "rgba(255,255,255,0.25)", alpha * 0.3, "Cheek Ln")
-      if (lp && rp) drawMeasurementLine(ctx, lp.x + dx, lp.y + dy, rp.x + dx, rp.y + dy, "rgba(255,255,255,0.25)", alpha * 0.3, "Pupil Ln")
-      if (cb && lc && rc) {
-        const cheekMidY = (lc.y + rc.y) / 2
-        drawMeasurementLine(ctx, cb.x + dx, cb.y + dy, cb.x + dx, cheekMidY + dy, WHITE, alpha, "Cheek H")
+      if (lc && rc && lp && rp && cb) {
+        const cheekMid = { x: (lc.x + rc.x) / 2, y: (lc.y + rc.y) / 2 }
+        const pupilMid = { x: (lp.x + rp.x) / 2, y: (lp.y + rp.y) / 2 }
+        // Dashed lines
+        ctx.setLineDash([5, 5]); ctx.lineWidth = 1.5; ctx.strokeStyle = DASHED
+        ctx.beginPath(); ctx.moveTo(lp.x + dx, lp.y + dy); ctx.lineTo(rp.x + dx, rp.y + dy); ctx.stroke()
+        ctx.beginPath(); ctx.moveTo(lc.x + dx, lc.y + dy); ctx.lineTo(rc.x + dx, rc.y + dy); ctx.stroke()
+        ctx.setLineDash([]); ctx.lineWidth = 2
+        // a: cupid's bow to cheekbone midpoint - highlighted
+        const a = Math.sqrt(((cb.x - cheekMid.x) / dw) ** 2 + ((cb.y - cheekMid.y) / dh) ** 2)
+        // b: pupil midpoint to cheekbone midpoint - dim
+        const b = Math.sqrt(((pupilMid.x - cheekMid.x) / dw) ** 2 + ((pupilMid.y - cheekMid.y) / dh) ** 2)
+        const total = a + b
+        const aPct = total > 0 ? Number((a / total) * 100) : 0
+        const bPct = total > 0 ? Number((b / total) * 100) : 0
+        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(255,255,255,0.8)"
+        drawMeasurementLine(ctx, cb.x + dx, cb.y + dy, cheekMid.x + dx, cheekMid.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        ctx.font = "bold 13px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+        ctx.fillText(`${aPct.toFixed(1)}%`, Math.max(cb.x, cheekMid.x) + dx + 6, (cb.y + cheekMid.y) / 2 + dy)
+        // b line dim
+        drawMeasurementLine(ctx, pupilMid.x + dx, pupilMid.y + dy, cheekMid.x + dx, cheekMid.y + dy, DIM, 1.0)
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = DIM; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+        ctx.fillText(`${bPct.toFixed(1)}%`, Math.max(pupilMid.x, cheekMid.x) + dx + 6, (pupilMid.y + cheekMid.y) / 2 + dy)
       }
       break
     }
@@ -444,25 +503,65 @@ function drawMeasurement(
       break
     }
     case "midface_ratio": {
-      const mm = L("left_medial_canthus", "left_pupil"), rm = L("right_medial_canthus", "right_pupil"), m = L("mouth_middle")
-      if (mm && rm && m) {
-        drawMeasurementLine(ctx, mm.x + dx, mm.y + dy, rm.x + dx, rm.y + dy, WHITE, alpha, "MFW")
-        drawMeasurementLine(ctx, mm.x + dx, mm.y + dy, m.x + dx, m.y + dy, WHITE_DIM, alpha * 0.5, "MFH")
+      const GLOW = "rgba(255,255,255,0.95)"
+      const DIM = "rgba(255,255,255,0.4)"
+      const lp = L("left_pupil"), rp = L("right_pupil"), ic = L("inner_cupids_bow")
+      if (lp && rp && ic) {
+        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(255,255,255,0.8)"
+        drawMeasurementLine(ctx, lp.x + dx, lp.y + dy, rp.x + dx, rp.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        // Normalize all to 0-1
+        const lx1 = lp.x / dw, ly1 = lp.y / dh, lx2 = rp.x / dw, ly2 = rp.y / dh
+        const icx = ic.x / dw, icy = ic.y / dh
+        const pDist = Math.sqrt((lx2 - lx1) ** 2 + (ly2 - ly1) ** 2)
+        const A = ly2 - ly1; const B = lx1 - lx2; const C = lx2 * ly1 - lx1 * ly2
+        const distToLine = Math.abs(A * icx + B * icy + C) / Math.sqrt(A * A + B * B)
+        const ratio = distToLine > 0 ? Number((pDist / distToLine).toFixed(4)) : 0
+        ctx.font = "bold 14px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "bottom"
+        ctx.fillText(`${ratio}`, (lx1 + lx2) / 2 * dw + dx, ly1 * dh + dy - 8)
+        // Dim perpendicular line from inner cupid's bow to pupil line
+        const t = -((lx1 - icx) * (lx2 - lx1) + (ly1 - icy) * (ly2 - ly1)) / ((lx2 - lx1) ** 2 + (ly2 - ly1) ** 2)
+        const px = (lx1 + t * (lx2 - lx1)) * dw + dx
+        const py = (ly1 + t * (ly2 - ly1)) * dh + dy
+        drawMeasurementLine(ctx, icx * dw + dx, icy * dh + dy, px, py, DIM, 1.0)
       }
       break
     }
     case "ipsilateral_alar_angle": {
-      const ln = L("left_nose_side"), nb = L("nose_bottom"), rn = L("right_nose_side")
-      if (ln && nb && rn) {
-        drawMeasurementLine(ctx, ln.x + dx, ln.y + dy, nb.x + dx, nb.y + dy, WHITE, alpha, "IAA")
-        drawMeasurementLine(ctx, nb.x + dx, nb.y + dy, rn.x + dx, rn.y + dy, WHITE_DIM, alpha * 0.5)
+      const GLOW = "rgba(255,255,255,0.95)"
+      const nb = L("nasal_base"), le = L("left_eyelid_hood_end"), re = L("right_eyelid_hood_end")
+      if (nb && le && re) {
+        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(255,255,255,0.8)"
+        drawMeasurementLine(ctx, nb.x + dx, nb.y + dy, le.x + dx, le.y + dy, GLOW, 1.0)
+        drawMeasurementLine(ctx, nb.x + dx, nb.y + dy, re.x + dx, re.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        const a1 = Math.atan2(le.y - nb.y, le.x - nb.x)
+        const a2 = Math.atan2(re.y - nb.y, re.x - nb.x)
+        const angle = Math.abs(a1 - a2) * (180 / Math.PI)
+        const midA = (a1 + a2) / 2
+        const rad = 30
+        ctx.strokeStyle = GLOW; ctx.lineWidth = 2
+        ctx.beginPath(); ctx.arc(nb.x + dx, nb.y + dy, rad, a1, a2); ctx.stroke()
+        ctx.font = "bold 13px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+        ctx.fillText(`${angle.toFixed(1)}°`, nb.x + dx + (rad + 15) * Math.cos(midA), nb.y + dy + (rad + 15) * Math.sin(midA))
       }
       break
     }
     case "mouth_width_to_nose_width": {
       const lm = L("left_mouth_corner"), rm = L("right_mouth_corner"), ln = L("left_nose_side"), rn = L("right_nose_side")
-      if (lm && rm) drawMeasurementLine(ctx, lm.x + dx, lm.y + dy, rm.x + dx, rm.y + dy, WHITE, alpha, "MW")
-      if (ln && rn) drawMeasurementLine(ctx, ln.x + dx, ln.y + dy, rn.x + dx, rn.y + dy, WHITE_DIM, alpha * 0.5, "NW")
+      const GLOW = "rgba(255,255,255,0.95)"
+      const DIM = "rgba(255,255,255,0.4)"
+      if (lm && rm) {
+        const mW = Math.abs(rm.x - lm.x) / dw
+        const nW = ln && rn ? Math.abs(rn.x - ln.x) / dw : 1
+        const ratio = nW > 0 ? Number((mW / nW).toFixed(4)) : 0
+        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(255,255,255,0.8)"
+        drawMeasurementLine(ctx, lm.x + dx, lm.y + dy, rm.x + dx, rm.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        ctx.font = "bold 14px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "bottom"
+        ctx.fillText(`${ratio}`, (lm.x + rm.x) / 2 + dx, lm.y + dy - 8)
+      }
+      if (ln && rn) drawMeasurementLine(ctx, ln.x + dx, ln.y + dy, rn.x + dx, rn.y + dy, DIM, 1.0)
       break
     }
     case "total_facial_width_to_height": {

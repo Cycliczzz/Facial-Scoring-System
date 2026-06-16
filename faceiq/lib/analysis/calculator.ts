@@ -240,16 +240,23 @@ function calculateFrontMeasurements(
   const rightTemple = L("right_temple")
 
   // ---- 1. Lateral Canthal Tilt ----
-  // Acute angle between line (lateral canthus → medial canthus) and horizontal
-  // Separate for left and right eye
-  if (leftLateral && leftMedial) {
-    const leftLCT = acuteAngleFromHorizontal(leftLateral, leftMedial)
-    addMeasurement("lateral_canthal_tilt", "Lateral Canthal Tilt", leftLCT, "degrees", "Eyes",
-      "Acute angle of the line connecting lateral canthus to medial canthus with horizontal (left eye).")
-  } else if (rightLateral && rightMedial) {
-    const rightLCT = acuteAngleFromHorizontal(rightLateral, rightMedial)
-    addMeasurement("lateral_canthal_tilt", "Lateral Canthal Tilt", rightLCT, "degrees", "Eyes",
-      "Acute angle of the line connecting lateral canthus to medial canthus with horizontal (right eye).")
+  // Signed angle between line (medial canthus → lateral canthus) and horizontal
+  // Positive = upward tilt (lateral higher than medial)
+  // Negative = downward tilt (negative canthal tilt)
+  let lctSum = 0
+  let lctCount = 0
+  if (leftMedial && leftLateral) {
+    const leftAngle = acuteAngleFromHorizontal(leftMedial, leftLateral)
+    lctSum += leftAngle; lctCount++
+  }
+  if (rightMedial && rightLateral) {
+    const rightAngle = acuteAngleFromHorizontal(rightMedial, rightLateral)
+    lctSum += rightAngle; lctCount++
+  }
+  if (lctCount > 0) {
+    const avgAngle = Math.round((lctSum / lctCount) * 10) / 10
+    addMeasurement("lateral_canthal_tilt", "Lateral Canthal Tilt", avgAngle, "degrees", "Eyes",
+      "Acute angle of the line from medial canthus to lateral canthus with horizontal. Always 0-90 degrees.")
   }
 
   // ---- 2. Nose Bridge to Nose Width ----
@@ -281,14 +288,18 @@ function calculateFrontMeasurements(
   // ---- 5. Ear Protrusion Angle - REMOVED ----
 
   // ---- 6. Cheekbone Height ----
-  // Ratio of distance from Cupid's Bow to line (left cheekbone, right cheekbone)
-  // divided by distance from Cupid's Bow to line (left pupil, right pupil) → percentage
+  // a = distance from Cupid's Bow (38) to midpoint of cheekbone line (47,48)
+  // b = distance from midpoint of pupil line (2,3) to midpoint of cheekbone line (47,48)
+  // Value = a/(a+b) as percentage
   if (cupidsBow && leftCheekbone && rightCheekbone && leftPupil && rightPupil) {
-    const distToCheekboneLine = distanceToLine(cupidsBow, leftCheekbone, rightCheekbone)
-    const distToPupilLine = distanceToLine(cupidsBow, leftPupil, rightPupil)
-    if (distToPupilLine > 0) {
-      addMeasurement("cheekbone_height", "Cheekbone Height", (distToCheekboneLine / distToPupilLine) * 100, "percentage", "Cheeks",
-        "Percentage ratio of Cupid's Bow distance to cheekbone line vs pupil line. Higher values indicate higher cheekbones.")
+    const cheekMid = midpoint(leftCheekbone, rightCheekbone)
+    const pupilMid = midpoint(leftPupil, rightPupil)
+    const a = dist(cupidsBow, cheekMid)
+    const b = dist(pupilMid, cheekMid)
+    const total = a + b
+    if (total > 0) {
+      addMeasurement("cheekbone_height", "Cheekbone Height", (a / total) * 100, "percentage", "Cheeks",
+        "Percentage of Cupid's Bow-to-cheekbone distance relative to total pupil-to-cheekbone distance. Higher = higher cheekbones.")
     }
   }
 
