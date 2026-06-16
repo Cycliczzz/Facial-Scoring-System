@@ -284,51 +284,86 @@ function drawMeasurementOnCanvas(
     ctx.setLineDash([])
   }
 
+  const projectPointToLine = (p: any, a: any, b: any) => {
+    if (!p || !a || !b) return null
+    const abx = b.x - a.x
+    const aby = b.y - a.y
+    const apx = p.x - a.x
+    const apy = p.y - a.y
+    const abLenSq = abx * abx + aby * aby
+    if (abLenSq === 0) return { x: a.x, y: a.y }
+    const t = (apx * abx + apy * aby) / abLenSq
+    return { x: a.x + abx * t, y: a.y + aby * t }
+  }
+
+  const offsetPoint = (origin: any, directionFrom: any, directionTo: any, length = 40) => {
+    if (!origin || !directionFrom || !directionTo) return null
+    const vx = directionTo.x - directionFrom.x
+    const vy = directionTo.y - directionFrom.y
+    const vLen = Math.hypot(vx, vy)
+    if (vLen === 0) return { x: origin.x, y: origin.y }
+    return { x: origin.x + (vx / vLen) * length, y: origin.y + (vy / vLen) * length }
+  }
+
   switch (measurementId) {
     // ============================================================
     // FRONT PROFILE VISUALIZATIONS (33)
     // ============================================================
 
     case "lateral_canthal_tilt": {
-      // Draw line from medial to lateral canthus + horizontal reference
-      const inner = lm["left_medial_canthus"]
-      const outer = lm["left_lateral_canthus"]
-      if (inner && outer) {
+      const leftInner = lm["left_medial_canthus"]
+      const leftOuter = lm["left_lateral_canthus"]
+      const rightInner = lm["right_medial_canthus"]
+      const rightOuter = lm["right_lateral_canthus"]
+      const drawTilt = (inner: any, outer: any, arcLabel: string, arcColor: string) => {
+        if (!inner || !outer) return
         drawLine(inner, outer, highlightColor)
         drawHLine(inner.y)
         drawPoint(inner, highlightColor)
         drawPoint(outer, highlightColor)
-        drawLabel(inner, "Medial")
-        drawLabel(outer, "Lateral")
-        // Angle arc
-        const a1 = Math.atan2(0, 1) // horizontal right
+        const a1 = Math.atan2(0, 1)
         const a2 = Math.atan2(outer.y - inner.y, outer.x - inner.x)
-        ctx.strokeStyle = angleColor
+        ctx.strokeStyle = arcColor
         ctx.lineWidth = 2
         ctx.beginPath()
-        ctx.arc(inner.x + drawX, inner.y + drawY, 25, a1, a2)
+        ctx.arc(inner.x + drawX, inner.y + drawY, 22, a1, a2)
         ctx.stroke()
         const midA = (a1 + a2) / 2
-        ctx.fillStyle = angleColor
+        ctx.fillStyle = arcColor
         ctx.font = "bold 10px sans-serif"
         ctx.textAlign = "center"
-        ctx.fillText("LCT", inner.x + drawX + 35 * Math.cos(midA), inner.y + drawY + 35 * Math.sin(midA))
+        ctx.fillText(arcLabel, inner.x + drawX + 32 * Math.cos(midA), inner.y + drawY + 32 * Math.sin(midA))
       }
+      drawTilt(leftInner, leftOuter, "L", angleColor)
+      drawTilt(rightInner, rightOuter, "R", angleColor)
       break
     }
 
     case "nose_bridge_to_width": {
-      const lb = lm["left_nose_bridge"]
-      const rb = lm["right_nose_bridge"]
-      const ls = lm["left_nose_side"]
-      const rs = lm["right_nose_side"]
+      const lb = lm["left_nose_bridge"]     // 34
+      const rb = lm["right_nose_bridge"]    // 35
+      const ls = lm["left_nose_side"]       // 4
+      const rs = lm["right_nose_side"]      // 5
       if (lb && rb && ls && rs) {
-        drawDimensionLine(lb, rb, "Bridge", highlightColor)
-        drawDimensionLine(ls, rs, "Width", color)
-        drawPoint(lb, highlightColor)
-        drawPoint(rb, highlightColor)
-        drawPoint(ls, color)
-        drawPoint(rs, color)
+        // Highlighted line: (4,5) = nose side width
+        drawLine(ls, rs, highlightColor)
+        // Dim line: (34,35) = nose bridge width
+        drawLine(lb, rb, color)
+        drawPoint(ls, highlightColor)
+        drawPoint(rs, highlightColor)
+        drawPoint(lb, color)
+        drawPoint(rb, color)
+        // Calculate ratio = bridgeWidth / noseWidth
+        const bridgeW = Math.sqrt((rb.x - lb.x) ** 2 + (rb.y - lb.y) ** 2)
+        const noseW = Math.sqrt((rs.x - ls.x) ** 2 + (rs.y - ls.y) ** 2)
+        const ratio = noseW > 0 ? bridgeW / noseW : 0
+        // Display ratio above highlighted line
+        const midX = (ls.x + rs.x) / 2 + drawX
+        const midY = (ls.y + rs.y) / 2 + drawY - 12
+        ctx.font = "bold 11px sans-serif"
+        ctx.fillStyle = highlightColor
+        ctx.textAlign = "center"
+        ctx.fillText(`${ratio.toFixed(2)}`, midX, midY)
       }
       break
     }
@@ -358,13 +393,15 @@ function drawMeasurementOnCanvas(
       if (leftCheek && rightCheek && cb && leftPupil && rightPupil) {
         drawLine(leftCheek, rightCheek, dimColor)
         drawLine(leftPupil, rightPupil, dimColor)
+        const cheekProj = projectPointToLine(cb, leftCheek, rightCheek)
+        const pupilProj = projectPointToLine(cb, leftPupil, rightPupil)
+        if (cheekProj) drawDashedLine(cb, cheekProj, highlightColor)
+        if (pupilProj) drawDashedLine(cb, pupilProj, color)
         drawPoint(cb, highlightColor)
-        drawLabel(cb, "Cupid's Bow")
-        drawDashedLine(cb, { x: cb.x, y: (leftCheek.y + rightCheek.y) / 2 }, highlightColor)
-        drawPoint(leftCheek, color)
-        drawPoint(rightCheek, color)
-        drawPoint(leftPupil, color)
-        drawPoint(rightPupil, color)
+        drawPoint(leftCheek, dimColor)
+        drawPoint(rightCheek, dimColor)
+        drawPoint(leftPupil, dimColor)
+        drawPoint(rightPupil, dimColor)
       }
       break
     }
@@ -386,8 +423,9 @@ function drawMeasurementOnCanvas(
     }
 
     case "bigonial_width": {
-      const gl = lm["left_lower_jaw_angle"]
-      const gr = lm["right_lower_jaw_angle"]
+      // a = distance between left & right UPPER jaw angles; b = bizygomatic (cheekbone) width
+      const gl = lm["left_upper_jaw_angle"]
+      const gr = lm["right_upper_jaw_angle"]
       const zl = lm["left_cheekbone"]
       const zr = lm["right_cheekbone"]
       if (gl && gr && zl && zr) {
@@ -401,30 +439,29 @@ function drawMeasurementOnCanvas(
       break
     }
 
+
     case "jaw_slope": {
-      const gonion = lm["left_lower_jaw_angle"]
-      const chin = lm["left_chin"] || lm["chin_bottom"]
-      if (gonion && chin) {
-        drawLine(gonion, chin, highlightColor)
-        drawHLine(gonion.y)
-        drawPoint(gonion, highlightColor)
+      const leftCheek = lm["left_cheekbone"]
+      const leftUpper = lm["left_upper_jaw_angle"]
+      const leftLower = lm["left_lower_jaw_angle"]
+      const leftChin = lm["left_chin"] || lm["chin_bottom"]
+      const rightCheek = lm["right_cheekbone"]
+      const rightUpper = lm["right_upper_jaw_angle"]
+      const rightLower = lm["right_lower_jaw_angle"]
+      const rightChin = lm["right_chin"] || lm["chin_bottom"]
+      const drawJawSlope = (cheek: any, upper: any, lower: any, chin: any, arcLabel: string) => {
+        if (!cheek || !upper || !lower || !chin) return
+        drawLine(cheek, upper, highlightColor)
+        drawLine(lower, chin, color)
+        const arcEnd = offsetPoint(upper, lower, chin, 35)
+        if (arcEnd) drawAngleArc(upper, cheek, arcEnd, arcLabel, angleColor)
+        drawPoint(upper, highlightColor)
+        drawPoint(cheek, color)
+        drawPoint(lower, color)
         drawPoint(chin, color)
-        drawLabel(gonion, "Gonion")
-        drawLabel(chin, "Chin")
-        // Angle arc
-        const a1 = Math.atan2(0, 1)
-        const a2 = Math.atan2(chin.y - gonion.y, chin.x - gonion.x)
-        ctx.strokeStyle = angleColor
-        ctx.lineWidth = 2
-        ctx.beginPath()
-        ctx.arc(gonion.x + drawX, gonion.y + drawY, 25, a1, a2)
-        ctx.stroke()
-        const midA = (a1 + a2) / 2
-        ctx.fillStyle = angleColor
-        ctx.font = "bold 10px sans-serif"
-        ctx.textAlign = "center"
-        ctx.fillText("JS", gonion.x + drawX + 35 * Math.cos(midA), gonion.y + drawY + 35 * Math.sin(midA))
       }
+      drawJawSlope(leftCheek, leftUpper, leftLower, leftChin, "L")
+      drawJawSlope(rightCheek, rightUpper, rightLower, rightChin, "R")
       break
     }
 
@@ -499,61 +536,73 @@ function drawMeasurementOnCanvas(
     case "mouth_corner_position": {
       const ml = lm["left_mouth_corner"]
       const mr = lm["right_mouth_corner"]
-      const hair = lm["hairline"]
-      const chin = lm["chin_bottom"]
-      if (ml && mr && hair && chin) {
-        const midY = (ml.y + mr.y) / 2
-        drawLine(hair, chin, dimColor)
-        drawHLine(midY, highlightColor)
-        drawPoint(ml, color)
-        drawPoint(mr, color)
-        drawPoint(hair, color)
-        drawPoint(chin, color)
-        drawLabel(ml, "Mouth")
+      const mouthMid = lm["mouth_middle"]
+      if (ml && mr && mouthMid) {
+        // Horizontal dashed line through mouth_middle (point 40)
+        drawHLine(mouthMid.y, highlightColor)
+        // Vertical highlighted lines from points 36 and 37 down to the horizontal line
+        drawLine(ml, { x: ml.x, y: mouthMid.y }, highlightColor)
+        drawLine(mr, { x: mr.x, y: mouthMid.y }, highlightColor)
+        drawPoint(ml, highlightColor)
+        drawPoint(mr, highlightColor)
+        drawPoint(mouthMid, highlightColor)
+        // Signed distances: positive if point above line (smaller y in image coords)
+        const distL = mouthMid.y - ml.y  // positive if ml is above mouthMid
+        const distR = mouthMid.y - mr.y  // positive if mr is above mouthMid
+        const avgDist = (distL + distR) / 2
+        // Display averaged signed distance near the horizontal line
+        const labelX = (ml.x + mr.x) / 2 + drawX
+        const labelY = mouthMid.y + drawY + 18
+        ctx.font = "bold 11px sans-serif"
+        ctx.fillStyle = highlightColor
+        ctx.textAlign = "center"
+        ctx.fillText(`${avgDist.toFixed(1)}`, labelX, labelY)
       }
       break
     }
 
     case "eye_separation_ratio": {
-      const ri = lm["right_medial_canthus"]
-      const li = lm["left_medial_canthus"]
-      const lo = lm["left_lateral_canthus"]
-      if (ri && li && lo) {
-        drawDimensionLine(ri, li, "Intercanthal", highlightColor)
-        drawDimensionLine(li, lo, "Eye width", color)
-        drawPoint(ri, highlightColor)
-        drawPoint(li, highlightColor)
-        drawPoint(lo, color)
+      const lp = lm["left_pupil"]
+      const rp = lm["right_pupil"]
+      const lc = lm["left_cheekbone"]
+      const rc = lm["right_cheekbone"]
+      if (lp && rp && lc && rc) {
+        drawDimensionLine(lp, rp, "Pupils", highlightColor)
+        drawDimensionLine(lc, rc, "Cheekbones", color)
+        drawPoint(lp, highlightColor)
+        drawPoint(rp, highlightColor)
+        drawPoint(lc, color)
+        drawPoint(rc, color)
       }
       break
     }
 
     case "eyebrow_tilt": {
-      const bi = lm["left_brow_head"]
-      const bo = lm["left_brow_tail"]
-      if (bi && bo) {
-        drawLine(bi, bo, highlightColor)
-        drawHLine(bi.y)
-        drawPoint(bi, highlightColor)
-        drawPoint(bo, color)
-        drawLabel(bi, "Head")
-        drawLabel(bo, "Tail")
-        // Angle arc
-        const a1 = Math.atan2(0, 1)
-        const a2 = Math.atan2(bo.y - bi.y, bo.x - bi.x)
-        ctx.strokeStyle = angleColor
-        ctx.lineWidth = 2
-        ctx.beginPath()
-        ctx.arc(bi.x + drawX, bi.y + drawY, 25, a1, a2)
-        ctx.stroke()
-        const midA = (a1 + a2) / 2
-        ctx.fillStyle = angleColor
-        ctx.font = "bold 10px sans-serif"
+      // Left: mid(15,16) → mid(17,18), Right: mid(26,27) → mid(28,29)
+      // Signed angle from horizontal, positive = upward
+      const mid = (a: any, b: any) => (a && b ? { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } : null)
+      const drawBrowTilt = (head: any, inner: any, arch: any, peak: any) => {
+        const start = mid(head, inner)
+        const end = mid(arch, peak)
+        if (!start || !end) return
+        drawLine(start, end, highlightColor)
+        drawPoint(start, highlightColor)
+        drawPoint(end, highlightColor)
+        // Signed angle from horizontal (atan2 gives correct sign in image coords)
+        const signedAngle = Math.atan2(end.y - start.y, end.x - start.x) * (180 / Math.PI)
+        // Display signed angle above the segment
+        const midPt = { x: (start.x + end.x) / 2 + drawX, y: (start.y + end.y) / 2 + drawY }
+        ctx.font = "bold 11px sans-serif"
+        ctx.fillStyle = highlightColor
         ctx.textAlign = "center"
-        ctx.fillText("BT", bi.x + drawX + 35 * Math.cos(midA), bi.y + drawY + 35 * Math.sin(midA))
+        ctx.textBaseline = "bottom"
+        ctx.fillText(`${signedAngle.toFixed(1)}°`, midPt.x, midPt.y - 5)
       }
+      drawBrowTilt(lm["left_brow_head"], lm["left_brow_inner_corner"], lm["left_brow_arch"], lm["left_brow_peak"])
+      drawBrowTilt(lm["right_brow_head"], lm["right_brow_inner_corner"], lm["right_brow_arch"], lm["right_brow_peak"])
       break
     }
+
 
     case "face_width_to_height": {
       const zl = lm["left_cheekbone"]
@@ -598,19 +647,57 @@ function drawMeasurementOnCanvas(
     }
 
     case "jaw_frontal_angle": {
-      const gl = lm["left_lower_jaw_angle"]
-      const gr = lm["right_lower_jaw_angle"]
-      const chin = lm["chin_bottom"]
-      if (gl && gr && chin) {
-        drawLine(gl, chin, color)
-        drawLine(gr, chin, color)
-        drawAngleArc(chin, gl, gr, "JFA", angleColor)
-        drawPoint(gl, color)
-        drawPoint(gr, color)
-        drawPoint(chin, highlightColor)
+      // Connect (43,45) and (44,46) with highlighted lines, extend them to intersect
+      const gl = lm["left_lower_jaw_angle"]    // 43
+      const gr = lm["right_lower_jaw_angle"]   // 44
+      const lc = lm["left_chin"]               // 45
+      const rc = lm["right_chin"]              // 46
+      if (gl && gr && lc && rc) {
+        // Draw original lines highlighted
+        drawLine(gl, lc, highlightColor)
+        drawLine(gr, rc, highlightColor)
+        // Find intersection point of the two extended lines
+        // Line 1: gl→lc, Line 2: gr→rc
+        // Parametric: L1 = gl + t*(lc-gl), L2 = gr + u*(rc-gr)
+        const dx1 = lc.x - gl.x, dy1 = lc.y - gl.y
+        const dx2 = rc.x - gr.x, dy2 = rc.y - gr.y
+        const det = dx1 * dy2 - dy1 * dx2
+        if (Math.abs(det) > 0.001) {
+          // Extend far enough for intersection
+          const extFactor = 5
+          const l1End = { x: gl.x + dx1 * extFactor, y: gl.y + dy1 * extFactor }
+          const l2End = { x: gr.x + dx2 * extFactor, y: gr.y + dy2 * extFactor }
+          // Compute intersection using extended points
+          const ex1 = l1End.x - gl.x, ey1 = l1End.y - gl.y
+          const ex2 = l2End.x - gr.x, ey2 = l2End.y - gr.y
+          const det2 = ex1 * ey2 - ey1 * ex2
+          if (Math.abs(det2) > 0.001) {
+            const t = ((gr.x - gl.x) * ey2 - (gr.y - gl.y) * ex2) / det2
+            const apex = { x: gl.x + ex1 * t, y: gl.y + ey1 * t }
+            // Draw angle arc at intersection
+            const angleDeg = Math.abs(Math.atan2(det, dx1 * dx2 + dy1 * dy2)) * (180 / Math.PI)
+            const finalAngle = angleDeg > 180 ? 360 - angleDeg : angleDeg
+            const a1 = Math.atan2(lc.y - gl.y, lc.x - gl.x)
+            const a2 = Math.atan2(rc.y - gr.y, rc.x - gr.x)
+            ctx.strokeStyle = angleColor
+            ctx.lineWidth = 2
+            ctx.beginPath()
+            ctx.arc(apex.x + drawX, apex.y + drawY, 30, a1, a2)
+            ctx.stroke()
+            // Display angle value
+            const midA = (a1 + a2) / 2
+            ctx.fillStyle = angleColor
+            ctx.font = "bold 11px sans-serif"
+            ctx.textAlign = "center"
+            ctx.fillText(`${finalAngle.toFixed(1)}°`, apex.x + drawX + 40 * Math.cos(midA), apex.y + drawY + 40 * Math.sin(midA))
+          }
+        }
+        drawPoint(gl, color); drawPoint(gr, color)
+        drawPoint(lc, highlightColor); drawPoint(rc, highlightColor)
       }
       break
     }
+
 
     case "intercanthal_nasal_width": {
       const ri = lm["right_medial_canthus"]
@@ -629,44 +716,68 @@ function drawMeasurementOnCanvas(
     }
 
     case "one_eye_apart": {
-      const rp = lm["right_pupil"]
-      const lp = lm["left_pupil"]
-      const inner = lm["left_medial_canthus"]
-      const outer = lm["left_lateral_canthus"]
-      if (rp && lp && inner && outer) {
-        drawDimensionLine(rp, lp, "Pupils", highlightColor)
-        drawDimensionLine(inner, outer, "Eye", color)
-        drawPoint(rp, highlightColor)
-        drawPoint(lp, highlightColor)
-        drawPoint(inner, color)
-        drawPoint(outer, color)
+      const li = lm["left_medial_canthus"]     // 10
+      const ri = lm["right_medial_canthus"]    // 21
+      const llo = lm["left_lateral_canthus"]    // 11
+      const rlo = lm["right_lateral_canthus"]   // 22
+      if (li && ri && llo && rlo) {
+        // Lines (10,11) and (21,22) - eye widths
+        drawLine(li, llo, color)
+        drawLine(ri, rlo, color)
+        // Highlighted line (10,21) - intercanthal distance
+        drawLine(li, ri, highlightColor)
+        drawPoint(li, highlightColor)
+        drawPoint(ri, highlightColor)
+        drawPoint(llo, color)
+        drawPoint(rlo, color)
+        // Calculate and display ratio
+        const intercanthal = Math.sqrt((ri.x - li.x) ** 2 + (ri.y - li.y) ** 2)
+        const leftEyeW = Math.sqrt((llo.x - li.x) ** 2 + (llo.y - li.y) ** 2)
+        const rightEyeW = Math.sqrt((rlo.x - ri.x) ** 2 + (rlo.y - ri.y) ** 2)
+        const avgEyeW = (leftEyeW + rightEyeW) / 2
+        const ratio = avgEyeW > 0 ? intercanthal / avgEyeW : 0
+        // Display ratio above highlighted line
+        const midX = (li.x + ri.x) / 2 + drawX
+        const midY = (li.y + ri.y) / 2 + drawY - 12
+        ctx.font = "bold 11px sans-serif"
+        ctx.fillStyle = highlightColor
+        ctx.textAlign = "center"
+        ctx.fillText(`${ratio.toFixed(2)}`, midX, midY)
       }
       break
     }
 
     case "midface_ratio": {
-      const ri = lm["right_medial_canthus"]
-      const li = lm["left_medial_canthus"]
-      const mouth = lm["mouth_middle"]
-      if (ri && li && mouth) {
-        drawDimensionLine(ri, li, "Width", color)
-        drawDimensionLine(li, mouth, "Height", highlightColor)
-        drawPoint(ri, color)
-        drawPoint(li, highlightColor)
-        drawPoint(mouth, highlightColor)
+      const rp = lm["right_pupil"]
+      const lp = lm["left_pupil"]
+      const icb = lm["inner_cupids_bow"]
+      if (rp && lp && icb) {
+        // Draw interpupillary line (width)
+        drawDimensionLine(rp, lp, "Width", highlightColor)
+        drawPoint(rp, highlightColor)
+        drawPoint(lp, highlightColor)
+        const proj = projectPointToLine(icb, lp, rp)
+        if (proj) {
+          drawDashedLine(icb, proj, color)
+          drawPoint(proj, dimColor)
+        }
+        drawPoint(icb, color)
+        drawLabel(icb, "Inner Cupid's Bow")
+        drawLabel(rp, "Right Pupil")
+        drawLabel(lp, "Left Pupil")
       }
       break
     }
 
     case "ipsilateral_alar_angle": {
-      const tip = lm["nose_bottom"]
-      const left = lm["left_nose_side"]
-      const right = lm["right_nose_side"]
-      if (tip && left && right) {
-        drawLine(left, tip, color)
-        drawLine(right, tip, color)
-        drawAngleArc(tip, left, right, "IAA", angleColor)
-        drawPoint(tip, highlightColor)
+      const base = lm["nasal_base"]
+      const left = lm["left_eyelid_hood_end"]
+      const right = lm["right_eyelid_hood_end"]
+      if (base && left && right) {
+        drawLine(base, left, color)
+        drawLine(base, right, color)
+        drawAngleArc(base, left, right, "IAA", angleColor)
+        drawPoint(base, highlightColor)
         drawPoint(left, color)
         drawPoint(right, color)
       }
@@ -729,73 +840,126 @@ function drawMeasurementOnCanvas(
     }
 
     case "eyebrow_low_setedness": {
-      const brow = lm["left_brow_arch"] || lm["left_brow_peak"]
-      const eye = lm["left_upper_eyelid"]
-      if (brow && eye) {
-        drawDimensionLine(brow, eye, "Brow-Eye", highlightColor)
-        drawPoint(brow, highlightColor)
-        drawPoint(eye, color)
+      const lUpper = lm["left_upper_eyelid"]
+      const lLower = lm["left_lower_eyelid"]
+      const rUpper = lm["right_upper_eyelid"]
+      const rLower = lm["right_lower_eyelid"]
+      const lp = lm["left_pupil"]
+      const rp = lm["right_pupil"]
+      const lBrow = lm["left_brow_inner_corner"]
+      const rBrow = lm["right_brow_inner_corner"]
+      if (lUpper && lLower && rUpper && rLower && lp && rp && lBrow && rBrow) {
+        // Solid lines for eye heights: (23,24) and (12,13)
+        drawLine(rUpper, rLower, dimColor)
+        drawLine(lUpper, lLower, dimColor)
+        // Dashed lines for pupils and brow inner corners: (2,3) and (16,27)
+        drawDashedLine(lp, rp, dimColor)
+        drawDashedLine(lBrow, rBrow, dimColor)
+        // Midpoints
+        const pupilMid = { x: (lp.x + rp.x) / 2, y: (lp.y + rp.y) / 2 }
+        const browMid = { x: (lBrow.x + rBrow.x) / 2, y: (lBrow.y + rBrow.y) / 2 }
+        // Highlighted line connecting midpoints
+        drawLine(pupilMid, browMid, highlightColor)
+        drawPoint(pupilMid, highlightColor)
+        drawPoint(browMid, highlightColor)
+        // Calculate: a = avg of eye heights, ratio = highlighted / a
+        const leftEyeH = Math.abs(lLower.y - lUpper.y)
+        const rightEyeH = Math.abs(rLower.y - rUpper.y)
+        const a = (leftEyeH + rightEyeH) / 2
+        const highlightedLen = Math.sqrt((browMid.x - pupilMid.x) ** 2 + (browMid.y - pupilMid.y) ** 2)
+        const ratio = a > 0 ? highlightedLen / a : 0
+        // Display ratio next to highlighted line
+        const midX = (pupilMid.x + browMid.x) / 2 + drawX
+        const midY = (pupilMid.y + browMid.y) / 2 + drawY
+        ctx.font = "bold 11px sans-serif"
+        ctx.fillStyle = highlightColor
+        ctx.textAlign = "left"
+        ctx.textBaseline = "middle"
+        ctx.fillText(`${ratio.toFixed(2)}`, midX + 5, midY)
       }
       break
     }
 
     case "brow_length_to_face_width": {
-      const bi = lm["left_brow_head"]
-      const bo = lm["left_brow_tail"]
-      const zl = lm["left_cheekbone"]
-      const zr = lm["right_cheekbone"]
-      if (bi && bo && zl && zr) {
-        drawDimensionLine(bi, bo, "Brow", highlightColor)
-        drawDimensionLine(zl, zr, "Face", color)
-        drawPoint(bi, highlightColor)
-        drawPoint(bo, highlightColor)
+      // Connect (16,19) and (27,30) highlighted, connect (47,48)
+      // ratio = avg((16,19), (27,30)) / (47,48)
+      const li = lm["left_brow_inner_corner"]   // 16
+      const lt = lm["left_brow_tail"]            // 19
+      const ri = lm["right_brow_inner_corner"]   // 27
+      const rt = lm["right_brow_tail"]           // 30
+      const zl = lm["left_cheekbone"]            // 47
+      const zr = lm["right_cheekbone"]           // 48
+      if (li && lt && ri && rt && zl && zr) {
+        // Highlighted brow length lines
+        drawLine(li, lt, highlightColor)
+        drawLine(ri, rt, highlightColor)
+        drawPoint(li, highlightColor)
+        drawPoint(lt, highlightColor)
+        drawPoint(ri, highlightColor)
+        drawPoint(rt, highlightColor)
+        // Face width line
+        drawLine(zl, zr, color)
         drawPoint(zl, color)
         drawPoint(zr, color)
+        // Calculate ratio
+        const leftBrow = Math.sqrt((lt.x - li.x) ** 2 + (lt.y - li.y) ** 2)
+        const rightBrow = Math.sqrt((rt.x - ri.x) ** 2 + (rt.y - ri.y) ** 2)
+        const avgBrow = (leftBrow + rightBrow) / 2
+        const faceW = Math.sqrt((zr.x - zl.x) ** 2 + (zr.y - zl.y) ** 2)
+        const ratio = faceW > 0 ? avgBrow / faceW : 0
+        // Display ratio above face width line
+        const midX = (zl.x + zr.x) / 2 + drawX
+        const midY = (zl.y + zr.y) / 2 + drawY - 10
+        ctx.font = "bold 11px sans-serif"
+        ctx.fillStyle = color
+        ctx.textAlign = "center"
+        ctx.fillText(`${ratio.toFixed(2)}`, midX, midY)
       }
       break
     }
 
+
     case "nose_tip_position": {
+      const base = lm["nasal_base"]
       const tip = lm["nose_bottom"]
-      const hair = lm["hairline"]
-      const chin = lm["chin_bottom"]
-      if (tip && hair && chin) {
-        drawLine(hair, chin, dimColor)
-        drawHLine(tip.y, highlightColor)
+      if (base && tip) {
+        drawLine(base, tip, highlightColor)
+        drawPoint(base, color)
         drawPoint(tip, highlightColor)
-        drawPoint(hair, color)
-        drawPoint(chin, color)
-        drawLabel(tip, "Nose tip")
       }
       break
     }
 
     case "deviation_iaa_jfa": {
       // Show both IAA and JFA angles
-      const tip = lm["nose_bottom"]
-      const left = lm["left_nose_side"]
-      const right = lm["right_nose_side"]
+      const base = lm["nasal_base"]
+      const left = lm["left_eyelid_hood_end"]
+      const right = lm["right_eyelid_hood_end"]
       const gl = lm["left_lower_jaw_angle"]
       const gr = lm["right_lower_jaw_angle"]
-      const chin = lm["chin_bottom"]
-      if (tip && left && right) {
-        drawLine(left, tip, color)
-        drawLine(right, tip, color)
-        drawAngleArc(tip, left, right, "IAA", angleColor)
-        drawPoint(tip, color)
+      const lc = lm["left_chin"]
+      const rc = lm["right_chin"]
+      if (base && left && right) {
+        drawLine(base, left, color)
+        drawLine(base, right, color)
+        drawAngleArc(base, left, right, "IAA", angleColor)
+        drawPoint(base, color)
         drawPoint(left, color)
         drawPoint(right, color)
       }
-      if (gl && gr && chin) {
-        drawLine(gl, chin, dimColor)
-        drawLine(gr, chin, dimColor)
-        drawAngleArc(chin, gl, gr, "JFA", "#a78bfa")
+      if (gl && gr && lc && rc) {
+        drawLine(gl, lc, dimColor)
+        drawLine(gr, rc, dimColor)
+        const apex = { x: (lc.x + rc.x) / 2, y: (lc.y + rc.y) / 2 }
+        drawAngleArc(apex, { x: apex.x + (lc.x - gl.x), y: apex.y + (lc.y - gl.y) }, { x: apex.x + (rc.x - gr.x), y: apex.y + (rc.y - gr.y) }, "JFA", "#a78bfa")
         drawPoint(gl, color)
         drawPoint(gr, color)
-        drawPoint(chin, color)
+        drawPoint(lc, color)
+        drawPoint(rc, color)
       }
       break
     }
+
 
     case "lower_lip_to_upper_lip": {
       const ll = lm["lower_lip_center"]
@@ -820,17 +984,15 @@ function drawMeasurementOnCanvas(
     }
 
     case "lower_third_proportion": {
-      const nose = lm["nose_bottom"]
+      const base = lm["nasal_base"]
+      const mouth = lm["mouth_middle"]
       const chin = lm["chin_bottom"]
-      const hair = lm["hairline"]
-      if (nose && chin && hair) {
-        drawLine(hair, chin, dimColor)
-        drawDashedLine(nose, { x: nose.x, y: chin.y }, highlightColor)
-        drawPoint(nose, highlightColor)
+      if (base && mouth && chin) {
+        drawLine(base, chin, dimColor)
+        drawLine(base, mouth, highlightColor)
+        drawPoint(base, highlightColor)
+        drawPoint(mouth, color)
         drawPoint(chin, color)
-        drawPoint(hair, color)
-        drawLabel(nose, "Nose")
-        drawLabel(chin, "Chin")
       }
       break
     }
