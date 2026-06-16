@@ -217,12 +217,8 @@ function drawMeasurementOnCanvas(
     ctx.stroke()
   }
 
-  const drawLabel = (p: any, text: string, c: string = textColor) => {
-    if (!p) return
-    ctx.fillStyle = c
-    ctx.font = "bold 11px sans-serif"
-    ctx.textAlign = "center"
-    ctx.fillText(text, p.x + drawX, p.y + drawY - 12)
+  const drawLabel = (_p: any, _text: string, _c?: string) => {
+    // No-op: labels removed from all measurements
   }
 
   const drawDashedLine = (p1: any, p2: any, c: string = dimColor) => {
@@ -259,18 +255,12 @@ function drawMeasurementOnCanvas(
     ctx.setLineDash([])
   }
 
-  const drawDimensionLine = (p1: any, p2: any, label: string, c: string = highlightColor) => {
+  const drawDimensionLine = (p1: any, p2: any, _label: string, c: string = highlightColor) => {
     if (!p1 || !p2) return
-    const mx = (p1.x + p2.x) / 2 + drawX
-    const my = (p1.y + p2.y) / 2 + drawY
     drawLine(p1, p2, c)
-    ctx.fillStyle = c
-    ctx.font = "bold 10px sans-serif"
-    ctx.textAlign = "center"
-    ctx.fillText(label, mx, my - 8)
   }
 
-  const drawAngleArc = (vertex: any, p1: any, p2: any, label: string, c: string = angleColor) => {
+  const drawAngleArc = (vertex: any, p1: any, p2: any, _label: string, c: string = angleColor) => {
     if (!vertex || !p1 || !p2) return
     const a1 = Math.atan2(p1.y - vertex.y, p1.x - vertex.x)
     const a2 = Math.atan2(p2.y - vertex.y, p2.x - vertex.x)
@@ -280,14 +270,6 @@ function drawMeasurementOnCanvas(
     ctx.beginPath()
     ctx.arc(vertex.x + drawX, vertex.y + drawY, radius, a1, a2)
     ctx.stroke()
-    // Label at midpoint of arc
-    const midAngle = (a1 + a2) / 2
-    const lx = vertex.x + drawX + (radius + 12) * Math.cos(midAngle)
-    const ly = vertex.y + drawY + (radius + 12) * Math.sin(midAngle)
-    ctx.fillStyle = c
-    ctx.font = "bold 10px sans-serif"
-    ctx.textAlign = "center"
-    ctx.fillText(label, lx, ly)
   }
 
   const drawSLine = (p1: any, p2: any, c: string = "#f97316") => {
@@ -367,61 +349,22 @@ function drawMeasurementOnCanvas(
       break
     }
 
-    case "neck_width": {
-      const nl = lm["left_neck_point"]
-      const nr = lm["right_neck_point"]
-      const zl = lm["left_cheekbone"]
-      const zr = lm["right_cheekbone"]
-      if (nl && nr && zl && zr) {
-        drawDimensionLine(nl, nr, "Neck", highlightColor)
-        drawDimensionLine(zl, zr, "Face", color)
-        drawPoint(nl, highlightColor)
-        drawPoint(nr, highlightColor)
-        drawPoint(zl, color)
-        drawPoint(zr, color)
-      }
-      break
-    }
-
-    case "ear_protrusion_angle": {
-      const ear = lm["left_outer_ear"]
-      const cheek = lm["left_cheekbone"]
-      if (ear && cheek) {
-        drawLine(cheek, ear, highlightColor)
-        drawHLine(cheek.y)
-        drawPoint(cheek, highlightColor)
-        drawPoint(ear, color)
-        drawLabel(cheek, "Cheek")
-        drawLabel(ear, "Ear")
-        // Angle arc
-        const a1 = Math.atan2(0, 1)
-        const a2 = Math.atan2(ear.y - cheek.y, ear.x - cheek.x)
-        ctx.strokeStyle = angleColor
-        ctx.lineWidth = 2
-        ctx.beginPath()
-        ctx.arc(cheek.x + drawX, cheek.y + drawY, 25, a1, a2)
-        ctx.stroke()
-        const midA = (a1 + a2) / 2
-        ctx.fillStyle = angleColor
-        ctx.font = "bold 10px sans-serif"
-        ctx.textAlign = "center"
-        ctx.fillText("EPA", cheek.x + drawX + 35 * Math.cos(midA), cheek.y + drawY + 35 * Math.sin(midA))
-      }
-      break
-    }
-
     case "cheekbone_height": {
-      const zygo = lm["left_cheekbone"]
-      const chin = lm["chin_bottom"]
-      const hair = lm["hairline"]
-      if (zygo && chin && hair) {
-        drawLine(hair, chin, dimColor)
-        drawDashedLine(zygo, { x: zygo.x, y: chin.y }, highlightColor)
-        drawPoint(zygo, highlightColor)
-        drawPoint(chin, color)
-        drawPoint(hair, color)
-        drawLabel(zygo, "Cheekbone")
-        drawLabel(chin, "Chin")
+      const leftCheek = lm["left_cheekbone"]
+      const rightCheek = lm["right_cheekbone"]
+      const leftPupil = lm["left_pupil"]
+      const rightPupil = lm["right_pupil"]
+      const cb = lm["cupids_bow"]
+      if (leftCheek && rightCheek && cb && leftPupil && rightPupil) {
+        drawLine(leftCheek, rightCheek, dimColor)
+        drawLine(leftPupil, rightPupil, dimColor)
+        drawPoint(cb, highlightColor)
+        drawLabel(cb, "Cupid's Bow")
+        drawDashedLine(cb, { x: cb.x, y: (leftCheek.y + rightCheek.y) / 2 }, highlightColor)
+        drawPoint(leftCheek, color)
+        drawPoint(rightCheek, color)
+        drawPoint(leftPupil, color)
+        drawPoint(rightPupil, color)
       }
       break
     }
@@ -485,52 +428,70 @@ function drawMeasurementOnCanvas(
       break
     }
 
-    case "ear_protrusion_ratio": {
-      const le = lm["left_outer_ear"]
-      const re = lm["right_outer_ear"]
-      const zl = lm["left_cheekbone"]
-      const zr = lm["right_cheekbone"]
-      if (le && re && zl && zr) {
-        drawDimensionLine(le, re, "Ear span", highlightColor)
-        drawDimensionLine(zl, zr, "Face width", color)
-        drawPoint(le, highlightColor)
-        drawPoint(re, highlightColor)
-        drawPoint(zl, color)
-        drawPoint(zr, color)
-      }
-      break
-    }
-
-    case "middle_third": {
-      const eye = lm["left_upper_eyelid"] || lm["right_upper_eyelid"]
-      const nose = lm["nose_bottom"]
+    case "top_third":
+    case "middle_third":
+    case "lower_third": {
+      // Show all 3 facial thirds; active = white glow, inactive = dim
       const hair = lm["hairline"]
       const chin = lm["chin_bottom"]
-      if (eye && nose && hair && chin) {
-        drawLine(hair, chin, dimColor)
-        drawDashedLine(eye, { x: eye.x, y: nose.y }, highlightColor)
-        drawPoint(eye, color)
-        drawPoint(nose, highlightColor)
-        drawPoint(hair, color)
-        drawPoint(chin, color)
-        drawLabel(eye, "Eye")
-        drawLabel(nose, "Nose")
+      const nasalBase = lm["nasal_base"]
+      const lbh = lm["left_brow_head"], lbi = lm["left_brow_inner_corner"]
+      const rbh = lm["right_brow_head"], rbi = lm["right_brow_inner_corner"]
+      if (hair && chin && nasalBase && lbh && lbi && rbh && rbi) {
+        const browY = (lbh.y + lbi.y + rbh.y + rbi.y) / 4
+        const midX = (lbh.x + lbi.x + rbh.x + rbi.x) / 4
+        const totalH = chin.y - hair.y
+        const topPct = Number(((browY - hair.y) / totalH * 100).toFixed(1))
+        const midPct = Number(((nasalBase.y - browY) / totalH * 100).toFixed(1))
+        const lowPct = Number(((chin.y - nasalBase.y) / totalH * 100).toFixed(1))
+        const DIM = "rgba(255,255,255,0.4)"
+        const GLOW = "rgba(255,255,255,0.95)"
+        const drawSegment = (y1: number, y2: number, color: string, pct: number, glow: boolean) => {
+          if (glow) { ctx.shadowBlur = 10; ctx.shadowColor = "rgba(255,255,255,0.8)" }
+          drawLine({ x: midX, y: y1 }, { x: midX, y: y2 }, color)
+          drawPoint({ x: midX, y: y1 }, color)
+          drawPoint({ x: midX, y: y2 }, color)
+          ctx.font = "bold 14px sans-serif"; ctx.fillStyle = color; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+          ctx.fillText(`${pct}%`, midX + drawX + 8, (y1 + y2) / 2 + drawY)
+          ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        }
+        drawSegment(hair.y, browY, measurementId === "top_third" ? GLOW : DIM, topPct, measurementId === "top_third")
+        drawSegment(browY, nasalBase.y, measurementId === "middle_third" ? GLOW : DIM, midPct, measurementId === "middle_third")
+        drawSegment(nasalBase.y, chin.y, measurementId === "lower_third" ? GLOW : DIM, lowPct, measurementId === "lower_third")
       }
       break
     }
 
     case "eye_aspect_ratio": {
-      const top = lm["left_upper_eyelid"]
-      const bot = lm["left_lower_eyelid"]
-      const inner = lm["left_medial_canthus"]
-      const outer = lm["left_lateral_canthus"]
-      if (top && bot && inner && outer) {
-        drawDimensionLine(inner, outer, "Width", color)
-        drawDimensionLine(top, bot, "Height", highlightColor)
-        drawPoint(top, highlightColor)
-        drawPoint(bot, highlightColor)
-        drawPoint(inner, color)
-        drawPoint(outer, color)
+      const GLOW = "rgba(255,255,255,0.95)"
+      const DIM = "rgba(255,255,255,0.4)"
+      // Left eye
+      const lue = lm["left_upper_eyelid"], lle = lm["left_lower_eyelid"]
+      const lmc = lm["left_medial_canthus"], llc = lm["left_lateral_canthus"]
+      if (lue && lle && lmc && llc) {
+        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(255,255,255,0.8)"
+        drawLine(lmc, llc, GLOW); drawPoint(lmc, GLOW); drawPoint(llc, GLOW)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        drawLine(lue, lle, DIM); drawPoint(lue, DIM); drawPoint(lle, DIM)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        const lW = Math.abs(llc.x - lmc.x) / drawWidth; const lH = Math.abs(lle.y - lue.y) / drawHeight
+        const lRatio = lH > 0 ? Number((lW / lH).toFixed(2)) : 0
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+        ctx.fillText(`${lRatio}`, Math.max(llc.x, lmc.x) + drawX + 6, (lue.y + lle.y) / 2 + drawY)
+      }
+      // Right eye
+      const rue = lm["right_upper_eyelid"], rle = lm["right_lower_eyelid"]
+      const rmc = lm["right_medial_canthus"], rlc = lm["right_lateral_canthus"]
+      if (rue && rle && rmc && rlc) {
+        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(255,255,255,0.8)"
+        drawLine(rmc, rlc, GLOW); drawPoint(rmc, GLOW); drawPoint(rlc, GLOW)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        drawLine(rue, rle, DIM); drawPoint(rue, DIM); drawPoint(rle, DIM)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        const rW = Math.abs(rlc.x - rmc.x) / drawWidth; const rH = Math.abs(rle.y - rue.y) / drawHeight
+        const rRatio = rH > 0 ? Number((rW / rH).toFixed(2)) : 0
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "right"; ctx.textBaseline = "middle"
+        ctx.fillText(`${rRatio}`, Math.min(rmc.x, rlc.x) + drawX - 6, (rue.y + rle.y) / 2 + drawY)
       }
       break
     }
@@ -594,34 +555,28 @@ function drawMeasurementOnCanvas(
       break
     }
 
-    case "lower_third": {
-      const nose = lm["nose_bottom"]
-      const chin = lm["chin_bottom"]
-      const hair = lm["hairline"]
-      if (nose && chin && hair) {
-        drawLine(hair, chin, dimColor)
-        drawDashedLine(nose, { x: nose.x, y: chin.y }, highlightColor)
-        drawPoint(nose, highlightColor)
-        drawPoint(chin, color)
-        drawPoint(hair, color)
-        drawLabel(nose, "Nose")
-        drawLabel(chin, "Chin")
-      }
-      break
-    }
-
     case "face_width_to_height": {
       const zl = lm["left_cheekbone"]
       const zr = lm["right_cheekbone"]
-      const brow = lm["left_brow_head"]
-      const mouth = lm["mouth_middle"]
-      if (zl && zr && brow && mouth) {
-        drawDimensionLine(zl, zr, "Width", color)
-        drawDimensionLine(brow, mouth, "Height", highlightColor)
-        drawPoint(zl, color)
-        drawPoint(zr, color)
-        drawPoint(brow, highlightColor)
-        drawPoint(mouth, highlightColor)
+      const lbh = lm["left_brow_head"], lbi = lm["left_brow_inner_corner"]
+      const rbh = lm["right_brow_head"], rbi = lm["right_brow_inner_corner"]
+      const cp = lm["cupids_bow"]
+      if (zl && zr && lbh && lbi && rbh && rbi && cp) {
+        const browY = (lbh.y + lbi.y + rbh.y + rbi.y) / 4
+        const midX = (lbh.x + lbi.x + rbh.x + rbi.x) / 4
+        const fw = Math.abs(zr.x - zl.x)
+        const fh = Math.abs(cp.y - browY)
+        const ratio = Number((fw / fh).toFixed(2))
+        const GLOW = "rgba(255,255,255,0.95)"
+        const DIM = "rgba(255,255,255,0.4)"
+        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(255,255,255,0.8)"
+        drawLine(zl, zr, GLOW)
+        drawPoint(zl, GLOW); drawPoint(zr, GLOW)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        ctx.font = "bold 14px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "bottom"
+        ctx.fillText(`${ratio}`, Math.max(zl.x, zr.x) + drawX + 8, zl.y + drawY - 8)
+        drawLine({ x: midX, y: browY }, { x: midX, y: cp.y }, DIM)
+        drawPoint({ x: midX, y: browY }, DIM); drawPoint({ x: midX, y: cp.y }, DIM)
       }
       break
     }
@@ -669,22 +624,6 @@ function drawMeasurementOnCanvas(
         drawPoint(li, highlightColor)
         drawPoint(ls, color)
         drawPoint(rs, color)
-      }
-      break
-    }
-
-    case "top_third": {
-      const hair = lm["hairline"]
-      const eye = lm["left_upper_eyelid"] || lm["right_upper_eyelid"]
-      const chin = lm["chin_bottom"]
-      if (hair && eye && chin) {
-        drawLine(hair, chin, dimColor)
-        drawDashedLine(hair, { x: hair.x, y: eye.y }, highlightColor)
-        drawPoint(hair, highlightColor)
-        drawPoint(eye, color)
-        drawPoint(chin, color)
-        drawLabel(hair, "Hairline")
-        drawLabel(eye, "Eye")
       }
       break
     }
@@ -767,15 +706,24 @@ function drawMeasurementOnCanvas(
     }
 
     case "chin_to_philtrum": {
-      const chin = lm["chin_bottom"]
-      const mouth = lm["mouth_middle"]
-      const nose = lm["nose_bottom"]
-      if (chin && mouth && nose) {
-        drawDimensionLine(mouth, chin, "Chin", highlightColor)
-        drawDimensionLine(nose, mouth, "Philtrum", color)
-        drawPoint(chin, highlightColor)
-        drawPoint(mouth, color)
-        drawPoint(nose, color)
+      const llc = lm["lower_lip_center"]
+      const cb = lm["chin_bottom"]
+      const cp = lm["cupids_bow"]
+      const nb = lm["nasal_base"]
+      if (llc && cb && cp && nb) {
+        const chinH = Math.abs(cb.y - llc.y)
+        const philH = Math.abs(cp.y - nb.y)
+        const ratio = Number((chinH / philH).toFixed(2))
+        const GLOW = "rgba(255,255,255,0.95)"
+        const DIM = "rgba(255,255,255,0.4)"
+        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(255,255,255,0.8)"
+        drawLine(llc, cb, GLOW)
+        drawPoint(llc, GLOW); drawPoint(cb, GLOW)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        ctx.font = "bold 14px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+        ctx.fillText(`${ratio}`, Math.max(llc.x, cb.x) + drawX + 8, (llc.y + cb.y) / 2 + drawY)
+        drawLine(cp, nb, DIM)
+        drawPoint(cp, DIM); drawPoint(nb, DIM)
       }
       break
     }
@@ -854,11 +802,19 @@ function drawMeasurementOnCanvas(
       const mouth = lm["mouth_middle"]
       const cupid = lm["cupids_bow"]
       if (ll && mouth && cupid) {
-        drawDimensionLine(mouth, ll, "Lower lip", highlightColor)
-        drawDimensionLine(cupid, mouth, "Upper lip", color)
-        drawPoint(ll, highlightColor)
-        drawPoint(mouth, color)
-        drawPoint(cupid, color)
+        const lowerH = Math.abs(mouth.y - ll.y)
+        const upperH = Math.abs(cupid.y - mouth.y)
+        const ratio = upperH > 0 ? Number((lowerH / upperH).toFixed(2)) : 0
+        const GLOW = "rgba(255,255,255,0.95)"
+        const DIM = "rgba(255,255,255,0.4)"
+        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(255,255,255,0.8)"
+        drawLine(ll, mouth, GLOW)
+        drawPoint(ll, GLOW); drawPoint(mouth, GLOW)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        ctx.font = "bold 14px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+        ctx.fillText(`${ratio}`, ll.x + drawX + 8, (ll.y + mouth.y) / 2 + drawY)
+        drawLine(mouth, cupid, DIM)
+        drawPoint(mouth, DIM); drawPoint(cupid, DIM)
       }
       break
     }
@@ -1402,10 +1358,47 @@ function drawMeasurementOnCanvas(
     }
 
     default: {
-      // Draw all landmarks as reference
+      // Draw all landmarks as reference with numbering
+      const FRONT_LANDMARK_ORDER: Record<string, number> = {
+        hairline: 1,
+        left_pupil: 2, right_pupil: 3,
+        left_nose_side: 4, right_nose_side: 5,
+        lower_lip_center: 6,
+        chin_bottom: 7,
+        left_temple: 8, right_temple: 9,
+        left_medial_canthus: 10, left_lateral_canthus: 11,
+        left_upper_eyelid: 12, left_lower_eyelid: 13,
+        left_eyelid_hood_end: 14,
+        left_brow_head: 15, left_brow_inner_corner: 16,
+        left_brow_arch: 17, left_brow_peak: 18, left_brow_tail: 19,
+        left_upper_eyelid_crease: 20,
+        right_medial_canthus: 21, right_lateral_canthus: 22,
+        right_upper_eyelid: 23, right_lower_eyelid: 24,
+        right_eyelid_hood_end: 25,
+        right_brow_head: 26, right_brow_inner_corner: 27,
+        right_brow_arch: 28, right_brow_peak: 29, right_brow_tail: 30,
+        right_upper_eyelid_crease: 31,
+        nasal_base: 32, nose_bottom: 33,
+        left_nose_bridge: 34, right_nose_bridge: 35,
+        left_mouth_corner: 36, right_mouth_corner: 37,
+        cupids_bow: 38, inner_cupids_bow: 39,
+        mouth_middle: 40,
+        left_upper_jaw_angle: 41, right_upper_jaw_angle: 42,
+        left_lower_jaw_angle: 43, right_lower_jaw_angle: 44,
+        left_chin: 45, right_chin: 46,
+        left_cheekbone: 47, right_cheekbone: 48,
+      }
       Object.entries(lm).forEach(([id, pt]) => {
         const c = id.includes("nose") ? "#10b981" : id.includes("eye") ? "#ef4444" : "#38bdf8"
         drawPoint(pt, c)
+        const num = FRONT_LANDMARK_ORDER[id]
+        if (num !== undefined) {
+          ctx.font = "bold 10px sans-serif"
+          ctx.fillStyle = "rgba(255,255,255,0.9)"
+          ctx.textAlign = "center"
+          ctx.textBaseline = "bottom"
+          ctx.fillText(String(num), pt.x + drawX, pt.y + drawY - 8)
+        }
       })
       break
     }

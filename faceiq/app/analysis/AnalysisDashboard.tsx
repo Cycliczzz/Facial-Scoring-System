@@ -224,7 +224,7 @@ function MeasurementDetail({ measurement }: { measurement: MeasurementResult | n
 function drawMeasurementLine(
   ctx: CanvasRenderingContext2D,
   x1: number, y1: number, x2: number, y2: number,
-  color: string, alpha: number, label?: string
+  color: string, alpha: number, _label?: string
 ) {
   ctx.save()
   ctx.globalAlpha = alpha
@@ -235,27 +235,9 @@ function drawMeasurementLine(
   ctx.moveTo(x1, y1)
   ctx.lineTo(x2, y2)
   ctx.stroke()
-
-  // Draw arrow heads
-  const angle = Math.atan2(y2 - y1, x2 - x1)
-  const headLen = 8
   ctx.fillStyle = color
-  ctx.beginPath()
-  ctx.moveTo(x2, y2)
-  ctx.lineTo(x2 - headLen * Math.cos(angle - 0.4), y2 - headLen * Math.sin(angle - 0.4))
-  ctx.lineTo(x2 - headLen * Math.cos(angle + 0.4), y2 - headLen * Math.sin(angle + 0.4))
-  ctx.closePath()
-  ctx.fill()
-
-  if (label) {
-    const mx = (x1 + x2) / 2
-    const my = (y1 + y2) / 2
-    ctx.font = "bold 10px sans-serif"
-    ctx.fillStyle = color
-    ctx.textAlign = "center"
-    ctx.textBaseline = "bottom"
-    ctx.fillText(label, mx, my - 4)
-  }
+  ctx.beginPath(); ctx.arc(x1, y1, 3, 0, 2 * Math.PI); ctx.fill()
+  ctx.beginPath(); ctx.arc(x2, y2, 3, 0, 2 * Math.PI); ctx.fill()
   ctx.restore()
 }
 
@@ -296,21 +278,15 @@ function drawMeasurement(
       if (lc && rc) drawMeasurementLine(ctx, lc.x + dx, lc.y + dy, rc.x + dx, rc.y + dy, WHITE_DIM, alpha * 0.5, "Bizyg")
       break
     }
-    case "neck_width": {
-      const lnk = L("left_neck_point"), rnk = L("right_neck_point")
-      if (lnk && rnk) drawMeasurementLine(ctx, lnk.x + dx, lnk.y + dy, rnk.x + dx, rnk.y + dy, WHITE_DIM, alpha, "Neck")
-      break
-    }
-    case "ear_protrusion_angle": {
-      const le = L("left_outer_ear"), lc = L("left_cheekbone")
-      if (le && lc) drawMeasurementLine(ctx, lc.x + dx, lc.y + dy, le.x + dx, le.y + dy, WHITE, alpha, "Ear")
-      break
-    }
     case "cheekbone_height": {
-      const h = L("hairline"), cb = L("chin_bottom"), lc = L("left_cheekbone")
-      if (h && cb && lc) {
-        drawMeasurementLine(ctx, h.x + dx, h.y + dy, cb.x + dx, cb.y + dy, "rgba(255,255,255,0.25)", alpha * 0.3, "Face H")
-        drawMeasurementLine(ctx, h.x + dx, h.y + dy, lc.x + dx, lc.y + dy, WHITE, alpha, "Cheek H")
+      const lc = L("left_cheekbone"), rc = L("right_cheekbone")
+      const lp = L("left_pupil"), rp = L("right_pupil")
+      const cb = L("cupids_bow")
+      if (lc && rc) drawMeasurementLine(ctx, lc.x + dx, lc.y + dy, rc.x + dx, rc.y + dy, "rgba(255,255,255,0.25)", alpha * 0.3, "Cheek Ln")
+      if (lp && rp) drawMeasurementLine(ctx, lp.x + dx, lp.y + dy, rp.x + dx, rp.y + dy, "rgba(255,255,255,0.25)", alpha * 0.3, "Pupil Ln")
+      if (cb && lc && rc) {
+        const cheekMidY = (lc.y + rc.y) / 2
+        drawMeasurementLine(ctx, cb.x + dx, cb.y + dy, cb.x + dx, cheekMidY + dy, WHITE, alpha, "Cheek H")
       }
       break
     }
@@ -329,22 +305,72 @@ function drawMeasurement(
       if (llj && lc) drawMeasurementLine(ctx, llj.x + dx, llj.y + dy, lc.x + dx, lc.y + dy, WHITE, alpha, "Jaw")
       break
     }
-    case "ear_protrusion_ratio": {
-      const le = L("left_outer_ear"), re = L("right_outer_ear")
-      if (le && re) drawMeasurementLine(ctx, le.x + dx, le.y + dy, re.x + dx, re.y + dy, WHITE_DIM, alpha, "Ear W")
-      break
-    }
-    case "middle_third": {
-      const ue = L("left_upper_eyelid"), nb = L("nose_bottom"), h = L("hairline"), cb = L("chin_bottom")
-      if (ue && nb && h && cb) {
-        drawMeasurementLine(ctx, ue.x + dx, ue.y + dy, nb.x + dx, nb.y + dy, WHITE, alpha, "Mid 3rd")
+    case "top_third":
+    case "middle_third":
+    case "lower_third": {
+      // Draw all 3 facial thirds with active one highlighted
+      const h = L("hairline"), nb = L("nasal_base"), cb = L("chin_bottom")
+      const lbh = L("left_brow_head"), lbi = L("left_brow_inner_corner")
+      const rbh = L("right_brow_head"), rbi = L("right_brow_inner_corner")
+      if (lbh && lbi && rbh && rbi && h && nb && cb) {
+        const lmy = (lbh.y + lbi.y) / 2
+        const rmy = (rbh.y + rbi.y) / 2
+        const browY = (lmy + rmy) / 2
+        const midX = (lbh.x + lbi.x + rbh.x + rbi.x) / 4
+        const totalH = cb.y - h.y
+        const topPct = Number(((browY - h.y) / totalH * 100).toFixed(1))
+        const midPct = Number(((nb.y - browY) / totalH * 100).toFixed(1))
+        const lowPct = Number(((cb.y - nb.y) / totalH * 100).toFixed(1))
+        const DIM = "rgba(255,255,255,0.4)"
+        const GLOW = "rgba(255,255,255,0.95)"
+        const drawSegment = (y1: number, y2: number, color: string, pct: number, glow: boolean) => {
+          if (glow) { ctx.shadowBlur = 10; ctx.shadowColor = "rgba(255,255,255,0.8)" }
+          drawMeasurementLine(ctx, midX + dx, y1 + dy, midX + dx, y2 + dy, color, 1.0)
+          const my = (y1 + y2) / 2
+          ctx.font = "bold 14px sans-serif"
+          ctx.fillStyle = color
+          ctx.textAlign = "left"
+          ctx.textBaseline = "middle"
+          ctx.fillText(`${pct}%`, midX + dx + 8, my + dy)
+          ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        }
+        drawSegment(h.y, browY, measurementId === "top_third" ? GLOW : DIM, topPct, measurementId === "top_third")
+        drawSegment(browY, nb.y, measurementId === "middle_third" ? GLOW : DIM, midPct, measurementId === "middle_third")
+        drawSegment(nb.y, cb.y, measurementId === "lower_third" ? GLOW : DIM, lowPct, measurementId === "lower_third")
       }
       break
     }
     case "eye_aspect_ratio": {
-      const ue = L("left_upper_eyelid"), le = L("left_lower_eyelid"), mm = L("left_medial_canthus", "left_pupil"), ll = L("left_lateral_canthus")
-      if (ue && le) drawMeasurementLine(ctx, ue.x + dx, ue.y + dy, le.x + dx, le.y + dy, WHITE, alpha, "Eye H")
-      if (mm && ll) drawMeasurementLine(ctx, mm.x + dx, mm.y + dy, ll.x + dx, ll.y + dy, WHITE_DIM, alpha * 0.5, "Eye W")
+      const GLOW = "rgba(255,255,255,0.95)"
+      const DIM = "rgba(255,255,255,0.4)"
+      // Left eye
+      const lue = L("left_upper_eyelid"), lle = L("left_lower_eyelid")
+      const lmc = L("left_medial_canthus"), llc = L("left_lateral_canthus")
+      if (lue && lle && lmc && llc) {
+        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(255,255,255,0.8)"
+        drawMeasurementLine(ctx, lmc.x + dx, lmc.y + dy, llc.x + dx, llc.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        drawMeasurementLine(ctx, lue.x + dx, lue.y + dy, lle.x + dx, lle.y + dy, DIM, 1.0)
+        const lW = Math.abs(llc.x - lmc.x) / dw
+        const lH = Math.abs(lle.y - lue.y) / dh
+        const lRatio = lH > 0 ? Number((lW / lH).toFixed(2)) : 0
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+        ctx.fillText(`${lRatio}`, Math.max(llc.x, lmc.x) + dx + 6, (lmc.y + llc.y) / 2 + dy)
+      }
+      // Right eye
+      const rue = L("right_upper_eyelid"), rle = L("right_lower_eyelid")
+      const rmc = L("right_medial_canthus"), rlc = L("right_lateral_canthus")
+      if (rue && rle && rmc && rlc) {
+        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(255,255,255,0.8)"
+        drawMeasurementLine(ctx, rmc.x + dx, rmc.y + dy, rlc.x + dx, rlc.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        drawMeasurementLine(ctx, rue.x + dx, rue.y + dy, rle.x + dx, rle.y + dy, DIM, 1.0)
+        const rW = Math.abs(rlc.x - rmc.x) / dw
+        const rH = Math.abs(rle.y - rue.y) / dh
+        const rRatio = rH > 0 ? Number((rW / rH).toFixed(2)) : 0
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "right"; ctx.textBaseline = "middle"
+        ctx.fillText(`${rRatio}`, Math.min(rmc.x, rlc.x) + dx - 6, (rmc.y + rlc.y) / 2 + dy)
+      }
       break
     }
     case "mouth_corner_position": {
@@ -365,15 +391,30 @@ function drawMeasurement(
       if (bh && bt) drawMeasurementLine(ctx, bh.x + dx, bh.y + dy, bt.x + dx, bt.y + dy, WHITE, alpha, "Brow")
       break
     }
-    case "lower_third": {
-      const nb = L("nose_bottom"), cb = L("chin_bottom")
-      if (nb && cb) drawMeasurementLine(ctx, nb.x + dx, nb.y + dy, cb.x + dx, cb.y + dy, WHITE, alpha, "Low 3rd")
-      break
-    }
     case "face_width_to_height": {
-      const lc = L("left_cheekbone"), rc = L("right_cheekbone"), bh = L("left_brow_head"), mm = L("mouth_middle")
-      if (lc && rc) drawMeasurementLine(ctx, lc.x + dx, lc.y + dy, rc.x + dx, rc.y + dy, WHITE, alpha, "FW")
-      if (bh && mm) drawMeasurementLine(ctx, bh.x + dx, bh.y + dy, mm.x + dx, mm.y + dy, WHITE_DIM, alpha * 0.5, "FH")
+      const lc = L("left_cheekbone"), rc = L("right_cheekbone")
+      const lbh = L("left_brow_head"), lbi = L("left_brow_inner_corner")
+      const rbh = L("right_brow_head"), rbi = L("right_brow_inner_corner")
+      const cp = L("cupids_bow")
+      if (lbh && lbi && rbh && rbi && cp && lc && rc) {
+        const lmy = (lbh.y + lbi.y) / 2
+        const rmy = (rbh.y + rbi.y) / 2
+        const browY = (lmy + rmy) / 2
+        const midX = (lbh.x + lbi.x + rbh.x + rbi.x) / 4
+        const fw = Math.abs(rc.x - lc.x)
+        const fh = Math.abs(cp.y - browY)
+        const ratio = Number((fw / fh).toFixed(2))
+        const GLOW = "rgba(255,255,255,0.95)"
+        const DIM = "rgba(255,255,255,0.4)"
+        // Width line with glow + ratio
+        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(255,255,255,0.8)"
+        drawMeasurementLine(ctx, lc.x + dx, lc.y + dy, rc.x + dx, rc.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        ctx.font = "bold 14px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "bottom"
+        ctx.fillText(`${ratio}`, Math.max(lc.x, rc.x) + dx + 8, lc.y + dy - 8)
+        // Height line dim
+        drawMeasurementLine(ctx, midX + dx, browY + dy, midX + dx, cp.y + dy, DIM, 1.0)
+      }
       break
     }
     case "interpupillary_mouth_width": {
@@ -394,11 +435,6 @@ function drawMeasurement(
       const mm = L("left_medial_canthus", "left_pupil"), rm = L("right_medial_canthus", "right_pupil"), ln = L("left_nose_side"), rn = L("right_nose_side")
       if (mm && rm) drawMeasurementLine(ctx, mm.x + dx, mm.y + dy, rm.x + dx, rm.y + dy, WHITE, alpha, "ICD")
       if (ln && rn) drawMeasurementLine(ctx, ln.x + dx, ln.y + dy, rn.x + dx, rn.y + dy, WHITE_DIM, alpha * 0.5, "NW")
-      break
-    }
-    case "top_third": {
-      const h = L("hairline"), ue = L("left_upper_eyelid")
-      if (h && ue) drawMeasurementLine(ctx, h.x + dx, h.y + dy, ue.x + dx, ue.y + dy, WHITE, alpha, "Top 3rd")
       break
     }
     case "one_eye_apart": {
@@ -436,9 +472,23 @@ function drawMeasurement(
       break
     }
     case "chin_to_philtrum": {
-      const m = L("mouth_middle"), cb = L("chin_bottom"), nb = L("nose_bottom")
-      if (m && cb) drawMeasurementLine(ctx, m.x + dx, m.y + dy, cb.x + dx, cb.y + dy, WHITE, alpha, "Chin")
-      if (nb && m) drawMeasurementLine(ctx, nb.x + dx, nb.y + dy, m.x + dx, m.y + dy, WHITE_DIM, alpha * 0.5, "Phil")
+      const llc = L("lower_lip_center"), cb = L("chin_bottom")
+      const cp = L("cupids_bow"), nb = L("nasal_base")
+      if (llc && cb && cp && nb) {
+        const chinH = Math.abs(cb.y - llc.y)
+        const philH = Math.abs(cp.y - nb.y)
+        const ratio = Number((chinH / philH).toFixed(2))
+        const GLOW = "rgba(255,255,255,0.95)"
+        const DIM = "rgba(255,255,255,0.4)"
+        // Chin with glow + ratio
+        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(255,255,255,0.8)"
+        drawMeasurementLine(ctx, llc.x + dx, llc.y + dy, cb.x + dx, cb.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        ctx.font = "bold 14px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+        ctx.fillText(`${ratio}`, Math.max(llc.x, cb.x) + dx + 8, (llc.y + cb.y) / 2 + dy)
+        // Philtrum dim
+        drawMeasurementLine(ctx, cp.x + dx, cp.y + dy, nb.x + dx, nb.y + dy, DIM, 1.0)
+      }
       break
     }
     case "eyebrow_low_setedness": {
@@ -469,9 +519,22 @@ function drawMeasurement(
       break
     }
     case "lower_lip_to_upper_lip": {
-      const llc = L("lower_lip_center"), mm = L("mouth_middle"), ul = L("upper_lip")
-      if (llc && mm) drawMeasurementLine(ctx, llc.x + dx, llc.y + dy, mm.x + dx, mm.y + dy, WHITE, alpha, "LL")
-      if (ul && mm) drawMeasurementLine(ctx, ul.x + dx, ul.y + dy, mm.x + dx, mm.y + dy, WHITE_DIM, alpha * 0.5, "UL")
+      const llc = L("lower_lip_center"), mm = L("mouth_middle"), cp = L("cupids_bow")
+      if (llc && mm && cp) {
+        const lowerH = Math.abs(mm.y - llc.y)
+        const upperH = Math.abs(cp.y - mm.y)
+        const ratio = upperH > 0 ? Number((lowerH / upperH).toFixed(2)) : 0
+        const GLOW = "rgba(255,255,255,0.95)"
+        const DIM = "rgba(255,255,255,0.4)"
+        // Lower lip with glow + ratio
+        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(255,255,255,0.8)"
+        drawMeasurementLine(ctx, llc.x + dx, llc.y + dy, mm.x + dx, mm.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        ctx.font = "bold 14px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+        ctx.fillText(`${ratio}`, llc.x + dx + 8, (llc.y + mm.y) / 2 + dy)
+        // Upper lip dim (mouth middle to cupid's bow)
+        drawMeasurementLine(ctx, mm.x + dx, mm.y + dy, cp.x + dx, cp.y + dy, DIM, 1.0)
+      }
       break
     }
     case "lower_third_proportion": {
@@ -917,7 +980,37 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
 
     // Draw landmarks if enabled
     if (showLandmarks) {
-      currentLandmarks.forEach((lm) => {
+      // Define display order for front profile landmarks
+      const FRONT_LANDMARK_ORDER: Record<string, number> = {
+        hairline: 1,
+        left_pupil: 2, right_pupil: 3,
+        left_nose_side: 4, right_nose_side: 5,
+        lower_lip_center: 6,
+        chin_bottom: 7,
+        left_temple: 8, right_temple: 9,
+        left_medial_canthus: 10, left_lateral_canthus: 11,
+        left_upper_eyelid: 12, left_lower_eyelid: 13,
+        left_eyelid_hood_end: 14,
+        left_brow_head: 15, left_brow_inner_corner: 16,
+        left_brow_arch: 17, left_brow_peak: 18, left_brow_tail: 19,
+        left_upper_eyelid_crease: 20,
+        right_medial_canthus: 21, right_lateral_canthus: 22,
+        right_upper_eyelid: 23, right_lower_eyelid: 24,
+        right_eyelid_hood_end: 25,
+        right_brow_head: 26, right_brow_inner_corner: 27,
+        right_brow_arch: 28, right_brow_peak: 29, right_brow_tail: 30,
+        right_upper_eyelid_crease: 31,
+        nasal_base: 32, nose_bottom: 33,
+        left_nose_bridge: 34, right_nose_bridge: 35,
+        left_mouth_corner: 36, right_mouth_corner: 37,
+        cupids_bow: 38, inner_cupids_bow: 39,
+        mouth_middle: 40,
+        left_upper_jaw_angle: 41, right_upper_jaw_angle: 42,
+        left_lower_jaw_angle: 43, right_lower_jaw_angle: 44,
+        left_chin: 45, right_chin: 46,
+        left_cheekbone: 47, right_cheekbone: 48,
+      }
+      currentLandmarks.forEach((lm, idx) => {
         const color = lm.color || (isFemaleAccent ? "#ec4899" : "#38bdf8")
         const px = lm.x * drawWidth + drawX
         const py = lm.y * drawHeight + drawY
@@ -926,6 +1019,17 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
         ctx.beginPath(); ctx.arc(px, py, 3, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.fill()
         ctx.beginPath(); ctx.arc(px, py, 1.5, 0, 2 * Math.PI); ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fill()
         ctx.shadowBlur = 0
+        // Draw number label for front profile
+        if (profileView === "front") {
+          const num = FRONT_LANDMARK_ORDER[lm.id]
+          if (num !== undefined) {
+            ctx.font = "bold 9px sans-serif"
+            ctx.fillStyle = "rgba(255,255,255,0.85)"
+            ctx.textAlign = "center"
+            ctx.textBaseline = "bottom"
+            ctx.fillText(String(num), px, py - 6)
+          }
+        }
       })
     }
 
