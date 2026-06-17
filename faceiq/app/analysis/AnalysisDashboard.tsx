@@ -251,7 +251,8 @@ function drawMeasurement(
   lm: Record<string, LandmarkPoint>,
   dx: number, dy: number,
   dw: number, dh: number,
-  alpha: number
+  alpha: number,
+  boxValue?: number
 ) {
   const L = (...ids: string[]) => {
     for (const id of ids) {
@@ -476,8 +477,8 @@ function drawMeasurement(
       const DIM = "rgba(255,255,255,0.35)"
       const lh = L("left_brow_head"), li = L("left_brow_inner_corner"), la = L("left_brow_arch"), lpk = L("left_brow_peak")
       const rh = L("right_brow_head"), ri = L("right_brow_inner_corner"), ra = L("right_brow_arch"), rpk = L("right_brow_peak")
-      const drawSide = (h: any, i: any, a: any, p: any) => {
-        if (!h || !i || !a || !p) return
+      const drawSide = (h: any, i: any, a: any, p: any, sideColor: string) => {
+        if (!h || !i || !a || !p) return 0
         const sx = (h.x + i.x) / 2, sy = (h.y + i.y) / 2
         const ex = (a.x + p.x) / 2, ey = (a.y + p.y) / 2
         const dxBrow = ex - sx, dyBrow = ey - sy
@@ -487,17 +488,27 @@ function drawMeasurement(
         ctx.setLineDash([]); ctx.lineWidth = 2
         // Highlighted brow tilt segment
         ctx.shadowBlur = 10; ctx.shadowColor = "rgba(255,255,255,0.8)"
-        drawMeasurementLine(ctx, sx + dx, sy + dy, ex + dx, ey + dy, GLOW, 1.0)
+        drawMeasurementLine(ctx, sx + dx, sy + dy, ex + dx, ey + dy, sideColor, 1.0)
         ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
         // Acute angle (0-90°) from horizontal, with sign: positive=upward, negative=downward
         // In image coords y↓, so negate dy to make upward=positive
         const signedDeg = Math.atan2(-dyBrow, dxBrow) * (180 / Math.PI)
         const acuteDeg = Math.abs(signedDeg) > 90 ? (180 - Math.abs(signedDeg)) * Math.sign(signedDeg) : signedDeg
-        ctx.font = "bold 11px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "bottom"
-        ctx.fillText(`${acuteDeg.toFixed(1)}°`, (sx + ex) / 2 + dx, (sy + ey) / 2 + dy - 5)
+        ctx.font = "bold 11px sans-serif"; ctx.fillStyle = sideColor; ctx.textAlign = "center"; ctx.textBaseline = "bottom"
+        ctx.fillText(`${Math.round(acuteDeg * 10) / 10}°`, (sx + ex) / 2 + dx, (sy + ey) / 2 + dy - 5)
+        return acuteDeg
       }
-      drawSide(lh, li, la, lpk)
-      drawSide(rh, ri, ra, rpk)
+      const lDeg = drawSide(lh, li, la, lpk, GLOW)
+      const rDeg = drawSide(rh, ri, ra, rpk, GLOW)
+      // Display average near center, matching measurement box value
+      if (lh && li && la && lpk && rh && ri && ra && rpk) {
+        const avgDeg = (lDeg + rDeg) / 2
+        const avgVal = Math.round(avgDeg * 100) / 100
+        const midBX = (lh.x + li.x + la.x + lpk.x + rh.x + ri.x + ra.x + rpk.x) / 8
+        const midBY = (lh.y + li.y + la.y + lpk.y + rh.y + ri.y + ra.y + rpk.y) / 8
+        ctx.font = "bold 15px sans-serif"; ctx.fillStyle = "rgba(255,255,100,0.95)"; ctx.textAlign = "center"; ctx.textBaseline = "bottom"
+        ctx.fillText(`avg: ${avgVal}°`, midBX + dx, midBY + dy - 18)
+      }
       break
     }
     case "face_width_to_height": {
@@ -1314,7 +1325,7 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
 
     // Only draw measurement visual when one is selected
     if (selectedMeasurement) {
-      drawMeasurement(ctx, selectedMeasurement.id, lmMap, drawX, drawY, drawWidth, drawHeight, 0.9)
+      drawMeasurement(ctx, selectedMeasurement.id, lmMap, drawX, drawY, drawWidth, drawHeight, 0.9, selectedMeasurement.value)
     }
 
     ctx.restore()
