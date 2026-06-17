@@ -114,10 +114,12 @@ function MeasurementCard({
   measurement,
   isSelected,
   onClick,
+  onHover,
 }: {
   measurement: MeasurementResult
   isSelected: boolean
   onClick: () => void
+  onHover: () => void
 }) {
   const scoreColor = getScoreColor(measurement.score)
   const scoreBg = getScoreBg(measurement.score)
@@ -125,18 +127,31 @@ function MeasurementCard({
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all duration-200 group ${
+      onMouseEnter={onHover}
+      className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all duration-500 ease-out group relative overflow-hidden ${
         isSelected
-          ? "bg-primary/10 border-primary/40 shadow-lg shadow-primary/5"
-          : "bg-card/50 border-border/50 hover:bg-card/80 hover:border-border/70"
+          ? "bg-primary/15 border-primary/60 shadow-[0_0_20px_rgba(var(--primary)/0.3)] scale-[1.02] z-10"
+          : "bg-card/50 border-border/50 hover:bg-card/80 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(var(--primary)/0.15)] hover:scale-[1.01]"
       }`}
     >
-      <div className="flex items-center justify-between gap-2">
+      {/* Animated glow overlay */}
+      <div className={`absolute inset-0 rounded-lg transition-opacity duration-500 ease-out ${
+        isSelected 
+          ? "opacity-100 bg-gradient-to-r from-primary/5 via-primary/10 to-transparent animate-pulse"
+          : "opacity-0 group-hover:opacity-100 bg-gradient-to-r from-primary/3 via-transparent to-transparent"
+      }`} />
+      {/* Left border glow indicator */}
+      <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 rounded-full transition-all duration-500 ease-out ${
+        isSelected ? "h-full bg-primary shadow-[0_0_8px_var(--primary)]" : "h-0 bg-primary/50 group-hover:h-3/4"
+      }`} />
+      <div className="flex items-center justify-between gap-2 relative z-[1]">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-medium text-foreground truncate">{measurement.name}</span>
+            <span className={`text-xs font-semibold truncate transition-colors duration-300 ${
+              isSelected ? "text-primary drop-shadow-[0_0_4px_rgba(var(--primary)/0.5)]" : "text-foreground group-hover:text-primary/90"
+            }`}>{measurement.name}</span>
             {measurement.isIdeal && (
-              <CheckCircle2 className="size-3 text-emerald-400 shrink-0" />
+              <CheckCircle2 className={`size-3 shrink-0 transition-all duration-300 ${isSelected ? "text-emerald-400 drop-shadow-[0_0_4px_rgba(52,211,153,0.5)]" : "text-emerald-400"}`} />
             )}
           </div>
           <div className="flex items-center gap-2 mt-0.5">
@@ -149,11 +164,17 @@ function MeasurementCard({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <div className="text-right">
-            <div className={`text-sm font-bold ${scoreColor}`}>{measurement.value.toFixed(1)}</div>
+            <div className={`text-sm font-bold transition-all duration-300 ${scoreColor} ${
+              isSelected ? "drop-shadow-[0_0_6px_currentColor]" : ""
+            }`}>{measurement.value.toFixed(1)}</div>
             <div className="text-[9px] text-muted-foreground">{measurement.unit}</div>
           </div>
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center border ${scoreBg}`}>
-            <span className={`text-xs font-bold ${scoreColor}`}>{measurement.score.toFixed(1)}</span>
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all duration-500 ease-out ${scoreBg} ${
+            isSelected ? "shadow-[0_0_12px_currentColor] scale-110" : "group-hover:shadow-[0_0_6px_currentColor] group-hover:scale-105"
+          }`}>
+            <span className={`text-xs font-bold transition-all duration-300 ${scoreColor} ${
+              isSelected ? "drop-shadow-[0_0_4px_currentColor]" : ""
+            }`}>{measurement.score.toFixed(1)}</span>
           </div>
         </div>
       </div>
@@ -1270,7 +1291,7 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
   const [showLandmarks, setShowLandmarks] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
-  const [activeTab, setActiveTab] = useState<"all" | "front" | "side">("all")
+  const [activeTab, setActiveTab] = useState<"front" | "side">("front")
 
   const imgRef = useRef<HTMLImageElement | null>(null)
   const loadedImagesRef = useRef<Set<string>>(new Set())
@@ -1337,8 +1358,7 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
     ? (results?.frontMeasurements || [])
     : (results?.sideMeasurements || [])
 
-  const allMeasurements = [...(results?.frontMeasurements || []), ...(results?.sideMeasurements || [])]
-  const tabMeasurements = activeTab === "all" ? allMeasurements : activeTab === "front" ? (results?.frontMeasurements || []) : (results?.sideMeasurements || [])
+  const tabMeasurements = activeTab === "front" ? (results?.frontMeasurements || []) : (results?.sideMeasurements || [])
   const filteredMeasurements = tabMeasurements.filter(m =>
     m.name.toLowerCase().includes(searchQuery.toLowerCase()) || m.category.toLowerCase().includes(searchQuery.toLowerCase())
   )
@@ -1467,11 +1487,7 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
     setProfileView(view); setSelectedMeasurement(null); setZoomLevel(1); setPanOffset({ x: 0, y: 0 }); setImageLoaded(false)
   }
 
-  const handleTabChange = (tab: "all" | "front" | "side") => {
-    setActiveTab(tab); setSelectedMeasurement(null)
-    if (tab === "front" && profileView !== "front") { setProfileView("front"); setZoomLevel(1); setPanOffset({ x: 0, y: 0 }); setImageLoaded(false) }
-    else if (tab === "side" && profileView !== "side") { setProfileView("side"); setZoomLevel(1); setPanOffset({ x: 0, y: 0 }); setImageLoaded(false) }
-  }
+
 
   const sortedMeasurements = [...filteredMeasurements].sort((a, b) => b.score - a.score)
 
@@ -1525,15 +1541,15 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
               {searchQuery && <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"><X className="size-3" /></button>}
             </div>
             <div className="flex items-center gap-1 bg-card border border-border/50 rounded-lg p-0.5">
-              {(["all","front","side"] as const).map(t => (
-                <button key={t} onClick={() => handleTabChange(t)} className={`flex-1 px-2 py-1 rounded text-[10px] font-medium transition-all ${activeTab === t ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary/50"}`}>
-                  {t === "all" ? `All (${allMeasurements.length})` : t === "front" ? `Front (${results?.frontMeasurements.length || 0})` : `Side (${results?.sideMeasurements.length || 0})`}
+              {(["front","side"] as const).map(t => (
+                <button key={t} onClick={() => { setActiveTab(t); setSelectedMeasurement(null); if (t === "front" && profileView !== "front") { setProfileView("front"); setZoomLevel(1); setPanOffset({ x: 0, y: 0 }); setImageLoaded(false) } else if (t === "side" && profileView !== "side") { setProfileView("side"); setZoomLevel(1); setPanOffset({ x: 0, y: 0 }); setImageLoaded(false) } }} className={`flex-1 px-2 py-1 rounded text-[10px] font-medium transition-all ${activeTab === t ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary/50"}`}>
+                  {t === "front" ? `Front (${results?.frontMeasurements.length || 0})` : `Side (${results?.sideMeasurements.length || 0})`}
                 </button>
               ))}
             </div>
             <div className="space-y-1.5 max-h-[calc(100vh-280px)] overflow-y-auto pr-1 custom-scrollbar">
               {sortedMeasurements.length === 0 ? <div className="text-center py-8 text-xs text-muted-foreground">No measurements found</div> : sortedMeasurements.map(m => (
-                <MeasurementCard key={m.id} measurement={m} isSelected={selectedMeasurement?.id === m.id} onClick={() => handleMeasurementClick(m)} />
+                <MeasurementCard key={m.id} measurement={m} isSelected={selectedMeasurement?.id === m.id} onClick={() => handleMeasurementClick(m)} onHover={() => setSelectedMeasurement(m)} />
               ))}
             </div>
           </div>
