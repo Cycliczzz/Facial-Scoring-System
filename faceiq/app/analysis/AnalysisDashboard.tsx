@@ -1612,20 +1612,7 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
                 </div>
               </div>
             )}
-            {results && Object.keys(results.categoryScores).length > 0 && (
-              <div className="bg-card/50 border border-border/50 rounded-xl p-4 shadow-lg">
-                <h3 className="text-xs font-semibold text-foreground mb-3 flex items-center gap-1.5"><BarChart3 className="size-3.5 text-primary" />Category Scores</h3>
-                <div className="space-y-2">
-                  {Object.entries(results.categoryScores).sort(([,a],[,b]) => b - a).map(([cat, score]) => (
-                    <div key={cat} className="flex items-center gap-2">
-                      <span className="text-[10px] text-muted-foreground w-16 truncate">{cat}</span>
-                      <div className="flex-1 h-2 bg-secondary/50 rounded-full overflow-hidden"><div className={`h-full rounded-full transition-all duration-700 ${getScoreGradient(score)}`} style={{ width: `${(score/10)*100}%` }} /></div>
-                      <span className={`text-[10px] font-bold w-6 text-right ${getScoreColor(score)}`}>{score.toFixed(1)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+
             {results && (
               <div className="bg-card/50 border border-border/50 rounded-xl p-4 shadow-lg">
                 <h3 className="text-xs font-semibold text-foreground mb-3 flex items-center gap-1.5"><Sparkles className="size-3.5 text-primary" />Insights</h3>

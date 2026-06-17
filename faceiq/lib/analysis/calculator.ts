@@ -125,7 +125,7 @@ function calculateHarmonyScore(value: number, idealMin: number, idealMax: number
   const range = (idealMax - idealMin) / 2
   if (range === 0) return 10
   const deviation = Math.abs(value - ideal) / range
-  const score = 10 * Math.exp(-0.5 * deviation * deviation)
+  const score = 10 * Math.exp(-0.3 * deviation * deviation)
   return Math.round(score * 10) / 10
 }
 
