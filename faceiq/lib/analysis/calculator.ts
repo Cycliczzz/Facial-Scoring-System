@@ -71,12 +71,13 @@ function acuteAngleFromHorizontal(p1: LandmarkPoint, p2: LandmarkPoint): number 
 }
 
 /** Angle between two lines: line1 = p1→p2, line2 = p3→p4 */
-function angleBetweenLines(p1: LandmarkPoint, p2: LandmarkPoint, p3: LandmarkPoint, p4: LandmarkPoint): number {
+function angleBetweenLines(p1: LandmarkPoint, p2: LandmarkPoint, p3: LandmarkPoint, p4: LandmarkPoint, preferObtuse = false): number {
   const v1 = { x: p2.x - p1.x, y: p2.y - p1.y }
   const v2 = { x: p4.x - p3.x, y: p4.y - p3.y }
   const dot = v1.x * v2.x + v1.y * v2.y
   const cross = v1.x * v2.y - v1.y * v2.x
-  return Math.abs(Math.atan2(cross, dot)) * (180 / Math.PI)
+  const acute = Math.abs(Math.atan2(cross, dot)) * (180 / Math.PI)
+  return preferObtuse ? (acute > 90 ? acute : 180 - acute) : acute
 }
 
 function distanceToLine(point: LandmarkPoint, lineStart: LandmarkPoint, lineEnd: LandmarkPoint): number {
@@ -317,12 +318,12 @@ function calculateFrontMeasurements(
   let jawSlopeSum = 0
   let jawSlopeCount = 0
   if (leftCheekbone && leftUpperJaw && leftLowerJaw && leftChin) {
-    const a = angleBetweenLines(leftCheekbone, leftUpperJaw, leftLowerJaw, leftChin)
+    const a = angleBetweenLines(leftCheekbone, leftUpperJaw, leftLowerJaw, leftChin, true)
     jawSlopeSum += a
     jawSlopeCount++
   }
   if (rightCheekbone && rightUpperJaw && rightLowerJaw && rightChin) {
-    const b = angleBetweenLines(rightCheekbone, rightUpperJaw, rightLowerJaw, rightChin)
+    const b = angleBetweenLines(rightCheekbone, rightUpperJaw, rightLowerJaw, rightChin, true)
     jawSlopeSum += b
     jawSlopeCount++
   }
@@ -449,8 +450,8 @@ function calculateFrontMeasurements(
     const mouthWidth = dist(leftMouthCorner, rightMouthCorner)
     const pupilDist2 = dist(leftPupil, rightPupil)
     if (pupilDist2 > 0) {
-      addMeasurement("interpupillary_mouth_width", "Interpupillary-Mouth Width Ratio", mouthWidth / pupilDist2, "ratio", "Proportions",
-        "Ratio of mouth width to interpupillary distance.")
+      addMeasurement("interpupillary_mouth_width", "Interpupillary-Mouth Width Ratio", (mouthWidth / pupilDist2) * 100, "percentage", "Proportions",
+        "Percentage ratio of mouth width to interpupillary distance.")
     }
   }
 

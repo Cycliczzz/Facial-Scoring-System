@@ -372,8 +372,41 @@ function drawMeasurement(
       break
     }
     case "jaw_slope": {
-      const llj = L("left_lower_jaw_angle"), lc = L("left_chin")
-      if (llj && lc) drawMeasurementLine(ctx, llj.x + dx, llj.y + dy, lc.x + dx, lc.y + dy, WHITE, alpha, "Jaw")
+      const GLOW = "rgba(255,255,255,0.95)"
+      const lc = L("left_cheekbone"), luj = L("left_upper_jaw_angle"), llj = L("left_lower_jaw_angle"), lcn = L("left_chin")
+      const rc = L("right_cheekbone"), ruj = L("right_upper_jaw_angle"), rlj = L("right_lower_jaw_angle"), rcn = L("right_chin")
+      const drawSide = (cheek: any, upper: any, lower: any, chin: any) => {
+        if (!cheek || !upper || !lower || !chin) return 0
+        const dx1 = upper.x - cheek.x, dy1 = upper.y - cheek.y  // cheek→upper direction
+        const dx2 = chin.x - lower.x, dy2 = chin.y - lower.y    // lower→chin direction
+        const det = dx1 * dy2 - dy1 * dx2
+        if (Math.abs(det) > 0.001) {
+          const t = ((lower.x - cheek.x) * dy2 - (lower.y - cheek.y) * dx2) / det
+          const ix = cheek.x + dx1 * t, iy = cheek.y + dy1 * t
+          // Draw two rays FROM intersection TO the landmarks (47=cheek, 45=chin), stop at landmarks
+          drawMeasurementLine(ctx, ix + dx, iy + dy, cheek.x + dx, cheek.y + dy, GLOW, 1.0)
+          drawMeasurementLine(ctx, ix + dx, iy + dy, chin.x + dx, chin.y + dy, GLOW, 1.0)
+          // Angle between the two rays (from intersection to cheek, from intersection to chin)
+          const a1 = Math.atan2(cheek.y - iy, cheek.x - ix)
+          const a2 = Math.atan2(chin.y - iy, chin.x - ix)
+          let diff = a2 - a1
+          while (diff < -Math.PI) diff += 2 * Math.PI
+          while (diff > Math.PI) diff -= 2 * Math.PI
+          const obtuseDeg = Math.abs((diff * 180) / Math.PI)
+          const rad = 25
+          // Draw arc between the two rays and place text inside the angle
+          const drawCCW = diff < 0
+          const bisector = a1 + diff / 2
+          ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5; ctx.setLineDash([])
+          ctx.beginPath(); ctx.arc(ix + dx, iy + dy, rad, a1, a2, drawCCW); ctx.stroke()
+          ctx.font = "bold 11px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+          ctx.fillText(`${obtuseDeg.toFixed(1)}°`, ix + dx + (rad + 14) * Math.cos(bisector), iy + dy + (rad + 14) * Math.sin(bisector))
+          return obtuseDeg
+        }
+        return 0
+      }
+      drawSide(lc, luj, llj, lcn)
+      drawSide(rc, ruj, rlj, rcn)
       break
     }
     case "top_third":
@@ -468,8 +501,18 @@ function drawMeasurement(
       break
     }
     case "eye_separation_ratio": {
-      const mm = L("left_medial_canthus", "left_pupil"), rm = L("right_medial_canthus", "right_pupil")
-      if (mm && rm) drawMeasurementLine(ctx, mm.x + dx, mm.y + dy, rm.x + dx, rm.y + dy, WHITE, alpha, "ICD")
+      const GLOW = "rgba(255,255,255,0.95)"
+      const DIM = "rgba(255,255,255,0.4)"
+      const lp = L("left_pupil"), rp = L("right_pupil"), lc = L("left_cheekbone"), rc = L("right_cheekbone")
+      if (lp && rp && lc && rc) {
+        drawMeasurementLine(ctx, lp.x + dx, lp.y + dy, rp.x + dx, rp.y + dy, GLOW, 1.0)
+        drawMeasurementLine(ctx, lc.x + dx, lc.y + dy, rc.x + dx, rc.y + dy, DIM, 1.0)
+        const pupilDist = Math.sqrt((rp.x - lp.x) ** 2 + (rp.y - lp.y) ** 2)
+        const faceW = Math.sqrt((rc.x - lc.x) ** 2 + (rc.y - lc.y) ** 2)
+        const pct = faceW > 0 ? Number(((pupilDist / faceW) * 100).toFixed(1)) : 0
+        ctx.font = "bold 14px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "bottom"
+        ctx.fillText(`${pct}%`, (lp.x + rp.x) / 2 + dx, lp.y + dy - 8)
+      }
       break
     }
     case "eyebrow_tilt": {
@@ -498,17 +541,8 @@ function drawMeasurement(
         ctx.fillText(`${Math.round(acuteDeg * 10) / 10}°`, (sx + ex) / 2 + dx, (sy + ey) / 2 + dy - 5)
         return acuteDeg
       }
-      const lDeg = drawSide(lh, li, la, lpk, GLOW)
-      const rDeg = drawSide(rh, ri, ra, rpk, GLOW)
-      // Display average near center, matching measurement box value
-      if (lh && li && la && lpk && rh && ri && ra && rpk) {
-        const avgDeg = (lDeg + rDeg) / 2
-        const avgVal = Math.round(avgDeg * 100) / 100
-        const midBX = (lh.x + li.x + la.x + lpk.x + rh.x + ri.x + ra.x + rpk.x) / 8
-        const midBY = (lh.y + li.y + la.y + lpk.y + rh.y + ri.y + ra.y + rpk.y) / 8
-        ctx.font = "bold 15px sans-serif"; ctx.fillStyle = "rgba(255,255,100,0.95)"; ctx.textAlign = "center"; ctx.textBaseline = "bottom"
-        ctx.fillText(`avg: ${avgVal}°`, midBX + dx, midBY + dy - 18)
-      }
+      drawSide(lh, li, la, lpk, GLOW)
+      drawSide(rh, ri, ra, rpk, GLOW)
       break
     }
     case "face_width_to_height": {
@@ -539,9 +573,20 @@ function drawMeasurement(
       break
     }
     case "interpupillary_mouth_width": {
+      const GLOW = "rgba(255,255,255,0.95)"
+      const DIM = "rgba(255,255,255,0.4)"
       const lp = L("left_pupil"), rp = L("right_pupil"), lm = L("left_mouth_corner"), rm = L("right_mouth_corner")
-      if (lp && rp) drawMeasurementLine(ctx, lp.x + dx, lp.y + dy, rp.x + dx, rp.y + dy, WHITE, alpha, "IPD")
-      if (lm && rm) drawMeasurementLine(ctx, lm.x + dx, lm.y + dy, rm.x + dx, rm.y + dy, WHITE_DIM, alpha * 0.5, "MW")
+      if (lp && rp && lm && rm) {
+        // Dim line: (2,3) = interpupillary
+        drawMeasurementLine(ctx, lp.x + dx, lp.y + dy, rp.x + dx, rp.y + dy, DIM, 1.0)
+        // Highlighted line: (36,37) = mouth width
+        drawMeasurementLine(ctx, lm.x + dx, lm.y + dy, rm.x + dx, rm.y + dy, GLOW, 1.0)
+        const mouthW = Math.sqrt((rm.x - lm.x) ** 2 + (rm.y - lm.y) ** 2)
+        const pupilDist = Math.sqrt((rp.x - lp.x) ** 2 + (rp.y - lp.y) ** 2)
+        const ratio = pupilDist > 0 ? Number(((mouthW / pupilDist) * 100).toFixed(1)) : 0
+        ctx.font = "bold 14px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "bottom"
+        ctx.fillText(`${ratio}%`, (lm.x + rm.x) / 2 + dx, lm.y + dy - 8)
+      }
       break
     }
     case "jaw_frontal_angle": {
@@ -578,25 +623,39 @@ function drawMeasurement(
             // Angle arc and value - use pixel-space coords (same as calculator's aspect-scaled space)
             const angleDeg = Math.abs(Math.atan2(det, dx1 * dx2 + dy1 * dy2)) * (180 / Math.PI)
             const finalAngle = angleDeg > 180 ? 360 - angleDeg : angleDeg
-            const a1 = Math.atan2(lc.y - gl.y, lc.x - gl.x), a2 = Math.atan2(rc.y - gr.y, rc.x - gr.x)
-            let diff = a2 - a1
-            while (diff < -Math.PI) diff += 2 * Math.PI
-            while (diff > Math.PI) diff -= 2 * Math.PI
-            const goCCW = diff < 0
-            const bisector = a1 + diff / 2
+            // Ray directions: from intersection toward jaw angles (opposite to jaw→chin vectors)
+            const ra1 = Math.atan2(gl.y - ay, gl.x - ax), ra2 = Math.atan2(gr.y - ay, gr.x - ax)
+            let rdiff = ra2 - ra1
+            while (rdiff < -Math.PI) rdiff += 2 * Math.PI
+            while (rdiff > Math.PI) rdiff -= 2 * Math.PI
+            // Draw the smaller sector (between the two rays)
+            const drawCCW = rdiff < 0
+            const bisector = ra1 + rdiff / 2
             ctx.strokeStyle = GLOW; ctx.lineWidth = 2; ctx.setLineDash([])
-            ctx.beginPath(); ctx.arc(ax + dx, ay + dy, 30, a1, a2, !goCCW); ctx.stroke()
+            const arcRadius = 35
+            ctx.beginPath(); ctx.arc(ax + dx, ay + dy, arcRadius, ra1, ra2, drawCCW); ctx.stroke()
             ctx.font = "bold 13px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
-            ctx.fillText(`${finalAngle.toFixed(1)}°`, ax + dx + 45 * Math.cos(bisector), ay + dy + 45 * Math.sin(bisector))
+            // Place text just above the arc (slightly outside, away from vertex)
+            const textR = arcRadius + 12
+            ctx.fillText(`${finalAngle.toFixed(1)}°`, ax + dx + textR * Math.cos(bisector), ay + dy + textR * Math.sin(bisector))
           }
         }
       }
       break
     }
     case "intercanthal_nasal_width": {
-      const mm = L("left_medial_canthus", "left_pupil"), rm = L("right_medial_canthus", "right_pupil"), ln = L("left_nose_side"), rn = L("right_nose_side")
-      if (mm && rm) drawMeasurementLine(ctx, mm.x + dx, mm.y + dy, rm.x + dx, rm.y + dy, WHITE, alpha, "ICD")
-      if (ln && rn) drawMeasurementLine(ctx, ln.x + dx, ln.y + dy, rn.x + dx, rn.y + dy, WHITE_DIM, alpha * 0.5, "NW")
+      const GLOW = "rgba(255,255,255,0.95)"
+      const DIM = "rgba(255,255,255,0.4)"
+      const lm = L("left_medial_canthus"), rm = L("right_medial_canthus"), ln = L("left_nose_side"), rn = L("right_nose_side")
+      if (lm && rm && ln && rn) {
+        drawMeasurementLine(ctx, lm.x + dx, lm.y + dy, rm.x + dx, rm.y + dy, DIM, 1.0)
+        drawMeasurementLine(ctx, ln.x + dx, ln.y + dy, rn.x + dx, rn.y + dy, GLOW, 1.0)
+        const noseW = Math.sqrt((rn.x - ln.x) ** 2 + (rn.y - ln.y) ** 2)
+        const icd = Math.sqrt((rm.x - lm.x) ** 2 + (rm.y - lm.y) ** 2)
+        const ratio = icd > 0 ? Number((noseW / icd).toFixed(4)) : 0
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "bottom"
+        ctx.fillText(`${ratio}`, (ln.x + rn.x) / 2 + dx, ln.y + dy - 8)
+      }
       break
     }
     case "one_eye_apart": {
@@ -774,14 +833,54 @@ function drawMeasurement(
       break
     }
     case "deviation_iaa_jfa": {
-      const nb = L("nasal_base"), le = L("left_eyelid_hood_end"), re = L("right_eyelid_hood_end"), llj = L("left_lower_jaw_angle"), lc = L("left_chin"), rlj = L("right_lower_jaw_angle")
+      const GLOW = "rgba(255,255,255,0.95)"
+      const DIM = "rgba(255,255,255,0.4)"
+      const nb = L("nasal_base"), le = L("left_eyelid_hood_end"), re = L("right_eyelid_hood_end")
+      const gl = L("left_lower_jaw_angle"), lc = L("left_chin"), gr = L("right_lower_jaw_angle"), rc = L("right_chin")
+      let iaaDeg = 0, jfaDeg = 0
+      // Draw IAA: angle at nasal_base between (14) and (25)
       if (nb && le && re) {
-        drawMeasurementLine(ctx, nb.x + dx, nb.y + dy, le.x + dx, le.y + dy, WHITE_DIM, alpha * 0.5)
-        drawMeasurementLine(ctx, nb.x + dx, nb.y + dy, re.x + dx, re.y + dy, WHITE_DIM, alpha * 0.5)
+        drawMeasurementLine(ctx, nb.x + dx, nb.y + dy, le.x + dx, le.y + dy, GLOW, 1.0)
+        drawMeasurementLine(ctx, nb.x + dx, nb.y + dy, re.x + dx, re.y + dy, GLOW, 1.0)
+        const v1x = le.x - nb.x, v1y = le.y - nb.y, v2x = re.x - nb.x, v2y = re.y - nb.y
+        const cross = v1x * v2y - v1y * v2x
+        const dot = v1x * v2x + v1y * v2y
+        iaaDeg = Math.abs(Math.atan2(cross, dot)) * (180 / Math.PI)
+        const a1 = Math.atan2(v1y, v1x), a2 = Math.atan2(v2y, v2x)
+        const rad = 25
+        ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.arc(nb.x + dx, nb.y + dy, rad, a1, a2); ctx.stroke()
+        const midA = (a1 + a2) / 2
+        ctx.font = "bold 11px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+        ctx.fillText(`IAA ${iaaDeg.toFixed(1)}°`, nb.x + dx + (rad + 14) * Math.cos(midA), nb.y + dy + (rad + 14) * Math.sin(midA))
       }
-      if (llj && lc && rlj) {
-        drawMeasurementLine(ctx, llj.x + dx, llj.y + dy, lc.x + dx, lc.y + dy, WHITE_DIM, alpha * 0.5)
-        drawMeasurementLine(ctx, lc.x + dx, lc.y + dy, rlj.x + dx, rlj.y + dy, WHITE_DIM, alpha * 0.5)
+      // Draw JFA: angle formed by (43→45) & (44→46) at intersection
+      if (gl && lc && gr && rc) {
+        const dx1 = lc.x - gl.x, dy1 = lc.y - gl.y, dx2 = rc.x - gr.x, dy2 = rc.y - gr.y
+        const det = dx1 * dy2 - dy1 * dx2
+        if (Math.abs(det) > 0.001) {
+          const ext = 4, ex1 = dx1 * ext, ey1 = dy1 * ext, ex2 = dx2 * ext, ey2 = dy2 * ext
+          const det2 = ex1 * ey2 - ey1 * ex2
+          if (Math.abs(det2) > 0.001) {
+            const t = ((gr.x - gl.x) * ey2 - (gr.y - gl.y) * ex2) / det2
+            const ax = gl.x + ex1 * t, ay = gl.y + ey1 * t
+            drawMeasurementLine(ctx, gl.x + dx, gl.y + dy, ax + dx, ay + dy, GLOW, 1.0)
+            drawMeasurementLine(ctx, gr.x + dx, gr.y + dy, ax + dx, ay + dy, GLOW, 1.0)
+            jfaDeg = Math.abs(Math.atan2(det, dx1 * dx2 + dy1 * dy2)) * (180 / Math.PI)
+            if (jfaDeg > 180) jfaDeg = 360 - jfaDeg
+            const ra1 = Math.atan2(gl.y - ay, gl.x - ax), ra2 = Math.atan2(gr.y - ay, gr.x - ax)
+            let rdiff = ra2 - ra1
+            while (rdiff < -Math.PI) rdiff += 2 * Math.PI
+            while (rdiff > Math.PI) rdiff -= 2 * Math.PI
+            const drawCCW = rdiff < 0
+            const bisector = ra1 + rdiff / 2
+            const rad = 30
+            ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
+            ctx.beginPath(); ctx.arc(ax + dx, ay + dy, rad, ra1, ra2, drawCCW); ctx.stroke()
+            ctx.font = "bold 11px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+            ctx.fillText(`JFA ${jfaDeg.toFixed(1)}°`, ax + dx + (rad + 14) * Math.cos(bisector), ay + dy + (rad + 14) * Math.sin(bisector))
+          }
+        }
       }
       break
     }
@@ -805,8 +904,18 @@ function drawMeasurement(
       break
     }
     case "lower_third_proportion": {
-      const nb = L("nose_bottom"), cb = L("chin_bottom")
-      if (nb && cb) drawMeasurementLine(ctx, nb.x + dx, nb.y + dy, cb.x + dx, cb.y + dy, WHITE, alpha, "Low 3rd")
+      const GLOW = "rgba(255,255,255,0.95)"
+      const DIM = "rgba(255,255,255,0.4)"
+      const nb = L("nasal_base"), mm = L("mouth_middle"), cb = L("chin_bottom")
+      if (nb && mm && cb) {
+        drawMeasurementLine(ctx, nb.x + dx, nb.y + dy, mm.x + dx, mm.y + dy, GLOW, 1.0)
+        drawMeasurementLine(ctx, nb.x + dx, nb.y + dy, cb.x + dx, cb.y + dy, DIM, 1.0)
+        const upperH = Math.abs(mm.y - nb.y)
+        const totalH = Math.abs(cb.y - nb.y)
+        const pct = totalH > 0 ? Number(((upperH / totalH) * 100).toFixed(1)) : 0
+        ctx.font = "bold 14px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+        ctx.fillText(`${pct}%`, Math.max(nb.x, mm.x) + dx + 8, (nb.y + mm.y) / 2 + dy)
+      }
       break
     }
     case "nasal_tip_angle": {
