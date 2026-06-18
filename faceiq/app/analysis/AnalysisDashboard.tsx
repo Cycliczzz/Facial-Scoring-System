@@ -263,8 +263,8 @@ function drawMeasurementLine(
 }
 
 // Unified clean white color: primary = pure white, secondary = white at 45% opacity
-const WHITE = "rgba(255,255,255,0.92)"
-const WHITE_DIM = "rgba(255,255,255,0.45)"
+const WHITE = "rgba(255,255,255,0.95)"
+const WHITE_DIM = "rgba(255,255,255,0.85)"
 
 function drawMeasurement(
   ctx: CanvasRenderingContext2D,
@@ -273,8 +273,23 @@ function drawMeasurement(
   dx: number, dy: number,
   dw: number, dh: number,
   alpha: number,
-  boxValue?: number
+  boxValue?: number,
+  score?: number
 ) {
+  const getScoreGlow = () => {
+    if (!score && score !== 0) return "rgba(255,255,255,0.95)"
+    if (score >= 8) return "rgba(52,211,153,0.95)"
+    if (score >= 6) return "rgba(251,191,36,0.95)"
+    return "rgba(248,113,113,0.95)"
+  }
+  const getScoreShadow = () => {
+    if (!score && score !== 0) return "rgba(255,255,255,0.8)"
+    if (score >= 8) return "rgba(52,211,153,0.6)"
+    if (score >= 6) return "rgba(251,191,36,0.6)"
+    return "rgba(248,113,113,0.6)"
+  }
+  const GLOW = getScoreGlow()
+  const GLOW_SHADOW = getScoreShadow()
   const L = (...ids: string[]) => {
     for (const id of ids) {
       if (lm[id]) return lm[id]
@@ -297,10 +312,8 @@ function drawMeasurement(
         ctx.strokeStyle = DASHED; ctx.lineWidth = 1.5
         ctx.beginPath(); ctx.moveTo(lmc.x + dx, lmc.y + dy); ctx.lineTo(lmc.x + dx - 60, lmc.y + dy); ctx.stroke()
         ctx.setLineDash([])
-        // Use normalized 0-1 coordinates for angle calculation
-        const lnx = lmc.x / dw, lny = lmc.y / dh
-        const llx = llc.x / dw, lly = llc.y / dh
-        const lDeg = Math.abs(Math.atan2(lly - lny, llx - lnx) * (180 / Math.PI))
+        // Use pixel-space coordinates for angle (matching calculator's aspect-scaled space)
+        const lDeg = Math.abs(Math.atan2(llc.y - lmc.y, llc.x - lmc.x) * (180 / Math.PI))
         const lAngle = lDeg > 90 ? 180 - lDeg : lDeg
         ctx.font = "bold 11px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
         ctx.fillText(`${lAngle.toFixed(1)}°`, lmc.x + dx - 70, lmc.y + dy - 12)
@@ -315,10 +328,8 @@ function drawMeasurement(
         ctx.strokeStyle = DASHED; ctx.lineWidth = 1.5
         ctx.beginPath(); ctx.moveTo(rmc.x + dx, rmc.y + dy); ctx.lineTo(rmc.x + dx + 60, rmc.y + dy); ctx.stroke()
         ctx.setLineDash([])
-        // Use normalized 0-1 coordinates for angle calculation
-        const rnx = rmc.x / dw, rny = rmc.y / dh
-        const rlx = rlc.x / dw, rly = rlc.y / dh
-        const rDeg = Math.abs(Math.atan2(rly - rny, rlx - rnx) * (180 / Math.PI))
+        // Use pixel-space coordinates for angle (matching calculator's aspect-scaled space)
+        const rDeg = Math.abs(Math.atan2(rlc.y - rmc.y, rlc.x - rmc.x) * (180 / Math.PI))
         const rAngle = rDeg > 90 ? 180 - rDeg : rDeg
         ctx.font = "bold 11px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "right"; ctx.textBaseline = "middle"
         ctx.fillText(`${rAngle.toFixed(1)}°`, rmc.x + dx + 70, rmc.y + dy - 12)
@@ -708,20 +719,18 @@ function drawMeasurement(
         ctx.shadowBlur = 10; ctx.shadowColor = "rgba(255,255,255,0.8)"
         drawMeasurementLine(ctx, lp.x + dx, lp.y + dy, rp.x + dx, rp.y + dy, GLOW, 1.0)
         ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
-        // Normalize all to 0-1
-        const lx1 = lp.x / dw, ly1 = lp.y / dh, lx2 = rp.x / dw, ly2 = rp.y / dh
-        const icx = ic.x / dw, icy = ic.y / dh
-        const pDist = Math.sqrt((lx2 - lx1) ** 2 + (ly2 - ly1) ** 2)
-        const A = ly2 - ly1; const B = lx1 - lx2; const C = lx2 * ly1 - lx1 * ly2
-        const distToLine = Math.abs(A * icx + B * icy + C) / Math.sqrt(A * A + B * B)
+        // Use raw pixel coords (matching calculator's aspect-scaled space) 
+        const pDist = Math.sqrt((rp.x - lp.x) ** 2 + (rp.y - lp.y) ** 2)
+        const A = rp.y - lp.y; const B = lp.x - rp.x; const C = rp.x * lp.y - lp.x * rp.y
+        const distToLine = Math.abs(A * ic.x + B * ic.y + C) / Math.sqrt(A * A + B * B)
         const ratio = distToLine > 0 ? Number((pDist / distToLine).toFixed(4)) : 0
         ctx.font = "bold 14px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "bottom"
-        ctx.fillText(`${ratio}`, (lx1 + lx2) / 2 * dw + dx, ly1 * dh + dy - 8)
+        ctx.fillText(`${ratio}`, (lp.x + rp.x) / 2 + dx, lp.y + dy - 8)
         // Dim perpendicular line from inner cupid's bow to pupil line
-        const t = -((lx1 - icx) * (lx2 - lx1) + (ly1 - icy) * (ly2 - ly1)) / ((lx2 - lx1) ** 2 + (ly2 - ly1) ** 2)
-        const px = (lx1 + t * (lx2 - lx1)) * dw + dx
-        const py = (ly1 + t * (ly2 - ly1)) * dh + dy
-        drawMeasurementLine(ctx, icx * dw + dx, icy * dh + dy, px, py, DIM, 1.0)
+        const t = -((lp.x - ic.x) * (rp.x - lp.x) + (lp.y - ic.y) * (rp.y - lp.y)) / ((rp.x - lp.x) ** 2 + (rp.y - lp.y) ** 2)
+        const px = lp.x + t * (rp.x - lp.x) + dx
+        const py = lp.y + t * (rp.y - lp.y) + dy
+        drawMeasurementLine(ctx, ic.x + dx, ic.y + dy, px, py, DIM, 1.0)
       }
       break
     }
@@ -733,12 +742,9 @@ function drawMeasurement(
         drawMeasurementLine(ctx, nb.x + dx, nb.y + dy, le.x + dx, le.y + dy, GLOW, 1.0)
         drawMeasurementLine(ctx, nb.x + dx, nb.y + dy, re.x + dx, re.y + dy, GLOW, 1.0)
         ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
-        // Normalize to 0-1 space for correct angle
-        const nbx = nb.x / dw, nby = nb.y / dh
-        const lex = le.x / dw, ley = le.y / dh
-        const rex = re.x / dw, rey = re.y / dh
-        const v1x = lex - nbx, v1y = ley - nby
-        const v2x = rex - nbx, v2y = rey - nby
+        // Use pixel-space coordinates for correct angle (matching calculator)
+        const v1x = le.x - nb.x, v1y = le.y - nb.y
+        const v2x = re.x - nb.x, v2y = re.y - nb.y
         const cross = v1x * v2y - v1y * v2x
         const dot = v1x * v2x + v1y * v2y
         const angle = Math.abs(Math.atan2(cross, dot)) * (180 / Math.PI)
@@ -1454,7 +1460,7 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
 
     // Only draw measurement visual when one is selected
     if (selectedMeasurement) {
-      drawMeasurement(ctx, selectedMeasurement.id, lmMap, drawX, drawY, drawWidth, drawHeight, 0.9, selectedMeasurement.value)
+      drawMeasurement(ctx, selectedMeasurement.id, lmMap, drawX, drawY, drawWidth, drawHeight, 0.9, selectedMeasurement.value, selectedMeasurement.score)
     }
 
     ctx.restore()
