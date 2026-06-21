@@ -733,7 +733,7 @@ function calculateSideMeasurements(
   if (upperLip && columella && chinPoint) {
     const sLineDist = signedDistanceToLine(upperLip, columella, chinPoint)
     addMeasurement("upper_lip_s_line", "Upper Lip S-Line Position", sLineDist, "mm", "Lips",
-      "Upper lip position relative to Steiner's S-line (columella to chin). Negative = behind line, positive = ahead.")
+      "Upper lip position relative to S-line (columella to chin point). Negative = behind line, positive = ahead.")
   }
 
   // ---- 4. Nasal Projection ----
@@ -747,21 +747,27 @@ function calculateSideMeasurements(
   if (glabella && nasion && rhinion) {
     const nfa = angle(glabella, nasion, rhinion)
     addMeasurement("nasofrontal_angle", "Nasofrontal Angle", nfa, "degrees", "Nose",
-      "Angle between glabella and rhinion at nasal bridge root. Ideal is ~115-135°.")
+      "Angle at nasion between glabella and rhinion. Ideal is ~115-135°.")
   }
 
   // ---- 6. Recession Relative to Frankfort Plane ----
-  if (chinPoint && porion && orbitale) {
-    const recession = signedDistanceToLine(chinPoint, porion, orbitale)
+  if (chinPoint && porion && orbitale && nasion) {
+    // Line through nasion perpendicular to Frankfort plane (70→73).
+    // The perpendicular direction to (fdx,fdy) is (-fdy,fdx).
+    // So a second point on the perpendicular line is nasion shifted by (-fdy, fdx).
+    const perpLineEnd: LandmarkPoint = {
+      id: "perpEnd", x: nasion.x - (orbitale.y - porion.y), y: nasion.y + (orbitale.x - porion.x), label: ""
+    }
+    const recession = signedDistanceToLine(chinPoint, nasion, perpLineEnd)
     addMeasurement("recession_frankfort", "Recession (Frankfort Plane)", recession, "mm", "Profile",
-      "Chin position relative to Frankfort plane. Negative = recessed, positive = prominent.")
+      "Signed distance from chin point to line through nasion perpendicular to Frankfort plane. Negative = recessed, positive = prominent.")
   }
 
   // ---- 7. Holdaway H-Line ----
-  if (chinPoint && upperLip && lowerLip) {
-    const hLineDist = distanceToLine(lowerLip, chinPoint, upperLip)
+  if (upperLip && chinPoint && lowerLip) {
+    const hLineDist = signedDistanceToLine(lowerLip, upperLip, chinPoint)
     addMeasurement("holdaway_h_line", "Holdaway H Line", hLineDist, "mm", "Profile",
-      "Distance from lower lip to Holdaway H-line (chin to upper lip).")
+      "Signed distance from lower lip to Holdaway H-line (upper lip to chin).")
   }
 
   // ---- 8. Mentolabial Angle ----
@@ -772,10 +778,10 @@ function calculateSideMeasurements(
   }
 
   // ---- 9. Upper Forehead Slope ----
-  if (hairline && forehead) {
-    const slope = angleFromVertical(hairline, forehead)
-    addMeasurement("upper_forehead_slope", "Upper Forehead Slope", slope, "degrees", "Forehead",
-      "Angle of upper forehead relative to vertical. Steeper slopes indicate a more sloping forehead.")
+  if (glabella && forehead && hairline) {
+    const ufs = angle(forehead, glabella, hairline)
+    addMeasurement("upper_forehead_slope", "Upper Forehead Slope", ufs, "degrees", "Forehead",
+      "Angle at glabella between forehead and hairline. Smaller = more sloping.")
   }
 
   // ---- 10. Facial Convexity (Nasion) ----
@@ -838,17 +844,25 @@ function calculateSideMeasurements(
   }
 
   // ---- 18. Orbital Vector ----
-  if (cornealApex && cheekbone) {
-    const ov = cornealApex.x - cheekbone.x
+  if (orbitale && lowerEyelid) {
+    // Signed horizontal distance from point 73 (orbitale) to vertical line through point 76 (lower_eyelid)
+    // Positive = orbitale to the right of vertical line (ahead), Negative = orbitale to the left (behind)
+    const ov = orbitale.x - lowerEyelid.x
     addMeasurement("orbital_vector", "Orbital Vector", ov, "mm", "Eyes",
-      "Horizontal projection of corneal apex relative to cheekbone.")
+      "Horizontal distance from orbitale to vertical line through lower eyelid. Negative = orbitale behind (left), positive = orbitale ahead (right).")
   }
 
-  // ---- 19. Inferior Midface Projection Angle ----
-  if (orbitale && subnasale && chinPoint) {
-    const impa = angle(orbitale, subnasale, chinPoint)
-    addMeasurement("interior_midface_projection", "Inferior Midface Projection Angle", impa, "degrees", "Midface",
-      "Inferior midface projection angle at subnasale between orbitale and chin.")
+  // ---- 19. Interior Midface Projection Angle ----
+  if (eyelidEnd && subalare) {
+    // Angle at vertex 61 (subalare) between ray (61→75) and horizontal leftward ray
+    const aRay = Math.atan2(eyelidEnd.y - subalare.y, eyelidEnd.x - subalare.x)
+    const aHoriz = Math.PI  // left-pointing horizontal ray (←)
+    let diff = aRay - aHoriz
+    while (diff < -Math.PI) diff += 2 * Math.PI
+    while (diff > Math.PI) diff -= 2 * Math.PI
+    const angleDeg = Math.abs(diff * 180 / Math.PI)
+    addMeasurement("interior_midface_projection", "Interior Midface Projection Angle", angleDeg, "degrees", "Midface",
+      "Angle at subalare between the ray to eyelid end and the leftward horizontal. Smaller angle (<180°).")
   }
 
   // ---- 20. Z-Angle ----
@@ -859,10 +873,23 @@ function calculateSideMeasurements(
   }
 
   // ---- 21. Nose Tip Rotation Angle ----
-  if (columella && noseTip) {
-    const ntra = Math.abs(angleFromHorizontal(columella, noseTip))
-    addMeasurement("nose_tip_rotation", "Nose Tip Rotation Angle", ntra, "degrees", "Nose",
-      "Angle of columella axis from horizontal.")
+  if (rhinion && cheekbone && subnasale && infratip) {
+    const dx1 = cheekbone.x - rhinion.x, dy1 = cheekbone.y - rhinion.y
+    const dx2 = infratip.x - subnasale.x, dy2 = infratip.y - subnasale.y
+    const det = dx1 * dy2 - dy1 * dx2
+    let ntr = 0
+    if (Math.abs(det) > 0.001) {
+      const t = ((subnasale.x - rhinion.x) * dy2 - (subnasale.y - rhinion.y) * dx2) / det
+      const ix = rhinion.x + t * dx1, iy = rhinion.y + t * dy1
+      const v1x = ix - rhinion.x, v1y = iy - rhinion.y, v2x = infratip.x - subnasale.x, v2y = infratip.y - subnasale.y
+      const dot = v1x * v2x + v1y * v2y
+      const cross = v1x * v2y - v1y * v2x
+      const acuteAngle = Math.abs(Math.atan2(cross, dot)) * (180 / Math.PI)
+      const sign = ix > subnasale.x + subnasale.y * 0 ? -1 : 1
+      ntr = acuteAngle * sign
+    }
+    addMeasurement("nose_tip_rotation", "Nose Tip Rotation Angle", ntr, "degrees", "Nose",
+      "Angle between rhinion-cheekbone and subnasale-infratip lines at their intersection.")
   }
 
   // ---- 22. Nasolabial Angle ----
@@ -915,10 +942,21 @@ function calculateSideMeasurements(
   }
 
   // ---- 29. Gonial Angle ----
-  if (tragus && lowerJawAngle && chinPoint) {
-    const ga = angleBetweenLines(tragus, lowerJawAngle, lowerJawAngle, chinPoint)
-    addMeasurement("gonial_angle", "Gonial Angle", ga, "degrees", "Jaw",
-      "Angle between ramus (tragus to jaw angle) and mandible (jaw angle to chin). Ideal is ~115-135°.")
+  if (intertragicNotch && upperJawAngle && chinBottom && lowerJawAngle) {
+    const dx1 = upperJawAngle.x - intertragicNotch.x, dy1 = upperJawAngle.y - intertragicNotch.y
+    const dx2 = lowerJawAngle.x - chinBottom.x, dy2 = lowerJawAngle.y - chinBottom.y
+    const det = dx1 * dy2 - dy1 * dx2
+    if (Math.abs(det) > 0.001) {
+      const t = ((chinBottom.x - intertragicNotch.x) * dy2 - (chinBottom.y - intertragicNotch.y) * dx2) / det
+      const ix = intertragicNotch.x + t * dx1, iy = intertragicNotch.y + t * dy1
+      const v1x = intertragicNotch.x - ix, v1y = intertragicNotch.y - iy
+      const v2x = lowerJawAngle.x - ix, v2y = lowerJawAngle.y - iy
+      const dot = v1x * v2x + v1y * v2y
+      const cross = v1x * v2y - v1y * v2x
+      const ga = Math.abs(Math.atan2(cross, dot)) * (180 / Math.PI)
+      addMeasurement("gonial_angle", "Gonial Angle", ga, "degrees", "Jaw",
+        "Angle between intertragic-notch-to-upper-jaw and chin-bottom-to-lower-jaw lines. Ideal is ~115-135°.")
+    }
   }
 
   // ---- 30. Mandibular Plane Angle ----

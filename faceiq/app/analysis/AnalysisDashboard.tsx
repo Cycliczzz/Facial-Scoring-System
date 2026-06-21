@@ -992,13 +992,19 @@ function drawMeasurement(
       break
     }
     case "upper_lip_s_line": {
-      const ul = L("upper_lip"), nt = L("nose_tip"), cp = L("chin_point")
-      if (ul && nt && cp) {
-        drawMeasurementLine(ctx, nt.x + dx, nt.y + dy, cp.x + dx, cp.y + dy, WHITE, alpha, "S-Line")
-        const nx = nt.x, ny = nt.y, cx = cp.x, cy = cp.y
+      const ul = L("upper_lip"), cl = L("columella"), cp = L("chin_point")
+      if (ul && cl && cp) {
+        // Same pattern as lower_lip_s_line: S-line (59→66) = columella to chin_point
+        drawMeasurementLine(ctx, cl.x + dx, cl.y + dy, cp.x + dx, cp.y + dy, WHITE_DIM, alpha, "S-Line")
+        const nx = cl.x, ny = cl.y, cx = cp.x, cy = cp.y
         const t = ((ul.x - nx) * (cx - nx) + (ul.y - ny) * (cy - ny)) / ((cx - nx) ** 2 + (cy - ny) ** 2)
         const px = nx + t * (cx - nx), py = ny + t * (cy - ny)
-        drawMeasurementLine(ctx, ul.x + dx, ul.y + dy, px + dx, py + dy, WHITE_DIM, alpha, "UL")
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, ul.x + dx, ul.y + dy, px + dx, py + dy, GLOW, 1.0, "UL")
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+        ctx.fillText(`${val.toFixed(1)}mm`, Math.max(ul.x, px) + dx + 8, (ul.y + py) / 2 + dy)
       }
       break
     }
@@ -1008,28 +1014,76 @@ function drawMeasurement(
       break
     }
     case "nasofrontal_angle": {
-      const g = L("glabella"), nbr = L("nasal_bridge_root"), nt = L("nose_tip")
-      if (g && nbr && nt) {
-        drawMeasurementLine(ctx, g.x + dx, g.y + dy, nbr.x + dx, nbr.y + dy, WHITE, alpha, "NFA")
-        drawMeasurementLine(ctx, nbr.x + dx, nbr.y + dy, nt.x + dx, nt.y + dy, WHITE_DIM, alpha)
+      const g = L("glabella"), nbr = L("nasal_bridge_root"), r = L("rhinion")
+      if (g && nbr && r) {
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, g.x + dx, g.y + dy, nbr.x + dx, nbr.y + dy, GLOW, 1.0)
+        drawMeasurementLine(ctx, nbr.x + dx, nbr.y + dy, r.x + dx, r.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        const v1x = g.x - nbr.x, v1y = g.y - nbr.y
+        const v2x = r.x - nbr.x, v2y = r.y - nbr.y
+        const a1 = Math.atan2(v1y, v1x), a2 = Math.atan2(v2y, v2x)
+        const rad = 25
+        ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.arc(nbr.x + dx, nbr.y + dy, rad, a1, a2); ctx.stroke()
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        const midA = (a1 + a2) / 2
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+        ctx.fillText(`${val}°`, nbr.x + dx + (rad + 16) * Math.cos(midA), nbr.y + dy + (rad + 16) * Math.sin(midA))
       }
       break
     }
     case "recession_frankfort": {
-      const p = L("porion"), o = L("orbitale"), s = L("subnasale")
-      if (p && o && s) {
-        drawMeasurementLine(ctx, p.x + dx, p.y + dy, o.x + dx, o.y + dy, WHITE, alpha, "Frankfort")
-        const t = ((s.x - p.x) * (o.x - p.x) + (s.y - p.y) * (o.y - p.y)) / ((o.x - p.x) ** 2 + (o.y - p.y) ** 2)
-        const px = p.x + t * (o.x - p.x), py = p.y + t * (o.y - p.y)
-        drawMeasurementLine(ctx, s.x + dx, s.y + dy, px + dx, py + dy, WHITE_DIM, alpha, "Rec")
+      const p = L("porion"), o = L("orbitale"), nb = L("nasal_bridge_root"), cp = L("chin_point")
+      if (p && o && nb) {
+        // Draw long Frankfort plane line through point 54 (nasion), perpendicular to segment (70,73)
+        // The line passes through point 54 and is perpendicular to segment (porion→orbitale)
+        const fdx = o.x - p.x, fdy = o.y - p.y
+        const flen = Math.sqrt(fdx * fdx + fdy * fdy)
+        if (flen > 0) {
+          const unx = fdx / flen, uny = fdy / flen
+          // Perpendicular direction
+          const pnx = -uny, pny = unx
+          const ext = 400
+          const lx1 = nb.x + dx + pnx * ext, ly1 = nb.y + dy + pny * ext
+          const lx2 = nb.x + dx - pnx * ext, ly2 = nb.y + dy - pny * ext
+          ctx.setLineDash([5, 5]); ctx.strokeStyle = WHITE_DIM; ctx.lineWidth = 1.5
+          ctx.beginPath(); ctx.moveTo(lx1, ly1); ctx.lineTo(lx2, ly2); ctx.stroke()
+          ctx.setLineDash([])
+          // Draw highlighted segment from point 66 (chin_point) perpendicular to this line
+          if (cp) {
+            const cx = cp.x + dx, cy = cp.y + dy
+            // Project chin_point onto the perpendicular line
+            const projT = ((cx - lx1) * pnx + (cy - ly1) * pny) / (pnx * pnx + pny * pny)
+            const projX = lx1 + projT * pnx
+            const projY = ly1 + projT * pny
+            ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+            drawMeasurementLine(ctx, cx, cy, projX, projY, GLOW, 1.0)
+            ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+            const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+            ctx.font = "bold 11px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+            ctx.fillText(`${val.toFixed(1)}mm`, Math.max(cx, projX) + 8, (cy + projY) / 2)
+            // Sign label based on computed value
+            const signedLabel = val < 0 ? "negative" : "positive"
+            ctx.font = "bold 10px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "bottom"
+            ctx.fillText(signedLabel, cx, cy - 10)
+          }
+        }
       }
       break
     }
     case "holdaway_h_line": {
-      const cp = L("chin_point"), ul = L("upper_lip"), g = L("glabella")
-      if (cp && ul && g) {
-        drawMeasurementLine(ctx, cp.x + dx, cp.y + dy, ul.x + dx, ul.y + dy, WHITE, alpha, "H-Line")
-        drawMeasurementLine(ctx, ul.x + dx, ul.y + dy, g.x + dx, g.y + dy, WHITE_DIM, alpha)
+      const ul = L("upper_lip"), cp = L("chin_point"), ll = L("lower_lip")
+      if (ul && cp && ll) {
+        drawMeasurementLine(ctx, ul.x + dx, ul.y + dy, cp.x + dx, cp.y + dy, WHITE_DIM, alpha, "H-Line")
+        const t = ((ll.x - ul.x) * (cp.x - ul.x) + (ll.y - ul.y) * (cp.y - ul.y)) / ((cp.x - ul.x) ** 2 + (cp.y - ul.y) ** 2)
+        const px = ul.x + t * (cp.x - ul.x), py = ul.y + t * (cp.y - ul.y)
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, ll.x + dx, ll.y + dy, px + dx, py + dy, GLOW, 1.0, "LL")
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+        ctx.fillText(`${val}mm`, Math.max(ll.x, px) + dx + 8, (ll.y + py) / 2 + dy)
       }
       break
     }
@@ -1042,8 +1096,31 @@ function drawMeasurement(
       break
     }
     case "upper_forehead_slope": {
-      const hp = L("hairline_profile"), f = L("forehead")
-      if (hp && f) drawMeasurementLine(ctx, hp.x + dx, hp.y + dy, f.x + dx, f.y + dy, WHITE, alpha, "Forehead")
+      const hp = L("hairline_profile"), f = L("forehead"), g = L("glabella")
+      if (hp && f && g) {
+        // Connect (53,52) = glabella to forehead
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, g.x + dx, g.y + dy, f.x + dx, f.y + dy, GLOW, 1.0)
+        // Connect (53,51) = glabella to hairline_profile
+        drawMeasurementLine(ctx, g.x + dx, g.y + dy, hp.x + dx, hp.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        // Calculate acute angle at vertex 53 (glabella)
+        const a1 = Math.atan2(f.y - g.y, f.x - g.x)
+        const a2 = Math.atan2(hp.y - g.y, hp.x - g.x)
+        let diff = a2 - a1
+        while (diff < -Math.PI) diff += 2 * Math.PI
+        while (diff > Math.PI) diff -= 2 * Math.PI
+        // Draw arc small, text far outside
+        const rad = 18
+        const drawCCW = diff < 0
+        const bisector = a1 + diff / 2
+        ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5; ctx.setLineDash([])
+        ctx.beginPath(); ctx.arc(g.x + dx, g.y + dy, rad, a1, a2, drawCCW); ctx.stroke()
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        const textR = rad + 26
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+        ctx.fillText(`${val.toFixed(1)}°`, g.x + dx + textR * Math.cos(bisector), g.y + dy + textR * Math.sin(bisector))
+      }
       break
     }
     case "facial_convexity_nasion": {
@@ -1106,13 +1183,60 @@ function drawMeasurement(
       break
     }
     case "orbital_vector": {
-      const ca = L("corneal_apex"), cs = L("cheekbone")
-      if (ca && cs) drawMeasurementLine(ctx, cs.x + dx, cs.y + dy, ca.x + dx, ca.y + dy, WHITE, alpha, "OV")
+      const or = L("orbitale"), le = L("lower_eyelid")
+      if (or && le) {
+        // Vertical line through point 76 (lower_eyelid)
+        const vx = le.x + dx, vy1 = le.y + dy - 80, vy2 = le.y + dy + 80
+        ctx.setLineDash([5, 5]); ctx.strokeStyle = WHITE_DIM; ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.moveTo(vx, vy1); ctx.lineTo(vx, vy2); ctx.stroke()
+        ctx.setLineDash([])
+        // Horizontal segment from point 73 (orbitale) perpendicular to vertical line
+        const segX1 = or.x + dx, segY = or.y + dy
+        const segX2 = vx
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, segX1, segY, segX2, segY, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        ctx.font = "bold 11px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+        ctx.fillText(`${val.toFixed(1)}mm`, Math.max(segX1, segX2) + 8, segY)
+        // Sign label based on computed value
+        const sideLabel = val < 0 ? "negative" : "positive"
+        ctx.font = "bold 10px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "bottom"
+        ctx.fillText(sideLabel, or.x + dx, or.y + dy - 10)
+      }
       break
     }
     case "interior_midface_projection": {
-      const s = L("subnasale"), cs = L("cheekbone")
-      if (s && cs) drawMeasurementLine(ctx, s.x + dx, s.y + dy, cs.x + dx, cs.y + dy, WHITE, alpha, "IMP")
+      const ed = L("eyelid_end"), sb = L("subalare")
+      if (ed && sb) {
+        // Dashed horizontal line from point 61 (subalare) going left (decreasing x)
+        ctx.setLineDash([5, 5]); ctx.strokeStyle = WHITE_DIM; ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.moveTo(sb.x + dx, sb.y + dy); ctx.lineTo(sb.x + dx - 80, sb.y + dy); ctx.stroke()
+        ctx.setLineDash([])
+        // Highlight ray (61→75) = subalare to eyelid_end
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, sb.x + dx, sb.y + dy, ed.x + dx, ed.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        // Angle at vertex 61: between ray (61→75) going UP-left and the dashed horizontal going LEFT
+        // In image coords: horizontal leftward ray has angle ±PI (or -180°)
+        // ray (61→75): vector = eyelid_end - subalare
+        const dxRay = ed.x - sb.x, dyRay = ed.y - sb.y
+        const aRay = Math.atan2(dyRay, dxRay)   // angle of ray (61→75) in standard math
+        const aHoriz = Math.PI                    // horizontal leftward ray
+        let diff = aRay - aHoriz
+        while (diff < -Math.PI) diff += 2 * Math.PI
+        while (diff > Math.PI) diff -= 2 * Math.PI
+        const angleDeg = Math.abs(diff * 180 / Math.PI)
+        // Draw arc between aHoriz and aRay at vertex 61
+        const rad = 20
+        const drawCCW = diff < 0
+        const bisector = aHoriz + diff / 2
+        ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5; ctx.setLineDash([])
+        ctx.beginPath(); ctx.arc(sb.x + dx, sb.y + dy, rad, aHoriz, aRay, drawCCW); ctx.stroke()
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : angleDeg
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+        ctx.fillText(`${val.toFixed(1)}°`, sb.x + dx + (rad + 14) * Math.cos(bisector), sb.y + dy + (rad + 14) * Math.sin(bisector))
+      }
       break
     }
     case "lower_lip_s_line": {
@@ -1177,11 +1301,38 @@ function drawMeasurement(
       if (nbr && r) drawMeasurementLine(ctx, nbr.x + dx, nbr.y + dy, r.x + dx, r.y + dy, WHITE, alpha, "NBA")
       break
     }
-    case "nasal_tip_rotation": {
-      const c = L("columella"), nt = L("nose_tip"), s = L("subnasale")
-      if (c && nt && s) {
-        drawMeasurementLine(ctx, c.x + dx, c.y + dy, nt.x + dx, nt.y + dy, WHITE, alpha, "NTR")
-        drawMeasurementLine(ctx, nt.x + dx, nt.y + dy, s.x + dx, s.y + dy, WHITE_DIM, alpha)
+    case "nose_tip_rotation": {
+      const r = L("rhinion"), cb = L("cheekbone"), sn = L("subnasale"), it = L("infratip")
+      if (r && cb && sn && it) {
+        const dx1 = cb.x - r.x, dy1 = cb.y - r.y
+        const dx2 = it.x - sn.x, dy2 = it.y - sn.y
+        const det = dx1 * dy2 - dy1 * dx2
+        if (Math.abs(det) > 0.001) {
+          const t = ((sn.x - r.x) * dy2 - (sn.y - r.y) * dx2) / det
+          const ix = r.x + t * dx1, iy = r.y + t * dy1
+          const ext1 = 2.5, ext2 = 2.5
+          const e1x = ix + (r.x - ix) * ext1, e1y = iy + (r.y - iy) * ext1
+          const e2x = ix + (sn.x - ix) * ext2, e2y = iy + (sn.y - iy) * ext2
+          ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+          ctx.strokeStyle = GLOW; ctx.lineWidth = 2; ctx.setLineDash([])
+          ctx.beginPath(); ctx.moveTo(e1x + dx, e1y + dy); ctx.lineTo(ix + dx, iy + dy); ctx.lineTo(e2x + dx, e2y + dy); ctx.stroke()
+          ctx.fillStyle = GLOW; ctx.beginPath(); ctx.arc(ix + dx, iy + dy, 3, 0, 2*Math.PI); ctx.fill()
+          ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+          const v1x = r.x - ix, v1y = r.y - iy
+          const v2x = sn.x - ix, v2y = sn.y - iy
+          const a1 = Math.atan2(v1y, v1x), a2 = Math.atan2(v2y, v2x)
+          let diff = a2 - a1
+          while (diff < -Math.PI) diff += 2 * Math.PI
+          while (diff > Math.PI) diff -= 2 * Math.PI
+          const drawCCW = diff < 0
+          const rad = 25
+          ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
+          ctx.beginPath(); ctx.arc(ix + dx, iy + dy, rad, a1, a2, drawCCW); ctx.stroke()
+          const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+          const midA = a1 + diff / 2
+          ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+          ctx.fillText(`${val}°`, ix + dx + (rad + 12) * Math.cos(midA), iy + dy + (rad + 12) * Math.sin(midA))
+        }
       }
       break
     }
@@ -1239,6 +1390,54 @@ function drawMeasurement(
       if (s && nt && c) {
         drawMeasurementLine(ctx, s.x + dx, s.y + dy, nt.x + dx, nt.y + dy, WHITE, alpha, "NBA")
         drawMeasurementLine(ctx, nt.x + dx, nt.y + dy, c.x + dx, c.y + dy, WHITE_DIM, alpha)
+      }
+      break
+    }
+    case "gonial_angle": {
+      const itn = L("intertragic_notch"), uj = L("upper_jaw_angle"), cb = L("chin_bottom"), lj = L("lower_jaw_angle")
+      if (itn && uj && cb && lj) {
+        const dx1 = uj.x - itn.x, dy1 = uj.y - itn.y
+        const dx2 = lj.x - cb.x, dy2 = lj.y - cb.y
+        const det = dx1 * dy2 - dy1 * dx2
+        if (Math.abs(det) > 0.001) {
+          const t = ((cb.x - itn.x) * dy2 - (cb.y - itn.y) * dx2) / det
+          const ix = itn.x + t * dx1, iy = itn.y + t * dy1
+          const e2x = ix + (lj.x - ix) * 2, e2y = iy + (lj.y - iy) * 2
+          ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+          ctx.strokeStyle = GLOW; ctx.lineWidth = 2; ctx.setLineDash([])
+          ctx.beginPath(); ctx.moveTo(itn.x + dx, itn.y + dy); ctx.lineTo(ix + dx, iy + dy); ctx.lineTo(e2x + dx, e2y + dy); ctx.stroke()
+          ctx.fillStyle = GLOW; ctx.beginPath(); ctx.arc(ix + dx, iy + dy, 3, 0, 2*Math.PI); ctx.fill()
+          ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+          const v1x = itn.x - ix, v1y = itn.y - iy
+          const v2x = lj.x - ix, v2y = lj.y - iy
+          const a1 = Math.atan2(v1y, v1x), a2 = Math.atan2(v2y, v2x)
+          let diff = a2 - a1
+          while (diff < -Math.PI) diff += 2 * Math.PI
+          while (diff > Math.PI) diff -= 2 * Math.PI
+          const drawCCW = diff < 0
+          const rad = 28
+          ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
+          ctx.beginPath(); ctx.arc(ix + dx, iy + dy, rad, a1, a2, drawCCW); ctx.stroke()
+          const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+          const midA = a1 + diff / 2
+          ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+          ctx.fillText(`${val}°`, ix + dx + (rad + 12) * Math.cos(midA), iy + dy + (rad + 12) * Math.sin(midA))
+        }
+      }
+      break
+    }
+    case "lower_lip_burstone": {
+      const sn = L("subnasale"), cp = L("chin_point"), ll = L("lower_lip")
+      if (sn && cp && ll) {
+        drawMeasurementLine(ctx, sn.x + dx, sn.y + dy, cp.x + dx, cp.y + dy, WHITE_DIM, alpha, "Burstone")
+        const t3 = ((ll.x - sn.x) * (cp.x - sn.x) + (ll.y - sn.y) * (cp.y - sn.y)) / ((cp.x - sn.x) ** 2 + (cp.y - sn.y) ** 2)
+        const p3x = sn.x + t3 * (cp.x - sn.x), p3y = sn.y + t3 * (cp.y - sn.y)
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, ll.x + dx, ll.y + dy, p3x + dx, p3y + dy, GLOW, 1.0, "LL")
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        const val2 = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+        ctx.fillText(`${val2}mm`, Math.max(ll.x, p3x) + dx + 8, (ll.y + p3y) / 2 + dy)
       }
       break
     }
