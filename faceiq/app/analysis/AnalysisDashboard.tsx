@@ -1,5 +1,5 @@
 "use client"
-
+  
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useSearchParams } from "next/navigation"
 import {
@@ -1116,13 +1116,48 @@ function drawMeasurement(
       break
     }
     case "lower_lip_s_line": {
-      const ll = L("lower_lip"), nt = L("nose_tip"), cp = L("chin_point")
-      if (ll && nt && cp) {
-        drawMeasurementLine(ctx, nt.x + dx, nt.y + dy, cp.x + dx, cp.y + dy, WHITE, alpha, "S-Line")
-        const nx = nt.x, ny = nt.y, cx = cp.x, cy = cp.y
+      const ll = L("lower_lip"), cl = L("columella"), cp = L("chin_point")
+      if (ll && cl && cp) {
+        drawMeasurementLine(ctx, cl.x + dx, cl.y + dy, cp.x + dx, cp.y + dy, WHITE_DIM, alpha, "S-Line")
+        const nx = cl.x, ny = cl.y, cx = cp.x, cy = cp.y
         const t = ((ll.x - nx) * (cx - nx) + (ll.y - ny) * (cy - ny)) / ((cx - nx) ** 2 + (cy - ny) ** 2)
         const px = nx + t * (cx - nx), py = ny + t * (cy - ny)
-        drawMeasurementLine(ctx, ll.x + dx, ll.y + dy, px + dx, py + dy, WHITE_DIM, alpha, "LL")
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, ll.x + dx, ll.y + dy, px + dx, py + dy, GLOW, 1.0, "LL")
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        const dist = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+        ctx.fillText(`${dist}mm`, Math.max(ll.x, px) + dx + 8, (ll.y + py) / 2 + dy)
+      }
+      break
+    }
+    case "nasolabial_angle": {
+      const ul = L("upper_lip"), sn = L("subnasale"), cl = L("columella")
+      if (ul && sn && cl) {
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        // (60→62): subnasale to upper_lip
+        drawMeasurementLine(ctx, sn.x + dx, sn.y + dy, ul.x + dx, ul.y + dy, GLOW, 1.0)
+        // (60→59): subnasale to columella, extended past 59
+        const ext = 1.8
+        const ecx = sn.x + (cl.x - sn.x) * ext
+        const ecy = sn.y + (cl.y - sn.y) * ext
+        ctx.strokeStyle = GLOW; ctx.lineWidth = 2; ctx.setLineDash([])
+        ctx.beginPath(); ctx.moveTo(sn.x + dx, sn.y + dy); ctx.lineTo(ecx + dx, ecy + dy); ctx.stroke()
+        ctx.fillStyle = GLOW
+        ctx.beginPath(); ctx.arc(sn.x + dx, sn.y + dy, 3, 0, 2*Math.PI); ctx.fill()
+        ctx.beginPath(); ctx.arc(cl.x + dx, cl.y + dy, 3, 0, 2*Math.PI); ctx.fill()
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        const v1x = ul.x - sn.x, v1y = ul.y - sn.y
+        const v2x = cl.x - sn.x, v2y = cl.y - sn.y
+        const a1 = Math.atan2(v1y, v1x), a2 = Math.atan2(v2y, v2x)
+        // Draw the SUPPLEMENTARY arc (a2→a1 instead of a1→a2 to get the larger sector)
+        const midASupp = Math.atan2(v1y + v2y, v1x + v2x)
+        const rad = 20
+        ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.arc(sn.x + dx, sn.y + dy, rad, a2, a1); ctx.stroke()
+        const angValue = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+        ctx.fillText(`${angValue}°`, sn.x + dx + (rad + 12) * Math.cos(midASupp), sn.y + dy + (rad + 12) * Math.sin(midASupp))
       }
       break
     }
@@ -1467,6 +1502,39 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
         left_chin: 45, right_chin: 46,
         left_cheekbone: 47, right_cheekbone: 48,
       }
+      const SIDE_LANDMARK_ORDER: Record<string, number> = {
+        top_of_head: 49,
+        occiput: 50,
+        hairline_profile: 51,
+        forehead: 52,
+        glabella: 53,
+        nasal_bridge_root: 54,
+        rhinion: 55,
+        supratip: 56,
+        nose_tip: 57,
+        infratip: 58,
+        columella: 59,
+        subnasale: 60,
+        subalare: 61,
+        upper_lip: 62,
+        mouth_corner: 63,
+        lower_lip: 64,
+        labiomental_fold: 65,
+        chin_point: 66,
+        chin_bottom: 67,
+        upper_jaw_angle: 68,
+        lower_jaw_angle: 69,
+        porion: 70,
+        tragus: 71,
+        intertragic_notch: 72,
+        orbitale: 73,
+        corneal_apex: 74,
+        eyelid_end: 75,
+        lower_eyelid: 76,
+        cheekbone: 77,
+        cervical_point: 78,
+        neck_point: 79,
+      }
       currentLandmarks.forEach((lm, idx) => {
         const color = lm.color || (isFemaleAccent ? "#ec4899" : "#38bdf8")
         const px = lm.x * drawWidth + drawX
@@ -1476,9 +1544,10 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
         ctx.beginPath(); ctx.arc(px, py, 3, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.fill()
         ctx.beginPath(); ctx.arc(px, py, 1.5, 0, 2 * Math.PI); ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fill()
         ctx.shadowBlur = 0
-        // Draw number label for front profile
-        if (profileView === "front") {
-          const num = FRONT_LANDMARK_ORDER[lm.id]
+        // Draw number label
+        if (profileView === "front" || profileView === "side") {
+          const order = profileView === "front" ? FRONT_LANDMARK_ORDER : SIDE_LANDMARK_ORDER
+          const num = order[lm.id]
           if (num !== undefined) {
             ctx.font = "bold 9px sans-serif"
             ctx.fillStyle = "rgba(255,255,255,0.85)"

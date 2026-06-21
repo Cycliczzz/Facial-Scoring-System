@@ -867,9 +867,9 @@ function calculateSideMeasurements(
 
   // ---- 22. Nasolabial Angle ----
   if (columella && subnasale && upperLip) {
-    const nla = angle(columella, subnasale, upperLip)
+    const nla = 180 - angle(columella, subnasale, upperLip)
     addMeasurement("nasolabial_angle", "Nasolabial Angle", nla, "degrees", "Nose",
-      "Angle between nose base and upper lip at subnasale. Ideal is ~90-110°.")
+      "Supplementary angle at subnasale between columella and upper lip. Ideal is ~90-110°.")
   }
 
   // ---- 23. Nasofacial Angle ----
