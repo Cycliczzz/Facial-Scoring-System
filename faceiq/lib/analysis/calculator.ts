@@ -267,8 +267,8 @@ function calculateFrontMeasurements(
     const noseWidth = dist(leftNoseSide, rightNoseSide)        // (4,5)
     const bridgeWidth = dist(leftNoseBridge, rightNoseBridge)  // (34,35)
     if (noseWidth > 0) {
-      addMeasurement("nose_bridge_to_width", "Nose Bridge to Nose Width Ratio", bridgeWidth / noseWidth, "ratio", "Nose",
-        "Ratio of nose bridge width (34→35) to nose side width (4→5).")
+      addMeasurement("nose_bridge_to_width", "Nose Bridge to Nose Width Ratio", noseWidth / bridgeWidth, "ratio", "Nose",
+        "Ratio of nose side width (4→5) to nose bridge width (34→35).")
     }
   }
 
