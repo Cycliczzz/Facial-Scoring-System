@@ -713,19 +713,19 @@ function calculateSideMeasurements(
   const neckPoint = L("neck_point")
 
   // ---- 1. Nasal Tip Angle ----
-  if (rhinion && noseTip && subnasale) {
-    const nta = angle(rhinion, noseTip, subnasale)
+  if (infratip && noseTip && supratip) {
+    const nta = angle(infratip, noseTip, supratip)
     addMeasurement("nasal_tip_angle", "Nasal Tip Angle", nta, "degrees", "Nose",
-      "Angle at the nasal tip between rhinion and subnasale. Ideal is ~70-80°.")
+      "Angle at nose tip between infratip and supratip.")
   }
 
   // ---- 2. Nasal Width to Height Ratio ----
-  if (subalare && subnasale && nasion) {
-    const nw = dist(subalare, subnasale)
-    const nh = dist(nasion, subnasale)
+  if (noseTip && subalare && nasion) {
+    const nw = dist(noseTip, subalare)
+    const nh = distanceToLine(nasion, noseTip, subalare)
     if (nh > 0) {
       addMeasurement("nasal_width_to_height", "Nasal Width to Height Ratio", nw / nh, "ratio", "Nose",
-        "Ratio of nasal width to nasal height from side view.")
+        "Ratio of nasal width (nose tip to subalare) to nasal height (nasion perpendicular to that line).")
     }
   }
 
@@ -736,11 +736,18 @@ function calculateSideMeasurements(
       "Upper lip position relative to S-line (columella to chin point). Negative = behind line, positive = ahead.")
   }
 
+  // ---- 3b. Upper Lip Burstone Line ----
+  if (upperLip && subnasale && chinPoint) {
+    const burstoneDist = signedDistanceToLine(upperLip, subnasale, chinPoint)
+    addMeasurement("upper_lip_burstone", "Upper Lip Burstone Line", burstoneDist, "mm", "Lips",
+      "Upper lip position relative to Burstone line (subnasale to chin point). Negative = behind line, positive = ahead.")
+  }
+
   // ---- 4. Nasal Projection ----
-  if (noseTip && subnasale) {
-    const proj = Math.abs(noseTip.x - subnasale.x)
-    addMeasurement("nasal_projection", "Nasal Projection", proj, "mm", "Nose",
-      "Horizontal projection of nose tip from the facial plane.")
+  if (noseTip && subnasale && rhinion) {
+    const nproj = angle(subnasale, noseTip, rhinion)
+    addMeasurement("nasal_projection", "Nasal Projection", nproj, "degrees", "Nose",
+      "Angle at nose tip between subnasale and rhinion. Measures nasal tip projection.")
   }
 
   // ---- 5. Nasofrontal Angle ----
@@ -785,17 +792,17 @@ function calculateSideMeasurements(
   }
 
   // ---- 10. Facial Convexity (Nasion) ----
-  if (glabella && subnasale && chinPoint) {
-    const fcn = angle(glabella, subnasale, chinPoint)
+  if (nasion && subnasale && chinPoint) {
+    const fcn = angle(nasion, subnasale, chinPoint)
     addMeasurement("facial_convexity_nasion", "Facial Convexity (Nasion)", fcn, "degrees", "Profile",
-      "Facial convexity angle at subnasale between glabella and chin.")
+      "Facial convexity angle at subnasale between nasion and chin point.")
   }
 
   // ---- 11. Anterior Facial Depth ----
-  if (glabella && chinPoint) {
-    const depth = dist(glabella, chinPoint)
-    addMeasurement("anterior_facial_depth", "Anterior Facial Depth", depth, "mm", "Proportions",
-      "Distance from glabella to chin point.")
+  if (tragus && subalare && orbitale) {
+    const afd = angle(tragus, subalare, orbitale)
+    addMeasurement("anterior_facial_depth", "Anterior Facial Depth", afd, "degrees", "Proportions",
+      "Angle at subalare between tragus and orbitale.")
   }
 
   // ---- 12. Upper Lip E-Line Position ----
@@ -813,12 +820,12 @@ function calculateSideMeasurements(
   }
 
   // ---- 14. Facial Depth to Height Ratio ----
-  if (glabella && chinPoint && hairline && cervicalPoint) {
-    const depth2 = dist(glabella, chinPoint)
-    const height2 = dist(hairline, cervicalPoint)
-    if (height2 > 0) {
-      addMeasurement("facial_depth_to_height", "Facial Depth to Height Ratio", depth2 / height2, "ratio", "Proportions",
-        "Ratio of facial depth (glabella to chin) to facial height (hairline to cervical point).")
+  if (subnasale && tragus && nasion && labiomentalFold) {
+    const depth3 = dist(subnasale, tragus)
+    const height3 = dist(nasion, labiomentalFold)
+    if (height3 > 0) {
+      addMeasurement("facial_depth_to_height", "Facial Depth to Height Ratio", depth3 / height3, "ratio", "Proportions",
+        "Ratio of facial depth (subnasale to tragus) to facial height (nasion to labiomental fold).")
     }
   }
 
@@ -830,17 +837,17 @@ function calculateSideMeasurements(
   }
 
   // ---- 16. Total Facial Convexity ----
-  if (forehead && subnasale && chinPoint) {
-    const tfc = angle(forehead, subnasale, chinPoint)
+  if (chinPoint && noseTip && glabella) {
+    const tfc = angle(chinPoint, noseTip, glabella)
     addMeasurement("total_facial_convexity", "Total Facial Convexity", tfc, "degrees", "Profile",
-      "Total facial convexity angle at subnasale between forehead and chin.")
+      "Total facial convexity angle at nose tip between chin point and glabella.")
   }
 
   // ---- 17. Facial Convexity (Glabella) ----
-  if (glabella && upperLip && chinPoint) {
-    const fcg = angle(glabella, upperLip, chinPoint)
+  if (glabella && subnasale && chinPoint) {
+    const fcg = angle(glabella, subnasale, chinPoint)
     addMeasurement("facial_convexity_glabella", "Facial Convexity (Glabella)", fcg, "degrees", "Profile",
-      "Facial convexity angle at upper lip between glabella and chin.")
+      "Facial convexity angle at subnasale between glabella and chin point.")
   }
 
   // ---- 18. Orbital Vector ----
@@ -900,24 +907,36 @@ function calculateSideMeasurements(
   }
 
   // ---- 23. Nasofacial Angle ----
-  if (nasion && noseTip && glabella && chinPoint) {
-    const nfa2 = angleBetweenLines(nasion, noseTip, glabella, chinPoint)
+  if (nasion && chinPoint && noseTip) {
+    const nfa2 = angle(chinPoint, nasion, noseTip)
     addMeasurement("nasofacial_angle", "Nasofacial Angle", nfa2, "degrees", "Nose",
-      "Angle between nasal dorsum and facial plane. Ideal is ~30-40°.")
+      "Angle at nasion between chin point and nose tip.")
   }
 
   // ---- 24. Nasomental Angle ----
   if (nasion && noseTip && chinPoint) {
     const nma = angle(nasion, noseTip, chinPoint)
     addMeasurement("nasomental_angle", "Nasomental Angle", nma, "degrees", "Profile",
-      "Angle at nose tip between nasion and chin. Ideal is ~120-135°.")
+      "Angle at nose tip between nasion and chin point.")
   }
 
   // ---- 25. Frankfort-Tip Angle ----
-  if (porion && orbitale && noseTip) {
-    const fta = angleBetweenLines(porion, orbitale, orbitale, noseTip)
-    addMeasurement("frankfort_tip_angle", "Frankfort-Tip Angle", fta, "degrees", "Nose",
-      "Angle between Frankfort plane and orbitale-nose tip line. Ideal is ~105-125°.")
+  if (columella && subnasale && cheekbone && rhinion) {
+    const dx1 = subnasale.x - columella.x, dy1 = subnasale.y - columella.y  // (60→59)
+    const dx2 = rhinion.x - cheekbone.x, dy2 = rhinion.y - cheekbone.y       // (77→55)
+    const det = dx1 * dy2 - dy1 * dx2
+    if (Math.abs(det) > 0.001) {
+      const t = ((cheekbone.x - columella.x) * dy2 - (cheekbone.y - columella.y) * dx2) / det
+      const ix = columella.x + dx1 * t, iy = columella.y + dy1 * t
+      // Vectors from intersection TO the line endpoints
+      const v1x = columella.x - ix, v1y = columella.y - iy
+      const v2x = rhinion.x - ix, v2y = rhinion.y - iy
+      const dot = v1x * v2x + v1y * v2y
+      const cross = v1x * v2y - v1y * v2x
+      const fta = Math.abs(Math.atan2(cross, dot)) * (180 / Math.PI)
+      addMeasurement("frankfort_tip_angle", "Frankfort-Tip Angle", fta, "degrees", "Nose",
+        "Acute angle at intersection of extended columella-subnasale and cheekbone-rhinion lines.")
+    }
   }
 
   // ---- 26. Lower Lip S-Line Position ----

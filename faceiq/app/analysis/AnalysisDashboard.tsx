@@ -978,27 +978,69 @@ function drawMeasurement(
       break
     }
     case "nasal_tip_angle": {
-      const r = L("rhinion"), nt = L("nose_tip"), c = L("columella")
-      if (r && nt && c) {
-        drawMeasurementLine(ctx, r.x + dx, r.y + dy, nt.x + dx, nt.y + dy, WHITE, alpha, "NTA")
-        drawMeasurementLine(ctx, nt.x + dx, nt.y + dy, c.x + dx, c.y + dy, WHITE_DIM, alpha)
+      const nt = L("nose_tip"), it = L("infratip"), sp = L("supratip")
+      if (nt && it && sp) {
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, nt.x + dx, nt.y + dy, it.x + dx, it.y + dy, GLOW, 1.0)
+        drawMeasurementLine(ctx, nt.x + dx, nt.y + dy, sp.x + dx, sp.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        const v1x = it.x - nt.x, v1y = it.y - nt.y
+        const v2x = sp.x - nt.x, v2y = sp.y - nt.y
+        const a1 = Math.atan2(v1y, v1x), a2 = Math.atan2(v2y, v2x)
+        const rad = 12
+        ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.arc(nt.x + dx, nt.y + dy, rad, a1, a2); ctx.stroke()
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        const midA = (a1 + a2) / 2
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+        ctx.fillText(`${val.toFixed(1)}°`, nt.x + dx + (rad + 18) * Math.cos(midA), nt.y + dy + (rad + 18) * Math.sin(midA))
       }
       break
     }
     case "nasal_width_to_height": {
-      const s = L("subnasale"), nt = L("nose_tip"), nbr = L("nasal_bridge_root")
-      if (s && nt) drawMeasurementLine(ctx, s.x + dx, s.y + dy, nt.x + dx, nt.y + dy, WHITE, alpha, "Proj")
-      if (nbr && s) drawMeasurementLine(ctx, nbr.x + dx, nbr.y + dy, s.x + dx, s.y + dy, WHITE_DIM, alpha, "Height")
+      const nt = L("nose_tip"), sb = L("subalare"), nb = L("nasal_bridge_root")
+      if (nt && sb) {
+        // Highlight segment (57,61) = nose_tip to subalare
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, nt.x + dx, nt.y + dy, sb.x + dx, sb.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        // Perpendicular from point 54 (nasion) to line (57,61)
+        if (nb) {
+          const nx = nt.x, ny = nt.y, sx = sb.x, sy = sb.y
+          const t = ((nb.x - nx) * (sx - nx) + (nb.y - ny) * (sy - ny)) / ((sx - nx) ** 2 + (sy - ny) ** 2)
+          const px = nx + t * (sx - nx), py = ny + t * (sy - ny)
+          ctx.setLineDash([5, 5]); ctx.strokeStyle = WHITE_DIM; ctx.lineWidth = 1.5
+          ctx.beginPath(); ctx.moveTo(nb.x + dx, nb.y + dy); ctx.lineTo(px + dx, py + dy); ctx.stroke()
+          ctx.setLineDash([])
+        }
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(2)) : 0
+        ctx.font = "bold 13px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "top"
+        ctx.fillText(`${val}`, (nt.x + sb.x) / 2 + dx, Math.max(nt.y, sb.y) + dy + 6)
+      }
+      break
+    }
+    case "upper_lip_burstone": {
+      const ul = L("upper_lip"), sn = L("subnasale"), cp = L("chin_point")
+      if (ul && sn && cp) {
+        // Same pattern as lower_lip_burstone: Burstone line (60→66) = subnasale to chin_point
+        drawMeasurementLine(ctx, sn.x + dx, sn.y + dy, cp.x + dx, cp.y + dy, WHITE_DIM, alpha, "Burstone")
+        const t = ((ul.x - sn.x) * (cp.x - sn.x) + (ul.y - sn.y) * (cp.y - sn.y)) / ((cp.x - sn.x) ** 2 + (cp.y - sn.y) ** 2)
+        const px = sn.x + t * (cp.x - sn.x), py = sn.y + t * (cp.y - sn.y)
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, ul.x + dx, ul.y + dy, px + dx, py + dy, GLOW, 1.0, "UL")
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+        ctx.fillText(`${val.toFixed(1)}mm`, Math.max(ul.x, px) + dx + 8, (ul.y + py) / 2 + dy)
+      }
       break
     }
     case "upper_lip_s_line": {
       const ul = L("upper_lip"), cl = L("columella"), cp = L("chin_point")
       if (ul && cl && cp) {
-        // Same pattern as lower_lip_s_line: S-line (59→66) = columella to chin_point
         drawMeasurementLine(ctx, cl.x + dx, cl.y + dy, cp.x + dx, cp.y + dy, WHITE_DIM, alpha, "S-Line")
-        const nx = cl.x, ny = cl.y, cx = cp.x, cy = cp.y
-        const t = ((ul.x - nx) * (cx - nx) + (ul.y - ny) * (cy - ny)) / ((cx - nx) ** 2 + (cy - ny) ** 2)
-        const px = nx + t * (cx - nx), py = ny + t * (cy - ny)
+        const t = ((ul.x - cl.x) * (cp.x - cl.x) + (ul.y - cl.y) * (cp.y - cl.y)) / ((cp.x - cl.x) ** 2 + (cp.y - cl.y) ** 2)
+        const px = cl.x + t * (cp.x - cl.x), py = cl.y + t * (cp.y - cl.y)
         ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
         drawMeasurementLine(ctx, ul.x + dx, ul.y + dy, px + dx, py + dy, GLOW, 1.0, "UL")
         ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
@@ -1009,8 +1051,26 @@ function drawMeasurement(
       break
     }
     case "nasal_projection": {
-      const s = L("subnasale"), nt = L("nose_tip")
-      if (s && nt) drawMeasurementLine(ctx, s.x + dx, s.y + dy, nt.x + dx, nt.y + dy, WHITE, alpha, "Proj")
+      const s = L("subnasale"), nt = L("nose_tip"), r = L("rhinion")
+      if (s && nt && r) {
+        // Connect (60,57) = subnasale to nose_tip
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, s.x + dx, s.y + dy, nt.x + dx, nt.y + dy, GLOW, 1.0)
+        // Connect (57,55) = nose_tip to rhinion
+        drawMeasurementLine(ctx, nt.x + dx, nt.y + dy, r.x + dx, r.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        // Angle at vertex 57 between (60,57) and (57,55)
+        const v1x = s.x - nt.x, v1y = s.y - nt.y
+        const v2x = r.x - nt.x, v2y = r.y - nt.y
+        const a1 = Math.atan2(v1y, v1x), a2 = Math.atan2(v2y, v2x)
+        const rad = 12
+        ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.arc(nt.x + dx, nt.y + dy, rad, a1, a2); ctx.stroke()
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        const midA = (a1 + a2) / 2
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+        ctx.fillText(`${val.toFixed(1)}°`, nt.x + dx + (rad + 18) * Math.cos(midA), nt.y + dy + (rad + 18) * Math.sin(midA))
+      }
       break
     }
     case "nasofrontal_angle": {
@@ -1030,6 +1090,49 @@ function drawMeasurement(
         const midA = (a1 + a2) / 2
         ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
         ctx.fillText(`${val}°`, nbr.x + dx + (rad + 16) * Math.cos(midA), nbr.y + dy + (rad + 16) * Math.sin(midA))
+      }
+      break
+    }
+    case "facial_convexity_nasion": {
+      const nb = L("nasal_bridge_root"), sn = L("subnasale"), cp = L("chin_point")
+      if (nb && sn && cp) {
+        // Connect (54,60) = nasion to subnasale
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, nb.x + dx, nb.y + dy, sn.x + dx, sn.y + dy, GLOW, 1.0)
+        // Connect (60,66) = subnasale to chin_point
+        drawMeasurementLine(ctx, sn.x + dx, sn.y + dy, cp.x + dx, cp.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        // Angle at vertex 60 between (54,60) and (60,66)
+        const v1x = nb.x - sn.x, v1y = nb.y - sn.y
+        const v2x = cp.x - sn.x, v2y = cp.y - sn.y
+        const a1 = Math.atan2(v1y, v1x), a2 = Math.atan2(v2y, v2x)
+        const rad = 22
+        ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.arc(sn.x + dx, sn.y + dy, rad, a1, a2, true); ctx.stroke()
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        const midA = (a1 + a2) / 2
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+        ctx.fillText(`${val.toFixed(1)}°`, sn.x + dx + (rad + 20) * Math.cos(midA), sn.y + dy + (rad + 20) * Math.sin(midA))
+      }
+      break
+    }
+    case "anterior_facial_depth": {
+      const tr = L("tragus"), sb = L("subalare"), or = L("orbitale")
+      if (tr && sb && or) {
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, tr.x + dx, tr.y + dy, sb.x + dx, sb.y + dy, GLOW, 1.0)
+        drawMeasurementLine(ctx, sb.x + dx, sb.y + dy, or.x + dx, or.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        const v1x = tr.x - sb.x, v1y = tr.y - sb.y
+        const v2x = or.x - sb.x, v2y = or.y - sb.y
+        const a1 = Math.atan2(v1y, v1x), a2 = Math.atan2(v2y, v2x)
+        const rad = 15
+        ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.arc(sb.x + dx, sb.y + dy, rad, a1, a2); ctx.stroke()
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        const midA = (a1 + a2) / 2
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+        ctx.fillText(`${val.toFixed(1)}°`, sb.x + dx + (rad + 16) * Math.cos(midA), sb.y + dy + (rad + 16) * Math.sin(midA))
       }
       break
     }
@@ -1123,27 +1226,18 @@ function drawMeasurement(
       }
       break
     }
-    case "facial_convexity_nasion": {
-      const g = L("glabella"), nbr = L("nasal_bridge_root"), cp = L("chin_point")
-      if (g && nbr && cp) {
-        drawMeasurementLine(ctx, g.x + dx, g.y + dy, nbr.x + dx, nbr.y + dy, WHITE, alpha, "FCN")
-        drawMeasurementLine(ctx, nbr.x + dx, nbr.y + dy, cp.x + dx, cp.y + dy, WHITE_DIM, alpha)
-      }
-      break
-    }
-    case "anterior_facial_depth": {
-      const lj = L("lower_jaw_angle"), cp = L("chin_point")
-      if (lj && cp) drawMeasurementLine(ctx, lj.x + dx, lj.y + dy, cp.x + dx, cp.y + dy, WHITE, alpha, "AFD")
-      break
-    }
     case "upper_lip_e_line": {
       const ul = L("upper_lip"), nt = L("nose_tip"), cp = L("chin_point")
       if (ul && nt && cp) {
         drawMeasurementLine(ctx, nt.x + dx, nt.y + dy, cp.x + dx, cp.y + dy, WHITE, alpha, "E-Line")
-        const nx = nt.x, ny = nt.y, cx = cp.x, cy = cp.y
-        const t = ((ul.x - nx) * (cx - nx) + (ul.y - ny) * (cy - ny)) / ((cx - nx) ** 2 + (cy - ny) ** 2)
-        const px = nx + t * (cx - nx), py = ny + t * (cy - ny)
-        drawMeasurementLine(ctx, ul.x + dx, ul.y + dy, px + dx, py + dy, WHITE_DIM, alpha, "UL")
+        const t = ((ul.x - nt.x) * (cp.x - nt.x) + (ul.y - nt.y) * (cp.y - nt.y)) / ((cp.x - nt.x) ** 2 + (cp.y - nt.y) ** 2)
+        const px = nt.x + t * (cp.x - nt.x), py = nt.y + t * (cp.y - nt.y)
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, ul.x + dx, ul.y + dy, px + dx, py + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+        ctx.fillText(`${val.toFixed(1)}mm`, Math.max(ul.x, px) + dx + 8, (ul.y + py) / 2 + dy)
       }
       break
     }
@@ -1156,9 +1250,16 @@ function drawMeasurement(
       break
     }
     case "facial_depth_to_height": {
-      const lj = L("lower_jaw_angle"), cp = L("chin_point"), nbr = L("nasal_bridge_root"), cbs = L("chin_bottom")
-      if (lj && cp) drawMeasurementLine(ctx, lj.x + dx, lj.y + dy, cp.x + dx, cp.y + dy, WHITE, alpha, "Depth")
-      if (nbr && cbs) drawMeasurementLine(ctx, nbr.x + dx, nbr.y + dy, cbs.x + dx, cbs.y + dy, WHITE_DIM, alpha, "Height")
+      const nb = L("nasal_bridge_root"), lf = L("labiomental_fold"), sn = L("subnasale"), tr = L("tragus")
+      if (nb && lf) drawMeasurementLine(ctx, nb.x + dx, nb.y + dy, lf.x + dx, lf.y + dy, WHITE_DIM, alpha, "Height")
+      if (sn && tr) {
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, sn.x + dx, sn.y + dy, tr.x + dx, tr.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(2)) : 0
+        ctx.font = "bold 14px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "bottom"
+        ctx.fillText(`${val}`, (sn.x + tr.x) / 2 + dx, sn.y + dy - 8)
+      }
       break
     }
     case "browridge_inclination": {
@@ -1169,16 +1270,40 @@ function drawMeasurement(
     case "total_facial_convexity": {
       const g = L("glabella"), nt = L("nose_tip"), cp = L("chin_point")
       if (g && nt && cp) {
-        drawMeasurementLine(ctx, g.x + dx, g.y + dy, nt.x + dx, nt.y + dy, WHITE, alpha, "TFC")
-        drawMeasurementLine(ctx, nt.x + dx, nt.y + dy, cp.x + dx, cp.y + dy, WHITE_DIM, alpha)
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, nt.x + dx, nt.y + dy, cp.x + dx, cp.y + dy, GLOW, 1.0)
+        drawMeasurementLine(ctx, nt.x + dx, nt.y + dy, g.x + dx, g.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        const v1x = cp.x - nt.x, v1y = cp.y - nt.y
+        const v2x = g.x - nt.x, v2y = g.y - nt.y
+        const a1 = Math.atan2(v1y, v1x), a2 = Math.atan2(v2y, v2x)
+        const rad = 20
+        ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.arc(nt.x + dx, nt.y + dy, rad, a1, a2); ctx.stroke()
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        const midA = (a1 + a2) / 2
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+        ctx.fillText(`${val.toFixed(1)}°`, nt.x + dx + (rad + 16) * Math.cos(midA), nt.y + dy + (rad + 16) * Math.sin(midA))
       }
       break
     }
     case "facial_convexity_glabella": {
-      const th = L("top_of_head"), g = L("glabella"), cp = L("chin_point")
-      if (th && g && cp) {
-        drawMeasurementLine(ctx, th.x + dx, th.y + dy, g.x + dx, g.y + dy, WHITE, alpha, "FCG")
-        drawMeasurementLine(ctx, g.x + dx, g.y + dy, cp.x + dx, cp.y + dy, WHITE_DIM, alpha)
+      const g = L("glabella"), sn = L("subnasale"), cp = L("chin_point")
+      if (g && sn && cp) {
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, g.x + dx, g.y + dy, sn.x + dx, sn.y + dy, GLOW, 1.0)
+        drawMeasurementLine(ctx, sn.x + dx, sn.y + dy, cp.x + dx, cp.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        const v1x = g.x - sn.x, v1y = g.y - sn.y
+        const v2x = cp.x - sn.x, v2y = cp.y - sn.y
+        const a1 = Math.atan2(v1y, v1x), a2 = Math.atan2(v2y, v2x)
+        const rad = 22
+        ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.arc(sn.x + dx, sn.y + dy, rad, a1, a2, true); ctx.stroke()
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        const midA = (a1 + a2) / 2
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+        ctx.fillText(`${val.toFixed(1)}°`, sn.x + dx + (rad + 20) * Math.cos(midA), sn.y + dy + (rad + 20) * Math.sin(midA))
       }
       break
     }
@@ -1239,6 +1364,77 @@ function drawMeasurement(
       }
       break
     }
+    case "nasofacial_angle": {
+      const nb = L("nasal_bridge_root"), cp = L("chin_point"), nt = L("nose_tip")
+      if (nb && cp && nt) {
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, nb.x + dx, nb.y + dy, cp.x + dx, cp.y + dy, GLOW, 1.0)
+        drawMeasurementLine(ctx, nb.x + dx, nb.y + dy, nt.x + dx, nt.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        const v1x = cp.x - nb.x, v1y = cp.y - nb.y
+        const v2x = nt.x - nb.x, v2y = nt.y - nb.y
+        const a1 = Math.atan2(v1y, v1x), a2 = Math.atan2(v2y, v2x)
+        const rad = 20
+        ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.arc(nb.x + dx, nb.y + dy, rad, a1, a2); ctx.stroke()
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        const midA = (a1 + a2) / 2
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+        ctx.fillText(`${val.toFixed(1)}°`, nb.x + dx + (rad + 16) * Math.cos(midA), nb.y + dy + (rad + 16) * Math.sin(midA))
+      }
+      break
+    }
+    case "nasomental_angle": {
+      const nb = L("nasal_bridge_root"), nt = L("nose_tip"), cp = L("chin_point")
+      if (nb && nt && cp) {
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, nt.x + dx, nt.y + dy, nb.x + dx, nb.y + dy, GLOW, 1.0)
+        drawMeasurementLine(ctx, nt.x + dx, nt.y + dy, cp.x + dx, cp.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        const v1x = nb.x - nt.x, v1y = nb.y - nt.y
+        const v2x = cp.x - nt.x, v2y = cp.y - nt.y
+        const a1 = Math.atan2(v1y, v1x), a2 = Math.atan2(v2y, v2x)
+        const rad = 20
+        ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.arc(nt.x + dx, nt.y + dy, rad, a1, a2); ctx.stroke()
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        const midA = (a1 + a2) / 2
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+        ctx.fillText(`${val.toFixed(1)}°`, nt.x + dx + (rad + 16) * Math.cos(midA), nt.y + dy + (rad + 16) * Math.sin(midA))
+      }
+      break
+    }
+    case "frankfort_tip_angle": {
+      const cl = L("columella"), sn = L("subnasale"), cb = L("cheekbone"), rh = L("rhinion")
+      if (cl && sn && cb && rh) {
+        const dx1 = sn.x - cl.x, dy1 = sn.y - cl.y
+        const dx2 = rh.x - cb.x, dy2 = rh.y - cb.y
+        const det = dx1 * dy2 - dy1 * dx2
+        if (Math.abs(det) > 0.001) {
+          const t = ((cb.x - cl.x) * dy2 - (cb.y - cl.y) * dx2) / det
+          const ix = cl.x + dx1 * t, iy = cl.y + dy1 * t
+          const ext1 = 2.5, ext2 = 2.5
+          const e1x = ix + (cl.x - ix) * ext1, e1y = iy + (cl.y - iy) * ext1
+          const e2x = ix + (rh.x - ix) * ext2, e2y = iy + (rh.y - iy) * ext2
+          ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+          ctx.strokeStyle = GLOW; ctx.lineWidth = 2; ctx.setLineDash([])
+          ctx.beginPath(); ctx.moveTo(e1x + dx, e1y + dy); ctx.lineTo(ix + dx, iy + dy); ctx.lineTo(e2x + dx, e2y + dy); ctx.stroke()
+          ctx.fillStyle = GLOW; ctx.beginPath(); ctx.arc(ix + dx, iy + dy, 3, 0, 2*Math.PI); ctx.fill()
+          ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+          const v1x = cl.x - ix, v1y = cl.y - iy
+          const v2x = rh.x - ix, v2y = rh.y - iy
+          const a1 = Math.atan2(v1y, v1x), a2 = Math.atan2(v2y, v2x)
+          const rad = 25
+          ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
+          ctx.beginPath(); ctx.arc(ix + dx, iy + dy, rad, a1, a2); ctx.stroke()
+          const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+          const midA = (a1 + a2) / 2
+          ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+          ctx.fillText(`${val.toFixed(1)}°`, ix + dx + (rad + 14) * Math.cos(midA), iy + dy + (rad + 14) * Math.sin(midA))
+        }
+      }
+      break
+    }
     case "lower_lip_s_line": {
       const ll = L("lower_lip"), cl = L("columella"), cp = L("chin_point")
       if (ll && cl && cp) {
@@ -1289,10 +1485,14 @@ function drawMeasurement(
       const ll = L("lower_lip"), nt = L("nose_tip"), cp = L("chin_point")
       if (ll && nt && cp) {
         drawMeasurementLine(ctx, nt.x + dx, nt.y + dy, cp.x + dx, cp.y + dy, WHITE, alpha, "E-Line")
-        const nx = nt.x, ny = nt.y, cx = cp.x, cy = cp.y
-        const t = ((ll.x - nx) * (cx - nx) + (ll.y - ny) * (cy - ny)) / ((cx - nx) ** 2 + (cy - ny) ** 2)
-        const px = nx + t * (cx - nx), py = ny + t * (cy - ny)
-        drawMeasurementLine(ctx, ll.x + dx, ll.y + dy, px + dx, py + dy, WHITE_DIM, alpha, "LL")
+        const t = ((ll.x - nt.x) * (cp.x - nt.x) + (ll.y - nt.y) * (cp.y - nt.y)) / ((cp.x - nt.x) ** 2 + (cp.y - nt.y) ** 2)
+        const px = nt.x + t * (cp.x - nt.x), py = nt.y + t * (cp.y - nt.y)
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, ll.x + dx, ll.y + dy, px + dx, py + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+        ctx.fillText(`${val.toFixed(1)}mm`, Math.max(ll.x, px) + dx + 8, (ll.y + py) / 2 + dy)
       }
       break
     }
