@@ -1971,6 +1971,78 @@ function getSampleSideLandmarks(): LandmarkPoint[] {
   ]
 }
 
+/**
+ * Map measurement ID → related landmark IDs for centroid calculation.
+ */
+function getMeasurementLandmarkIds(measurementId: string): string[] {
+  const map: Record<string, string[]> = {
+    lateral_canthal_tilt: ["left_medial_canthus","left_lateral_canthus","right_medial_canthus","right_lateral_canthus"],
+    nose_bridge_to_width: ["left_nose_bridge","right_nose_bridge","left_nose_side","right_nose_side"],
+    bitemporal_width: ["left_temple","right_temple","left_cheekbone","right_cheekbone"],
+    cheekbone_height: ["left_cheekbone","right_cheekbone","left_pupil","right_pupil","cupids_bow"],
+    cupids_bow_depth: ["cupids_bow","inner_cupids_bow"],
+    bigonial_width: ["left_upper_jaw_angle","right_upper_jaw_angle","left_cheekbone","right_cheekbone"],
+    jaw_slope: ["left_cheekbone","left_upper_jaw_angle","left_lower_jaw_angle","left_chin","right_cheekbone","right_upper_jaw_angle","right_lower_jaw_angle","right_chin"],
+    top_third: ["hairline","left_brow_head","left_brow_inner_corner","right_brow_head","right_brow_inner_corner"],
+    middle_third: ["left_brow_head","left_brow_inner_corner","right_brow_head","right_brow_inner_corner","nasal_base"],
+    lower_third: ["nasal_base","chin_bottom"],
+    eye_aspect_ratio: ["left_upper_eyelid","left_lower_eyelid","left_medial_canthus","left_lateral_canthus","right_upper_eyelid","right_lower_eyelid","right_medial_canthus","right_lateral_canthus"],
+    mouth_corner_position: ["left_mouth_corner","right_mouth_corner","mouth_middle"],
+    eye_separation_ratio: ["left_pupil","right_pupil","left_cheekbone","right_cheekbone"],
+    eyebrow_tilt: ["left_brow_head","left_brow_inner_corner","left_brow_arch","left_brow_peak","right_brow_head","right_brow_inner_corner","right_brow_arch","right_brow_peak"],
+    face_width_to_height: ["left_cheekbone","right_cheekbone","left_brow_head","left_brow_inner_corner","right_brow_head","right_brow_inner_corner","cupids_bow"],
+    interpupillary_mouth_width: ["left_pupil","right_pupil","left_mouth_corner","right_mouth_corner"],
+    jaw_frontal_angle: ["left_lower_jaw_angle","left_chin","right_lower_jaw_angle","right_chin"],
+    intercanthal_nasal_width: ["left_medial_canthus","right_medial_canthus","left_nose_side","right_nose_side"],
+    one_eye_apart: ["left_medial_canthus","right_medial_canthus","left_lateral_canthus","right_lateral_canthus"],
+    midface_ratio: ["left_pupil","right_pupil","inner_cupids_bow"],
+    ipsilateral_alar_angle: ["nasal_base","left_eyelid_hood_end","right_eyelid_hood_end"],
+    mouth_width_to_nose_width: ["left_mouth_corner","right_mouth_corner","left_nose_side","right_nose_side"],
+    total_facial_width_to_height: ["left_cheekbone","right_cheekbone","hairline","chin_bottom"],
+    chin_to_philtrum: ["lower_lip_center","chin_bottom","cupids_bow","nasal_base"],
+    eyebrow_low_setedness: ["left_upper_eyelid","left_lower_eyelid","right_upper_eyelid","right_lower_eyelid","left_pupil","right_pupil","left_brow_inner_corner","right_brow_inner_corner"],
+    brow_length_to_face_width: ["left_brow_inner_corner","left_brow_tail","right_brow_inner_corner","right_brow_tail","left_cheekbone","right_cheekbone"],
+    nose_tip_position: ["nasal_base","nose_bottom"],
+    deviation_iaa_jfa: ["nasal_base","left_eyelid_hood_end","right_eyelid_hood_end","left_lower_jaw_angle","left_chin","right_lower_jaw_angle","right_chin"],
+    lower_lip_to_upper_lip: ["lower_lip_center","mouth_middle","cupids_bow"],
+    lower_third_proportion: ["nasal_base","mouth_middle","chin_bottom"],
+    nasal_tip_angle: ["nose_tip","infratip","supratip"],
+    nasal_width_to_height: ["nose_tip","subalare","nasal_bridge_root"],
+    upper_lip_s_line: ["upper_lip","columella","chin_point"],
+    upper_lip_burstone: ["upper_lip","subnasale","chin_point"],
+    nasal_projection: ["subalare","nose_tip","nasal_bridge_root"],
+    nasofrontal_angle: ["glabella","nasal_bridge_root","rhinion"],
+    recession_frankfort: ["porion","orbitale","nasal_bridge_root","chin_point"],
+    holdaway_h_line: ["upper_lip","chin_point","lower_lip"],
+    mentolabial_angle: ["lower_lip","labiomental_fold","chin_point"],
+    upper_forehead_slope: ["hairline_profile","forehead","glabella"],
+    facial_convexity_nasion: ["nasal_bridge_root","subnasale","chin_point"],
+    anterior_facial_depth: ["tragus","subalare","orbitale"],
+    upper_lip_e_line: ["upper_lip","nose_tip","chin_point"],
+    submental_cervical_angle: ["chin_bottom","cervical_point","neck_point"],
+    facial_depth_to_height: ["subnasale","tragus","nasal_bridge_root","labiomental_fold"],
+    browridge_inclination: ["glabella","hairline_profile"],
+    total_facial_convexity: ["chin_point","nose_tip","glabella"],
+    facial_convexity_glabella: ["glabella","subnasale","chin_point"],
+    orbital_vector: ["orbitale","lower_eyelid"],
+    interior_midface_projection: ["eyelid_end","subalare"],
+    z_angle: ["cheekbone","rhinion","chin_point","infratip"],
+    nose_tip_rotation: ["rhinion","cheekbone","subnasale","infratip"],
+    nasolabial_angle: ["columella","subnasale","upper_lip"],
+    nasofacial_angle: ["nasal_bridge_root","chin_point","nose_tip"],
+    nasomental_angle: ["nasal_bridge_root","nose_tip","chin_point"],
+    frankfort_tip_angle: ["columella","subnasale","cheekbone","rhinion"],
+    lower_lip_s_line: ["lower_lip","columella","chin_point"],
+    lower_lip_e_line: ["lower_lip","nose_tip","chin_point"],
+    lower_lip_burstone: ["lower_lip","subnasale","chin_point"],
+    gonial_angle: ["intertragic_notch","upper_jaw_angle","chin_bottom","lower_jaw_angle"],
+    mandibular_plane_angle: ["lower_jaw_angle","chin_bottom"],
+    ramus_to_mandible: ["chin_bottom","lower_jaw_angle","tragus","upper_jaw_angle","chin_point"],
+    gonion_to_mouth: ["chin_bottom","lower_jaw_angle","tragus","upper_jaw_angle","mouth_corner"],
+  }
+  return map[measurementId] || []
+}
+
 // ============================================================
 // MAIN DASHBOARD COMPONENT
 // ============================================================
@@ -1992,6 +2064,13 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
   const [zoomLevel, setZoomLevel] = useState(1)
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
   const [showLandmarks, setShowLandmarks] = useState(false)
+
+  // ---- Auto-zoom animation states ----
+  const animZoomRef = useRef<number | null>(null)
+  const [animZoom, setAnimZoom] = useState(1)
+  const [animPanX, setAnimPanX] = useState(0)
+  const [animPanY, setAnimPanY] = useState(0)
+  const [animAlpha, setAnimAlpha] = useState(0)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState<"front" | "side">("front")
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc")
@@ -2090,10 +2169,13 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
     }
 
     ctx.save()
+    const az = selectedMeasurement ? animZoom : zoomLevel
+    const apx = selectedMeasurement ? animPanX : panOffset.x
+    const apy = selectedMeasurement ? animPanY : panOffset.y
     const zoomCenterX = canvas.width / 2
     const zoomCenterY = canvas.height / 2
-    ctx.translate(zoomCenterX + panOffset.x, zoomCenterY + panOffset.y)
-    ctx.scale(zoomLevel, zoomLevel)
+    ctx.translate(zoomCenterX + apx, zoomCenterY + apy)
+    ctx.scale(az, az)
     ctx.translate(-zoomCenterX, -zoomCenterY)
     ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight)
 
@@ -2195,7 +2277,7 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
     }
 
     ctx.restore()
-  }, [currentImage, currentLandmarks, selectedMeasurement, showLandmarks, zoomLevel, panOffset, isFemaleAccent])
+  }, [currentImage, currentLandmarks, selectedMeasurement, showLandmarks, zoomLevel, panOffset, isFemaleAccent, animZoom, animPanX, animPanY, animAlpha])
 
   useEffect(() => {
     if (!currentImage) return
@@ -2210,13 +2292,69 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
 
   useEffect(() => {
     if (imageLoaded && imgRef.current) drawCanvas(imgRef.current)
-  }, [imageLoaded, drawCanvas])
+  }, [imageLoaded, drawCanvas, animZoom, animPanX, animPanY, animAlpha])
+
+  // Auto-zoom animation: when measurement selected, animate zoom to 1.4x centered on measurement's landmarks
+  useEffect(() => {
+    if (!selectedMeasurement) {
+      // Zoom back to 1.0
+      const st = Date.now()
+      const dur = 1200
+      const initZ = animZoom
+      const initPX = animPanX
+      const initPY = animPanY
+      const animate = () => {
+        const t = Math.min((Date.now() - st) / dur, 1)
+        const e = 1 - Math.pow(1 - t, 3)
+        setAnimZoom(initZ + (1 - initZ) * e)
+        setAnimPanX(initPX + (0 - initPX) * e)
+        setAnimPanY(initPY + (0 - initPY) * e)
+        setAnimAlpha(1 - e)
+        if (t < 1) animZoomRef.current = requestAnimationFrame(animate)
+      }
+      animZoomRef.current = requestAnimationFrame(animate)
+      return () => { if (animZoomRef.current) cancelAnimationFrame(animZoomRef.current) }
+    }
+
+    // Compute centroid of relevant landmarks
+    const mid = selectedMeasurement.id
+    const cLm = profileView === "front" ? frontLandmarks : sideLandmarks
+    const lmIds = getMeasurementLandmarkIds(mid)
+    let sx = 0, sy = 0, sc = 0
+    for (const id of lmIds) {
+      const l = cLm.find(l => l.id === id)
+      if (l) { sx += l.x; sy += l.y; sc++ }
+    }
+    const centroid = sc > 0 ? { x: sx / sc, y: sy / sc } : null
+
+    const cw = containerRef.current?.clientWidth || 800
+    const ch = containerRef.current?.clientHeight || 600
+    const tpx = centroid ? -(centroid.x - 0.5) * cw : 0
+    const tpy = centroid ? -(centroid.y - 0.5) * ch : 0
+    const tz = 1.4
+
+    const st = Date.now()
+    const dur = 1200
+    const initZ = animZoom
+    const initPX = animPanX
+    const initPY = animPanY
+    const animate = () => {
+      const t = Math.min((Date.now() - st) / dur, 1)
+      const e = 1 - Math.pow(1 - t, 3)
+      setAnimZoom(initZ + (tz - initZ) * e)
+      setAnimPanX(initPX + (tpx - initPX) * e)
+      setAnimPanY(initPY + (tpy - initPY) * e)
+      setAnimAlpha(e)
+      if (t < 1) animZoomRef.current = requestAnimationFrame(animate)
+    }
+    animZoomRef.current = requestAnimationFrame(animate)
+    return () => { if (animZoomRef.current) cancelAnimationFrame(animZoomRef.current) }
+  }, [selectedMeasurement?.id])
 
   const handleMeasurementClick = (m: MeasurementResult) => {
     if (selectedMeasurement?.id === m.id) { setSelectedMeasurement(null); return }
     const isFront = results?.frontMeasurements.some(fm => fm.id === m.id)
-    const target: ProfileView = isFront ? "front" : "side"
-    if (target !== profileView) { setProfileView(target); setZoomLevel(1); setPanOffset({ x: 0, y: 0 }); setImageLoaded(false) }
+    if (isFront) setActiveTab("front"); else setActiveTab("side")
     setSelectedMeasurement(m)
   }
 
@@ -2414,3 +2552,4 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
     </div>
   )
 }
+ 

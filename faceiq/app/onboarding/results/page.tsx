@@ -14,28 +14,16 @@ import type { AnalysisResults, LandmarkPoint, Ethnicity, Gender } from "@/lib/an
 // ============================================================
 
 function ScoreRing({ score, label, size = 90, delay = 0 }: { score: number; label: string; size?: number; delay?: number }) {
-  const [animatedScore, setAnimatedScore] = useState(0)
-  const [animatedOffset, setAnimatedOffset] = useState(0)
+  const [active, setActive] = useState(false)
   const strokeWidth = 6
   const radius = (size - strokeWidth) / 2
   const circumference = 2 * Math.PI * radius
+  const offset = circumference - (score / 10) * circumference
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const duration = 1500
-      const startTime = Date.now()
-      const tick = () => {
-        const elapsed = Date.now() - startTime
-        const progress = Math.min(elapsed / duration, 1)
-        const eased = 1 - Math.pow(1 - progress, 3)
-        setAnimatedScore(score * eased)
-        setAnimatedOffset(circumference * (1 - eased * (score / 10)))
-        if (progress < 1) requestAnimationFrame(tick)
-      }
-      requestAnimationFrame(tick)
-    }, delay)
-    return () => clearTimeout(timer as any)
-  }, [score, circumference, delay])
+    const t = setTimeout(() => setActive(true), delay)
+    return () => clearTimeout(t)
+  }, [delay])
 
   const getColor = (s: number) => {
     if (s >= 8) return { ring: "#34d399", glow: "rgba(52,211,153,0.6)", text: "#34d399" }
@@ -43,7 +31,6 @@ function ScoreRing({ score, label, size = 90, delay = 0 }: { score: number; labe
     return { ring: "#f87171", glow: "rgba(248,113,113,0.6)", text: "#f87171" }
   }
   const colors = getColor(score)
-
   const center = size / 2
 
   return (
@@ -62,13 +49,23 @@ function ScoreRing({ score, label, size = 90, delay = 0 }: { score: number; labe
             cx={center + 10} cy={center + 10} r={radius}
             fill="none" stroke={colors.ring} strokeWidth={strokeWidth} strokeLinecap="round"
             strokeDasharray={circumference}
-            strokeDashoffset={circumference - animatedOffset}
-            style={{ transition: "stroke-dashoffset 0.05s linear", filter: `drop-shadow(0 0 12px ${colors.glow})` }}
+            strokeDashoffset={active ? offset : circumference}
+            style={{
+              transition: "stroke-dashoffset 1.8s cubic-bezier(0.16, 1, 0.3, 1)",
+              filter: active ? `drop-shadow(0 0 12px ${colors.glow})` : "none",
+            }}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-bold tracking-tight" style={{ color: colors.text }}>
-            {animatedScore.toFixed(1)}
+          <span
+            className="text-2xl font-bold tracking-tight transition-all duration-1000"
+            style={{
+              color: colors.text,
+              opacity: active ? 1 : 0,
+              transform: active ? "scale(1)" : "scale(0.5)",
+            }}
+          >
+            {score.toFixed(1)}
           </span>
           <span className="text-[9px] text-white/30 font-medium">/10</span>
         </div>
@@ -150,13 +147,14 @@ function ScanningOverlay({ progress }: { progress: number }) {
 // ============================================================
 
 function ResultCard({
-  results, frontImageUrl, sideImageUrl, gender, ethnicity
+  results, frontImageUrl, sideImageUrl, gender, ethnicity, uiEthnicity
 }: {
   results: AnalysisResults
   frontImageUrl: string
   sideImageUrl: string
   gender: Gender
   ethnicity: Ethnicity
+  uiEthnicity: string
 }) {
   const router = useRouter()
   const [visible, setVisible] = useState(false)
@@ -181,7 +179,7 @@ function ResultCard({
 
   const handleClick = () => {
     const gq = gender || "male"
-    const eq = ethnicity || "asian"
+    const eq = uiEthnicity || "east_asian"
     router.push(`/analysis?gender=${gq}&ethnicity=${eq}`)
   }
 
@@ -245,8 +243,8 @@ function ResultCard({
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
               <div className="absolute bottom-2 left-2 right-2 flex items-center gap-1.5">
-                <div className="size-2 rounded-full bg-sky-400 animate-pulse" />
-                <span className="text-[9px] text-white/70">Front View</span>
+                
+                <span className="text-[9px] text-white/70"></span>
               </div>
             </div>
           </div>
@@ -260,8 +258,8 @@ function ResultCard({
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
               <div className="absolute bottom-2 left-2 right-2 flex items-center gap-1.5">
-                <div className="size-2 rounded-full bg-purple-400 animate-pulse" />
-                <span className="text-[9px] text-white/70">Side View</span>
+                
+                <span className="text-[9px] text-white/70"></span>
               </div>
             </div>
           </div>
@@ -310,8 +308,21 @@ export default function ResultsPage() {
   const [frontImage, setFrontImage] = useState("")
   const [sideImage, setSideImage] = useState("")
 
-  const genderParam = (searchParams?.get("gender") || "male") as Gender
-  const ethnicityParam = (searchParams?.get("ethnicity") || "asian") as Ethnicity
+  // Map UI ethnicity values to analysis system ethnicity values (same as dashboard)
+  const UI_ETHNICITY_MAP: Record<string, Ethnicity> = {
+    east_asian: "asian",
+    white_caucasian: "caucasian",
+    black_african: "black",
+    hispanic: "hispanic",
+    middle_eastern: "middle_eastern",
+    south_asian: "south_asian",
+    native_american: "mixed",
+    pacific_islander: "mixed",
+  }
+
+  const genderParam = ((searchParams?.get("gender")) === "female" ? "female" : "male") as Gender
+  const uiEthnicity = searchParams?.get("ethnicity") || "east_asian"
+  const ethnicityParam: Ethnicity = UI_ETHNICITY_MAP[uiEthnicity] || "asian"
 
   // Calculate results
   useEffect(() => {
@@ -351,7 +362,8 @@ export default function ResultsPage() {
     }
   }, [genderParam, ethnicityParam, router])
 
-  // Scanning animation
+  // Scanning animation - run once, independent of results
+  // When results arrive later, the second effect handles the transition
   useEffect(() => {
     if (phase !== "scanning") return
 
@@ -367,12 +379,18 @@ export default function ResultsPage() {
 
       if (progress >= 100) {
         clearInterval(timer)
-        setTimeout(() => setPhase("result"), 200)
       }
     }, interval)
 
     return () => clearInterval(timer)
   }, [phase])
+
+  // Transition to result when scanning ended AND results arrived
+  useEffect(() => {
+    if (phase === "scanning" && scanProgress >= 100 && results !== null) {
+      setTimeout(() => setPhase("result"), 300)
+    }
+  }, [scanProgress, results, phase])
 
   // Redirect to dashboard if no data
   useEffect(() => {
@@ -414,7 +432,7 @@ export default function ResultsPage() {
       )}
 
       {/* Result phase */}
-      {phase === "result" && results && (
+      {phase === "result" && results && results.frontMeasurements.length + results.sideMeasurements.length > 0 && (
         <main className="mx-auto flex min-h-screen max-w-5xl items-center justify-center px-4 py-12">
           <ResultCard
             results={results}
@@ -422,11 +440,36 @@ export default function ResultsPage() {
             sideImageUrl={sideImage}
             gender={genderParam}
             ethnicity={ethnicityParam}
+            uiEthnicity={uiEthnicity}
           />
         </main>
       )}
 
-      {/* Fallback if no results yet */}
+      {/* Fallback: no measurements computed */}
+      {phase === "result" && results && results.frontMeasurements.length + results.sideMeasurements.length === 0 && (
+        <main className="mx-auto flex min-h-screen max-w-5xl items-center justify-center px-4">
+          <div className="text-center space-y-4 bg-card/60 border border-border/50 rounded-3xl p-12 backdrop-blur-xl shadow-2xl">
+            <DNAHelix />
+            <div className="space-y-1">
+              <p className="text-sm text-white/70 font-medium">No measurements computed</p>
+              <p className="text-[11px] text-white/30">
+                Front landmarks: {results.frontMeasurements.length} | Side landmarks: {results.sideMeasurements.length}
+              </p>
+              <p className="text-[11px] text-white/30">
+                Gender: {results.gender} | Ethnicity: {results.ethnicity}
+              </p>
+            </div>
+            <button
+              onClick={() => router.push(`/analysis?gender=${genderParam}&ethnicity=${ethnicityParam}`)}
+              className="mt-4 px-6 py-2 rounded-xl bg-sky-500/20 text-sky-300 border border-sky-500/30 hover:bg-sky-500/30 transition-all text-xs font-medium"
+            >
+              Go to Dashboard →
+            </button>
+          </div>
+        </main>
+      )}
+
+      {/* Fallback if no results yet (still loading) */}
       {phase === "result" && !results && (
         <main className="mx-auto flex min-h-screen max-w-5xl items-center justify-center px-4">
           <div className="text-center space-y-4">

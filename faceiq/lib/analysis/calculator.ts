@@ -126,7 +126,7 @@ function vDist(a: LandmarkPoint, b: LandmarkPoint): number {
 // ============================================================
 
 /** Gaussian steepness factor (higher = score drops faster as R increases) */
-const SCORING_K = 1.2
+const SCORING_K = 2
 
 /** Minimum score floor for any measurement */
 const SCORING_FLOOR = 1.0
