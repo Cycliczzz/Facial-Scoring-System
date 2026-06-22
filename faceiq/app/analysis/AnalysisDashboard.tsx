@@ -27,7 +27,7 @@ interface AnalysisDashboardProps {
   initialEthnicity: string
 }
 
-type ProfileView = "front" | "side" | "ai"
+type ProfileView = "front" | "side" | "ai" | "facegpt"
 
 // ============================================================
 // Color helpers
@@ -2377,18 +2377,23 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
               <h1 className="text-lg font-bold text-foreground tracking-tight">Facial Analysis</h1>
               <div className="h-4 w-px bg-border/50" />
               <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-0.5">
-                {(["front", "side", "ai"] as ProfileView[]).map(v => (
+                {([
+                  { id: "front" as ProfileView, label: "Harmony" },
+                  { id: "ai" as ProfileView, label: "Dimorphism & Angularity", icon: Brain },
+                  { id: "facegpt" as ProfileView, label: "FaceGPT" },
+                ]).map(v => (
                   <button
-                    key={v}
-                    onClick={() => handleProfileChange(v)}
+                    key={v.id}
+                    onClick={() => v.id === "facegpt" ? null : handleProfileChange(v.id)}
                     className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 ${
-                      profileView === v
+                      profileView === v.id
                         ? isFemaleAccent ? "bg-pink-500/20 text-pink-100" : "bg-sky-500/20 text-sky-100"
                         : "text-muted-foreground hover:bg-secondary/50"
-                    }`}
+                    } ${v.id === "facegpt" ? "opacity-60 cursor-not-allowed" : ""}`}
                   >
-                    {v === "ai" && <Brain className="size-3" />}
-                    {v === "front" ? "Front" : v === "side" ? "Side" : "AI"}
+                    {v.icon && <Brain className="size-3" />}
+                    {v.label}
+                    {v.id === "facegpt" && <span className="ml-1 text-[8px] bg-sky-500/20 text-sky-300 px-1.5 py-0.5 rounded-full">soon</span>}
                   </button>
                 ))}
               </div>
