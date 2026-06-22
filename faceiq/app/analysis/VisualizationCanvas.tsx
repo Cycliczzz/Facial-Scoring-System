@@ -20,7 +20,7 @@ export function VisualizationCanvas({ imageUrl, measurementId, profileType }: Vi
   const [isPanning, setIsPanning] = useState(false)
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 })
   const [showGrid, setShowGrid] = useState(false)
-  const [showMeasurements, setShowMeasurements] = useState(true)
+  const [showMeasurements, setShowMeasurements] = useState(false)
 
   const drawVisualization = useCallback(() => {
     const canvas = canvasRef.current

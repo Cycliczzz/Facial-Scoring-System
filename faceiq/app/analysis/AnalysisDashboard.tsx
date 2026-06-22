@@ -795,13 +795,13 @@ function drawMeasurement(
       if (h && cb && lc && rc) {
         const faceH = Math.abs(cb.y - h.y)
         const faceW = Math.abs(rc.x - lc.x)
-        const ratio = faceW > 0 ? Number((faceH / faceW).toFixed(2)) : 0
+        const ratio = faceH > 0 ? Number((faceW / faceH).toFixed(2)) : 0
         ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
-        drawMeasurementLine(ctx, h.x + dx, h.y + dy, cb.x + dx, cb.y + dy, GLOW, 1.0, "TFH")
+        drawMeasurementLine(ctx, lc.x + dx, lc.y + dy, rc.x + dx, rc.y + dy, GLOW, 1.0, "TFW")
         ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
-        if (lc && rc) drawMeasurementLine(ctx, lc.x + dx, lc.y + dy, rc.x + dx, rc.y + dy, WHITE_DIM, 1.0, "TFW")
-        ctx.font = "bold 14px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "right"; ctx.textBaseline = "middle"
-        ctx.fillText(`${ratio}`, h.x + dx - 8, (h.y + cb.y) / 2 + dy)
+        if (h && cb) drawMeasurementLine(ctx, h.x + dx, h.y + dy, cb.x + dx, cb.y + dy, WHITE_DIM, 1.0, "TFH")
+        ctx.font = "bold 14px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "bottom"
+        ctx.fillText(`${ratio}`, (lc.x + rc.x) / 2 + dx, lc.y + dy - 8)
       }
       break
     }
@@ -869,10 +869,17 @@ function drawMeasurement(
         drawMeasurementLine(ctx, zl.x + dx, zl.y + dy, zr.x + dx, zr.y + dy, DIM, 1.0)
         const lbw = Math.sqrt(((lt.x / dw - li.x / dw) ** 2) + ((lt.y / dh - li.y / dh) ** 2))
         const rbw = Math.sqrt(((rt.x / dw - ri.x / dw) ** 2) + ((rt.y / dh - ri.y / dh) ** 2))
-        const avgBw = (lbw + rbw) / 2
-        const fw = Math.sqrt(((zr.x / dw - zl.x / dw) ** 2) + ((zr.y / dh - zl.y / dh) ** 2))
-        const ratio = fw > 0 ? Number((avgBw / fw).toFixed(2)) : 0
-        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = DIM; ctx.textAlign = "center"; ctx.textBaseline = "bottom"
+        const totalBw = lbw + rbw
+
+        const fw = Math.sqrt(
+          ((zr.x / dw - zl.x / dw) ** 2) +
+          ((zr.y / dh - zl.y / dh) ** 2)
+        )
+
+        const ratio = fw > 0
+          ? Number((totalBw / fw).toFixed(2))
+          : 0
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "bottom"
         ctx.fillText(`${ratio}`, (zl.x + zr.x) / 2 + dx, zl.y + dy - 8)
       }
       break
@@ -1984,7 +1991,7 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
   const [imageLoaded, setImageLoaded] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(1)
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
-  const [showLandmarks, setShowLandmarks] = useState(true)
+  const [showLandmarks, setShowLandmarks] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState<"front" | "side">("front")
 

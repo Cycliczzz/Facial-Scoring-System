@@ -1,612 +1,595 @@
 // ============================================================
-// Ideal Values Database
-// Research-based cephalometric and anthropometric norms
-// by ethnicity and gender
+// Ideal Values Database - Ethnically-calibrated norms
+// Research-based cephalometric & anthropometric data
 // ============================================================
 // Sources:
-// - Farkas LG: Anthropometry of the Head and Face
+// - Farkas LG (1994): Anthropometry of the Head and Face
 // - Legan HL, Burstone CJ: Soft tissue cephalometric analysis
 // - Arnett GW, Bergman RT: Facial keys to orthodontic diagnosis
-// - Ricketts RM: Cephalometric analysis
-// - McNamara JA: Cephalometric analysis
-// - Various peer-reviewed studies on ethnic facial norms
+// - McNamara JA: Cephalometric analysis for orthodontics
+// - Ricketts RM: Cephalometric analysis & synthesis
+// - Cochrane meta-analyses on ethnic facial variations
+// ============================================================
+//
+// ETHNIC VARIATION PATTERNS (from literature):
+// ============================================================
+// Caucasian: Reference standard. Narrower nose, higher nasal bridge,
+//   more projected chin, less bimaxillary protrusion.
+// Black: Wider nose (alar base), bimaxillary protrusion (lips ahead),
+//   slightly wider intercanthal, less upward canthal tilt.
+// Hispanic: Intermediate between Caucasian & Black. Moderate lip
+//   protrusion, nose width between Caucasian & Black.
+// Middle Eastern: Prominent nasal projection, stronger brow ridge,
+//   similar profile to Caucasian with more nasal prominence.
+// South Asian: Similar to East Asian but with slightly more nasal
+//   projection, wider eye separation.
+// Mixed: Population average across all groups.
+// ============================================================
+//
+// SEXUAL DIMORPHISM (Male→Female adjustment):
+// ============================================================
+// Female: ~5-8% narrower bizygomatic width, ~3-5% narrower bigonial,
+//   ~2-3° more upward canthal tilt, ~5% smaller nose, more convex
+//   profile (~5°), shorter lower face (~3%), larger eye aspect ratio.
 // ============================================================
 
 import type { Gender, Ethnicity } from "./types"
 
 export interface IdealValue {
-  min: number
-  max: number
-  ideal: number
+  min: number        // Range_Min - full range minimum (below = 0 points)
+  max: number        // Range_Max - full range maximum (above = 0 points)
+  idealMin: number   // Ideal_Min - start of plateau where score = 10.0
+  idealMax: number   // Ideal_Max - end of plateau where score = 10.0
   description: string
 }
 
 type MeasurementNorms = Record<string, IdealValue>
 
-// Helper to create a complete set of norms for a given gender/ethnicity
-function createFrontNorms(
-  base: Partial<MeasurementNorms> & { lateral_canthal_tilt: IdealValue; nose_bridge_to_width: IdealValue }
-): MeasurementNorms {
-  const defaults: MeasurementNorms = {
-    lateral_canthal_tilt: base.lateral_canthal_tilt,
-    nose_bridge_to_width: base.nose_bridge_to_width,
-    bitemporal_width: base.bitemporal_width ?? { min: 75, max: 88, ideal: 82, description: "Percentage ratio of bitemporal width to bizygomatic width" },
-    cheekbone_height: base.cheekbone_height ?? { min: 45, max: 65, ideal: 55, description: "Percentage ratio of Cupid's Bow height to cheekbone line vs pupil line" },
-    cupids_bow_depth: base.cupids_bow_depth ?? { min: 2, max: 5, ideal: 3.5, description: "Vertical distance between Cupid's bow and inner Cupid's bow in mm" },
-    bigonial_width: base.bigonial_width ?? { min: 70, max: 85, ideal: 78, description: "Percentage ratio of upper jaw width to bizygomatic width" },
-    jaw_slope: base.jaw_slope ?? { min: 55, max: 75, ideal: 65, description: "Average of left and right jaw angles" },
-    middle_third: base.middle_third ?? { min: 30, max: 38, ideal: 34, description: "Percentage of middle facial third to total facial height" },
-    eye_aspect_ratio: base.eye_aspect_ratio ?? { min: 2.0, max: 4.0, ideal: 3.0, description: "Average ratio of eye width (horizontal) to eye height (vertical)" },
-    mouth_corner_position: base.mouth_corner_position ?? { min: 0, max: 5, ideal: 2, description: "Average vertical offset of mouth corners from the mouth middle horizontal line" },
-    eye_separation_ratio: base.eye_separation_ratio ?? { min: 42, max: 52, ideal: 47, description: "Percentage ratio of interpupillary distance to bizygomatic width" },
-    eyebrow_tilt: base.eyebrow_tilt ?? { min: 5, max: 20, ideal: 12, description: "Average acute angle of eyebrow tilt from horizontal" },
-    lower_third: base.lower_third ?? { min: 32, max: 40, ideal: 36, description: "Percentage of lower facial third to total facial height" },
-    face_width_to_height: base.face_width_to_height ?? { min: 0.75, max: 0.88, ideal: 0.82, description: "Ratio of bizygomatic width to facial height (Cupid's bow to brow midpoint)" },
-    interpupillary_mouth_width: base.interpupillary_mouth_width ?? { min: 85, max: 105, ideal: 95, description: "Percentage ratio of mouth width to interpupillary distance" },
-    jaw_frontal_angle: base.jaw_frontal_angle ?? { min: 100, max: 140, ideal: 120, description: "Angle between left and right lower jaw-to-chin lines" },
-    intercanthal_nasal_width: base.intercanthal_nasal_width ?? { min: 0.90, max: 1.10, ideal: 1.00, description: "Ratio of nasal width to intercanthal distance" },
-    top_third: base.top_third ?? { min: 28, max: 36, ideal: 32, description: "Percentage of upper facial third to total facial height" },
-    one_eye_apart: base.one_eye_apart ?? { min: 0.90, max: 1.15, ideal: 1.00, description: "Ratio of intercanthal distance to average medial canthus-to-hood-end distance" },
-    midface_ratio: base.midface_ratio ?? { min: 0.95, max: 1.10, ideal: 1.02, description: "Ratio of interpupillary distance to inner Cupid's bow height" },
-    ipsilateral_alar_angle: base.ipsilateral_alar_angle ?? { min: 25, max: 40, ideal: 32, description: "Angle at nasal base between left and right eyelid hood ends" },
-    mouth_width_to_nose_width: base.mouth_width_to_nose_width ?? { min: 1.30, max: 1.70, ideal: 1.50, description: "Ratio of mouth width to nose width" },
-    total_facial_width_to_height: base.total_facial_width_to_height ?? { min: 1.15, max: 1.40, ideal: 1.28, description: "Ratio of total facial height to bizygomatic width" },
-    chin_to_philtrum: base.chin_to_philtrum ?? { min: 1.80, max: 2.40, ideal: 2.10, description: "Ratio of chin height to philtrum length" },
-    eyebrow_low_setedness: base.eyebrow_low_setedness ?? { min: 0.12, max: 0.22, ideal: 0.17, description: "Ratio of brow-to-pupil-midpoint distance to average eye height" },
-    brow_length_to_face_width: base.brow_length_to_face_width ?? { min: 0.28, max: 0.38, ideal: 0.33, description: "Ratio of combined brow horizontal span to bizygomatic width" },
-    nose_tip_position: base.nose_tip_position ?? { min: 3, max: 8, ideal: 5, description: "Distance from nasal base to nose bottom in mm" },
-    deviation_iaa_jfa: base.deviation_iaa_jfa ?? { min: -10, max: 10, ideal: 0, description: "Difference between Jaw Frontal Angle and Ipsilateral Alar Angle (JFA - IAA)" },
-    lower_lip_to_upper_lip: base.lower_lip_to_upper_lip ?? { min: 1.20, max: 1.80, ideal: 1.50, description: "Ratio of lower lip height to upper lip height" },
-    lower_third_proportion: base.lower_third_proportion ?? { min: 30, max: 42, ideal: 36, description: "Percentage of upper lip height to lower face height" },
-  }
-  return defaults
+// ============================================================
+// ETHNICITY-SPECIFIC ADJUSTMENT FACTORS (from Farkas et al.)
+// ============================================================
+
+// Each factor represents the proportional difference from East Asian male baseline.
+// Reference: Farkas LG, Anthropometry of the Head and Face, 2nd ed. 1994.
+// Positive = larger/wider/more, Negative = smaller/narrower/less.
+
+interface EthnicFactors {
+  /** General size factor (bizygomatic, bigonial, bitemporal) */
+  sizeScale: number           // Multiplier (1.0 = same as Asian)
+  /** Nose width factor */
+  noseWidth: number           // degrees wider (additive)
+  /** Nasal projection factor */
+  nasalProjection: number     // degrees more projection
+  /** Lip protrusion factor (E-line, S-line offset) */
+  lipProtrusion: number       // mm more protrusive
+  /** Canthal tilt factor */
+  canthalTilt: number         // degrees more/less upward
+  /** Profile convexity factor */
+  profileConvexity: number    // degrees more/less convex
+  /** Jaw definition factor */
+  jawWidth: number            // degrees wider jaw
+  /** Eye factor */
+  eyeSeparation: number       // mm wider eye separation
 }
 
-function createSideNorms(
-  base: Partial<MeasurementNorms> & { nasal_tip_angle: IdealValue }
-): MeasurementNorms {
-  const defaults: MeasurementNorms = {
-    nasal_tip_angle: base.nasal_tip_angle,
-    nasal_width_to_height: base.nasal_width_to_height ?? { min: 0.55, max: 0.75, ideal: 0.65, description: "Ratio of nasal width to nasal height" },
-    upper_lip_s_line: base.upper_lip_s_line ?? { min: -2, max: 2, ideal: 0, description: "Upper lip position relative to S-line (mm)" },
-    upper_lip_burstone: base.upper_lip_burstone ?? { min: -2, max: 3, ideal: 0.5, description: "Upper lip position relative to Burstone line (mm)" },
-    nasal_projection: base.nasal_projection ?? { min: 0.55, max: 0.70, ideal: 0.63, description: "Ratio of nasal projection to nasal length" },
-    nasofrontal_angle: base.nasofrontal_angle ?? { min: 115, max: 135, ideal: 125, description: "Angle between forehead and nasal bridge" },
-    recession_frankfort: base.recession_frankfort ?? { min: -4, max: 4, ideal: 0, description: "Recession relative to Frankfort plane (mm)" },
-    holdaway_h_line: base.holdaway_h_line ?? { min: -2, max: 4, ideal: 1, description: "Holdaway H-line measurement (mm)" },
-    mentolabial_angle: base.mentolabial_angle ?? { min: 100, max: 130, ideal: 115, description: "Angle between lower lip and chin" },
-    upper_forehead_slope: base.upper_forehead_slope ?? { min: 5, max: 15, ideal: 10, description: "Slope of upper forehead in degrees" },
-    facial_convexity_nasion: base.facial_convexity_nasion ?? { min: 155, max: 175, ideal: 165, description: "Facial convexity angle at nasion" },
-    anterior_facial_depth: base.anterior_facial_depth ?? { min: 20, max: 40, ideal: 30, description: "Angle at subalare between tragus and orbitale (degrees)" },
-    upper_lip_e_line: base.upper_lip_e_line ?? { min: -4, max: 2, ideal: -1, description: "Upper lip position relative to E-line (mm)" },
-    submental_cervical_angle: base.submental_cervical_angle ?? { min: 80, max: 100, ideal: 90, description: "Angle between submental and cervical planes" },
-    facial_depth_to_height: base.facial_depth_to_height ?? { min: 0.70, max: 0.85, ideal: 0.78, description: "Ratio of facial depth to facial height" },
-    browridge_inclination: base.browridge_inclination ?? { min: 50, max: 70, ideal: 60, description: "Inclination angle of brow ridge" },
-    total_facial_convexity: base.total_facial_convexity ?? { min: 155, max: 175, ideal: 165, description: "Total facial convexity angle" },
-    facial_convexity_glabella: base.facial_convexity_glabella ?? { min: 160, max: 178, ideal: 169, description: "Facial convexity angle at glabella" },
-    orbital_vector: base.orbital_vector ?? { min: -2, max: 4, ideal: 1, description: "Orbital vector measurement (mm)" },
-    interior_midface_projection: base.interior_midface_projection ?? { min: 10, max: 20, ideal: 15, description: "Interior midface projection angle" },
-    z_angle: base.z_angle ?? { min: 60, max: 80, ideal: 70, description: "Z-angle of soft tissue profile" },
-    nose_tip_rotation: base.nose_tip_rotation ?? { min: 90, max: 115, ideal: 102, description: "Nose tip rotation angle" },
-    nasolabial_angle: base.nasolabial_angle ?? { min: 90, max: 110, ideal: 100, description: "Angle between nose base and upper lip" },
-    nasofacial_angle: base.nasofacial_angle ?? { min: 30, max: 40, ideal: 35, description: "Angle between nasal bridge and facial plane" },
-    nasomental_angle: base.nasomental_angle ?? { min: 120, max: 135, ideal: 128, description: "Angle between nose and chin" },
-    frankfort_tip_angle: base.frankfort_tip_angle ?? { min: 105, max: 125, ideal: 115, description: "Angle between Frankfort plane and nose tip" },
-    lower_lip_s_line: base.lower_lip_s_line ?? { min: -2, max: 2, ideal: 0, description: "Lower lip position relative to S-line (mm)" },
-    lower_lip_e_line: base.lower_lip_e_line ?? { min: -4, max: 2, ideal: -1, description: "Lower lip position relative to E-line (mm)" },
-    lower_lip_burstone: base.lower_lip_burstone ?? { min: -2, max: 3, ideal: 0.5, description: "Lower lip position relative to Burstone line (mm)" },
-    gonial_angle: base.gonial_angle ?? { min: 115, max: 135, ideal: 125, description: "Angle of the mandible at gonion" },
-    mandibular_plane_angle: base.mandibular_plane_angle ?? { min: 20, max: 35, ideal: 28, description: "Angle of mandibular plane relative to horizontal" },
-    ramus_to_mandible: base.ramus_to_mandible ?? { min: 0.55, max: 0.75, ideal: 0.65, description: "Ratio of ramus height to mandibular body length" },
-    gonion_to_mouth: base.gonion_to_mouth ?? { min: 0.40, max: 0.55, ideal: 0.48, description: "Ratio of gonion-to-mouth distance to facial height" },
-  }
-  return defaults
+const ETHNIC_FACTORS: Record<Exclude<Ethnicity, "asian">, EthnicFactors> = {
+  caucasian: {
+    sizeScale: 0.95,
+    noseWidth: -8,
+    nasalProjection: 0.12,
+    lipProtrusion: -2,
+    canthalTilt: -1.5,
+    profileConvexity: -5,
+    jawWidth: -5,
+    eyeSeparation: -1,
+  },
+  black: {
+    sizeScale: 1.02,
+    noseWidth: 12,
+    nasalProjection: -0.05,
+    lipProtrusion: 3,
+    canthalTilt: -2.5,
+    profileConvexity: 3,
+    jawWidth: 5,
+    eyeSeparation: 2,
+  },
+  hispanic: {
+    sizeScale: 0.98,
+    noseWidth: 2,
+    nasalProjection: 0.06,
+    lipProtrusion: 1,
+    canthalTilt: -0.5,
+    profileConvexity: -2,
+    jawWidth: -2,
+    eyeSeparation: 0,
+  },
+  middle_eastern: {
+    sizeScale: 0.97,
+    noseWidth: -3,
+    nasalProjection: 0.15,
+    lipProtrusion: -1,
+    canthalTilt: -1,
+    profileConvexity: -3,
+    jawWidth: -3,
+    eyeSeparation: -1,
+  },
+  south_asian: {
+    sizeScale: 0.99,
+    noseWidth: 4,
+    nasalProjection: 0.04,
+    lipProtrusion: 0.5,
+    canthalTilt: 0,
+    profileConvexity: -1,
+    jawWidth: -1,
+    eyeSeparation: 1,
+  },
+  mixed: {
+    sizeScale: 0.98,
+    noseWidth: 1,
+    nasalProjection: 0.05,
+    lipProtrusion: 0,
+    canthalTilt: -0.5,
+    profileConvexity: -1.5,
+    jawWidth: -2,
+    eyeSeparation: 0,
+  },
+}
+
+
+// ============================================================
+// MALE EAST ASIAN BASELINE (user-specified custom data)
+// ============================================================
+
+const MALE_ASIAN_FRONT: Partial<MeasurementNorms> = {
+  lateral_canthal_tilt:      { min: -2.57, max: 19.67, idealMin: 6.50, idealMax: 10.50, description: "Lateral Canthal Tilt (degrees)" },
+  nose_bridge_to_width:      { min: 1.16, max: 3.04, idealMin: 1.85, idealMax: 2.35, description: "Nose Bridge to Nose Width Ratio" },
+  bitemporal_width:          { min: 75, max: 88, idealMin: 80.00, idealMax: 84.00, description: "Bitemporal Width (%)" },
+  cheekbone_height:          { min: 49.48, max: 133.52, idealMin: 85.00, idealMax: 98.00, description: "Cheekbone Height (%)" },
+  cupids_bow_depth:          { min: -2.15, max: 8.53, idealMin: 2.00, idealMax: 4.50, description: "Cupid's Bow Depth (mm)" },
+  bigonial_width:            { min: 68.55, max: 110.45, idealMin: 86.50, idealMax: 92.50, description: "Bigonial Width (%)" },
+  jaw_slope:                 { min: 115.51, max: 166.99, idealMin: 136.00, idealMax: 146.50, description: "Jaw Slope (degrees)" },
+  middle_third:              { min: 22.74, max: 43.06, idealMin: 31.00, idealMax: 34.50, description: "Middle Third (%)" },
+  eye_aspect_ratio:          { min: 1.42, max: 4.88, idealMin: 2.85, idealMax: 3.45, description: "Eye Aspect Ratio" },
+  mouth_corner_position:     { min: -12.94, max: 16.94, idealMin: -1.00, idealMax: 4.50, description: "Mouth Corner Position (mm)" },
+  eye_separation_ratio:      { min: 37.38, max: 54.98, idealMin: 44.00, idealMax: 48.00, description: "Eye Separation Ratio (%)" },
+  eyebrow_tilt:              { min: -14.02, max: 31.52, idealMin: 6.50, idealMax: 11.00, description: "Eyebrow Tilt (degrees)" },
+  lower_third:               { min: 25.78, max: 44.32, idealMin: 33.50, idealMax: 36.50, description: "Lower Third (%)" },
+  face_width_to_height:      { min: 1.52, max: 2.38, idealMin: 1.85, idealMax: 2.05, description: "Face Width to Height Ratio (fWHR)" },
+  interpupillary_mouth_width:{ min: 37, max: 123, idealMin: 75.00, idealMax: 85.00, description: "Interpupillary-Mouth Width Ratio (%)" },
+  jaw_frontal_angle:         { min: 54.78, max: 124.22, idealMin: 84.50, idealMax: 94.50, description: "Jaw Frontal Angle (degrees)" },
+  intercanthal_nasal_width:  { min: 0.90, max: 1.10, idealMin: 0.95, idealMax: 1.05, description: "Intercanthal-Nasal Width Ratio" },
+  top_third:                 { min: 20.25, max: 42.75, idealMin: 29.50, idealMax: 33.50, description: "Top Third (%)" },
+  one_eye_apart:             { min: 0.72, max: 1.53, idealMin: 1.00, idealMax: 1.25, description: "One Eye Apart Test" },
+  midface_ratio:             { min: 0.61, max: 1.34, idealMin: 0.92, idealMax: 1.03, description: "Midface Ratio" },
+  ipsilateral_alar_angle:    { min: 68.23, max: 106.77, idealMin: 82.50, idealMax: 92.50, description: "Ipsilateral Alar Angle (degrees)" },
+  mouth_width_to_nose_width: { min: 1.04, max: 1.80, idealMin: 1.35, idealMax: 1.50, description: "Mouth Width to Nose Width Ratio" },
+  total_facial_width_to_height:{ min: 0.70, max: 0.82, idealMin: 0.74, idealMax: 0.78, description: "Total Facial Width to Height Ratio" },
+  chin_to_philtrum:          { min: 0.78, max: 3.82, idealMin: 2.10, idealMax: 2.50, description: "Chin to Philtrum Ratio" },
+  eyebrow_low_setedness:     { min: -1.96, max: 3.21, idealMin: 0.25, idealMax: 1.00, description: "Eyebrow Low Setedness" },
+  brow_length_to_face_width: { min: 0.33, max: 1.12, idealMin: 0.68, idealMax: 0.77, description: "Brow Length to Face Width Ratio" },
+  nose_tip_position:         { min: 3, max: 8, idealMin: 4.00, idealMax: 6.00, description: "Nose Tip Position (mm)" },
+  deviation_iaa_jfa:         { min: -22.21, max: 22.32, idealMin: -5.00, idealMax: 5.00, description: "Deviation of IAA & JFA (degrees)" },
+  lower_lip_to_upper_lip:    { min: -0.44, max: 4.04, idealMin: 1.50, idealMax: 2.10, description: "Lower Lip to Upper Lip Ratio" },
+  lower_third_proportion:    { min: 26.21, max: 38.29, idealMin: 30.50, idealMax: 34.00, description: "Lower Third Proportion (%)" },
+}
+
+const MALE_ASIAN_SIDE: Partial<MeasurementNorms> = {
+  nasal_tip_angle:             { min: 106.16, max: 166.84, idealMin: 130.00, idealMax: 142.00, description: "Nasal Tip Angle (degrees)" },
+  nasal_width_to_height:       { min: -0.01, max: 1.31, idealMin: 0.55, idealMax: 0.75, description: "Nasal Width to Height Ratio" },
+  upper_lip_s_line:            { min: -8.19, max: 7.19, idealMin: -2.00, idealMax: 1.00, description: "Upper Lip S-Line Position (mm)" },
+  upper_lip_burstone:          { min: -2, max: 3, idealMin: -0.50, idealMax: 1.50, description: "Upper Lip Burstone Line (mm)" },
+  nasal_projection:            { min: 0.11, max: 1.02, idealMin: 0.50, idealMax: 0.63, description: "Nasal Projection ratio" },
+  nasofrontal_angle:           { min: 79.18, max: 173.22, idealMin: 120.00, idealMax: 132.50, description: "Nasofrontal Angle (degrees)" },
+  recession_frankfort:         { min: -24.08, max: 39.05, idealMin: 1.50, idealMax: 15.00, description: "Recession Frankfort Plane (mm)" },
+  holdaway_h_line:             { min: -9.79, max: 8.79, idealMin: -2.00, idealMax: 1.00, description: "Holdaway H Line (mm)" },
+  mentolabial_angle:           { min: 60.13, max: 185.87, idealMin: 114.00, idealMax: 132.00, description: "Mentolabial Angle (degrees)" },
+  upper_forehead_slope:        { min: -13.30, max: 15.30, idealMin: -2.00, idealMax: 4.50, description: "Upper Forehead Slope (degrees)" },
+  facial_convexity_nasion:     { min: 134.63, max: 196.37, idealMin: 160.00, idealMax: 171.00, description: "Facial Convexity at Nasion (degrees)" },
+  anterior_facial_depth:       { min: 36.12, max: 103.88, idealMin: 65.00, idealMax: 75.00, description: "Anterior Facial Depth (degrees)" },
+  upper_lip_e_line:            { min: -7.56, max: 12.56, idealMin: 1.00, idealMax: 4.00, description: "Upper Lip E-Line Position (mm)" },
+  submental_cervical_angle:    { min: 56.02, max: 143.98, idealMin: 90.00, idealMax: 110.00, description: "Submental Cervical Angle (degrees)" },
+  facial_depth_to_height:      { min: 0.94, max: 1.76, idealMin: 1.28, idealMax: 1.42, description: "Facial Depth to Height Ratio" },
+  browridge_inclination:       { min: -0.75, max: 37.75, idealMin: 14.00, idealMax: 23.00, description: "Browridge Inclination (degrees)" },
+  total_facial_convexity:      { min: 120.14, max: 170.86, idealMin: 140.00, idealMax: 150.00, description: "Total Facial Convexity (degrees)" },
+  facial_convexity_glabella:   { min: 153.31, max: 193.69, idealMin: 168.00, idealMax: 179.00, description: "Facial Convexity at Glabella (degrees)" },
+  orbital_vector:              { min: -10.33, max: 19.25, idealMin: 2.00, idealMax: 7.00, description: "Orbital Vector (mm)" },
+  interior_midface_projection: { min: 35.75, max: 85.25, idealMin: 56.00, idealMax: 65.00, description: "Interior Midface Projection (degrees)" },
+  z_angle:                     { min: 54.18, max: 105.82, idealMin: 75.00, idealMax: 85.00, description: "Z-Angle (degrees)" },
+  nose_tip_rotation:           { min: -15.08, max: 48.08, idealMin: 10.00, idealMax: 23.00, description: "Nose Tip Rotation (degrees)" },
+  nasolabial_angle:            { min: 55.02, max: 145.98, idealMin: 95.00, idealMax: 106.00, description: "Nasolabial Angle (degrees)" },
+  nasofacial_angle:            { min: 15.93, max: 48.07, idealMin: 28.00, idealMax: 36.00, description: "Nasofacial Angle (degrees)" },
+  nasomental_angle:            { min: 105.26, max: 153.74, idealMin: 124.00, idealMax: 135.00, description: "Nasomental Angle (degrees)" },
+  frankfort_tip_angle:         { min: 5.59, max: 64.41, idealMin: 30.00, idealMax: 40.00, description: "Frankfort-Tip Angle (degrees)" },
+  lower_lip_s_line:            { min: -8.19, max: 7.19, idealMin: -2.00, idealMax: 1.00, description: "Lower Lip S-Line (mm)" },
+  lower_lip_e_line:            { min: -7.74, max: 11.24, idealMin: 0.50, idealMax: 3.00, description: "Lower Lip E-Line (mm)" },
+  lower_lip_burstone:          { min: -9.47, max: 3.48, idealMin: -4.50, idealMax: -1.50, description: "Lower Lip Burstone Line (mm)" },
+  gonial_angle:                { min: 94.34, max: 145.66, idealMin: 117.00, idealMax: 123.00, description: "Gonial Angle (degrees)" },
+  mandibular_plane_angle:      { min: -4.68, max: 43.68, idealMin: 14.00, idealMax: 24.00, description: "Mandibular Plane Angle (degrees)" },
+  ramus_to_mandible:           { min: -0.20, max: 1.57, idealMin: 0.55, idealMax: 0.80, description: "Ramus to Mandible Ratio" },
+  gonion_to_mouth:             { min: -4.95, max: 64.95, idealMin: 22.00, idealMax: 38.00, description: "Gonion to Mouth Line (mm)" },
 }
 
 // ============================================================
-// FRONT PROFILE IDEAL VALUES
+// Helper: derive ethnicity-specific values from Asian baseline
+// ============================================================
+
+/** Apply ethnic adjustment factors to a numeric value */
+function adjust(asianVal: number, additiveFactor: number): number {
+  return Math.round((asianVal + additiveFactor) * 100) / 100
+}
+
+/** Adjust an IdealValue using additive factors for all fields */
+function adjustIdeal(base: IdealValue, deltaMin: number, deltaMax: number, deltaIdealMin: number, deltaIdealMax: number): IdealValue {
+  return {
+    min: adjust(base.min, deltaMin),
+    max: adjust(base.max, deltaMax),
+    idealMin: adjust(base.idealMin, deltaIdealMin),
+    idealMax: adjust(base.idealMax, deltaIdealMax),
+    description: base.description,
+  }
+}
+
+/** Scale an IdealValue (multiply) for width/ratio measurements */
+function scaleIdeal(base: IdealValue, factor: number): IdealValue {
+  return {
+    min: Math.round(base.min * factor * 100) / 100,
+    max: Math.round(base.max * factor * 100) / 100,
+    idealMin: Math.round(base.idealMin * factor * 100) / 100,
+    idealMax: Math.round(base.idealMax * factor * 100) / 100,
+    description: base.description,
+  }
+}
+
+/** Derive female values from male using known sexual dimorphism ratios */
+function femaleAdjust(male: IdealValue): IdealValue {
+  return {
+    min: Math.round(male.min * 0.96 * 100) / 100,
+    max: Math.round(male.max * 0.96 * 100) / 100,
+    idealMin: Math.round(male.idealMin * 0.96 * 100) / 100,
+    idealMax: Math.round(male.idealMax * 0.96 * 100) / 100,
+    description: male.description,
+  }
+}
+
+/** Derive angle-based measurement for females (additive shift, not multiplicative) */
+function femaleAngle(male: IdealValue, delta: number): IdealValue {
+  return {
+    min: adjust(male.min, delta),
+    max: adjust(male.max, delta),
+    idealMin: adjust(male.idealMin, delta),
+    idealMax: adjust(male.idealMax, delta),
+    description: male.description,
+  }
+}
+
+// ============================================================
+// BUILD ALL ETHNICITY-GENDER COMBINATIONS
+// ============================================================
+
+function buildFrontNorms(ethnicity: Exclude<Ethnicity, "asian">, maleAsian: typeof MALE_ASIAN_FRONT, descSuffix: string): Partial<MeasurementNorms> {
+  const f = ETHNIC_FACTORS[ethnicity]
+  const s = f.sizeScale
+  const nw = f.noseWidth
+  const np = f.nasalProjection
+  const lp = f.lipProtrusion
+  const ct = f.canthalTilt
+  const pc = f.profileConvexity
+  const jw = f.jawWidth
+  const es = f.eyeSeparation
+
+  return {
+    // Scale by size factor
+    bitemporal_width:          scaleIdeal(maleAsian.bitemporal_width!, s),
+    cheekbone_height:          scaleIdeal(maleAsian.cheekbone_height!, s),
+    bigonial_width:            adjustIdeal(maleAsian.bigonial_width!, jw, jw, jw, jw),
+    middle_third:              maleAsian.middle_third!,  // proportions don't change
+    lower_third:               maleAsian.lower_third!,
+    top_third:                 maleAsian.top_third!,
+    lower_third_proportion:    maleAsian.lower_third_proportion!,
+    face_width_to_height:      scaleIdeal(maleAsian.face_width_to_height!, s),
+    total_facial_width_to_height: scaleIdeal(maleAsian.total_facial_width_to_height!, s),
+
+    // Nose width affects
+    nose_bridge_to_width:      adjustIdeal(maleAsian.nose_bridge_to_width!, nw * 0.015, nw * 0.015, nw * 0.012, nw * 0.012),
+    intercanthal_nasal_width:  adjustIdeal(maleAsian.intercanthal_nasal_width!, nw * 0.002, nw * 0.002, nw * 0.002, nw * 0.002),
+    mouth_width_to_nose_width: adjustIdeal(maleAsian.mouth_width_to_nose_width!, -nw * 0.006, -nw * 0.006, -nw * 0.005, -nw * 0.005),
+    ipsilateral_alar_angle:    adjustIdeal(maleAsian.ipsilateral_alar_angle!, nw * 0.5, nw * 0.5, nw * 0.4, nw * 0.4),
+    nose_tip_position:         adjustIdeal(maleAsian.nose_tip_position!, nw * 0.02, nw * 0.02, nw * 0.015, nw * 0.015),
+
+    // Canthal tilt
+    lateral_canthal_tilt:      adjustIdeal(maleAsian.lateral_canthal_tilt!, ct, ct, ct, ct),
+
+    // Eye spacing
+    eye_separation_ratio:      adjustIdeal(maleAsian.eye_separation_ratio!, es, es, es, es),
+    one_eye_apart:             adjustIdeal(maleAsian.one_eye_apart!, es * 0.01, es * 0.01, es * 0.008, es * 0.008),
+
+    // Lip protrusion
+    mouth_corner_position:     adjustIdeal(maleAsian.mouth_corner_position!, lp * 0.15, lp * 0.15, lp * 0.12, lp * 0.12),
+
+    // Jaw
+    jaw_frontal_angle:         adjustIdeal(maleAsian.jaw_frontal_angle!, jw, jw, jw, jw),
+    jaw_slope:                 adjustIdeal(maleAsian.jaw_slope!, jw * 0.5, jw * 0.5, jw * 0.4, jw * 0.4),
+
+    // Unchanged by ethnicity
+    cupids_bow_depth:          maleAsian.cupids_bow_depth!,
+    eye_aspect_ratio:          maleAsian.eye_aspect_ratio!,
+    eyebrow_tilt:              maleAsian.eyebrow_tilt!,
+    interpupillary_mouth_width:maleAsian.interpupillary_mouth_width!,
+    midface_ratio:             maleAsian.midface_ratio!,
+    chin_to_philtrum:          maleAsian.chin_to_philtrum!,
+    eyebrow_low_setedness:     maleAsian.eyebrow_low_setedness!,
+    brow_length_to_face_width: maleAsian.brow_length_to_face_width!,
+    deviation_iaa_jfa:         maleAsian.deviation_iaa_jfa!,
+    lower_lip_to_upper_lip:    maleAsian.lower_lip_to_upper_lip!,
+  }
+}
+
+function buildSideNorms(ethnicity: Exclude<Ethnicity, "asian">, maleAsian: typeof MALE_ASIAN_SIDE): Partial<MeasurementNorms> {
+  const f = ETHNIC_FACTORS[ethnicity]
+  const np = f.nasalProjection  // positive = more projection
+  const lp = f.lipProtrusion    // positive = more protrusive
+  const pc = f.profileConvexity // positive = more convex
+  const jw = f.jawWidth
+  const nw = f.noseWidth
+
+  return {
+    // Nasal projection (Caucasian most, Black least)
+    nasal_projection:            adjustIdeal(maleAsian.nasal_projection!, np, np, np, np),
+    nasofrontal_angle:           adjustIdeal(maleAsian.nasofrontal_angle!, -np * 8, np * 8, -np * 5, np * 5),
+    nasal_tip_angle:             adjustIdeal(maleAsian.nasal_tip_angle!, -np * 15, np * 10, -np * 10, np * 8),
+    nasolabial_angle:            adjustIdeal(maleAsian.nasolabial_angle!, -np * 8, np * 5, -np * 5, np * 3),
+    nasofacial_angle:            adjustIdeal(maleAsian.nasofacial_angle!, -np * 3, np * 3, -np * 2, np * 2),
+    nasomental_angle:            adjustIdeal(maleAsian.nasomental_angle!, -np * 5, np * 5, -np * 3, np * 3),
+    nose_tip_rotation:           adjustIdeal(maleAsian.nose_tip_rotation!, -np * 3, np * 3, -np * 2, np * 2),
+    frankfort_tip_angle:         adjustIdeal(maleAsian.frankfort_tip_angle!, -np * 4, np * 4, -np * 3, np * 3),
+    nasal_width_to_height:       adjustIdeal(maleAsian.nasal_width_to_height!, nw * 0.003, nw * 0.003, nw * 0.002, nw * 0.002),
+
+    // Lip protrusion (Black most)
+    upper_lip_s_line:            adjustIdeal(maleAsian.upper_lip_s_line!, lp * 0.3, lp * 0.3, lp * 0.25, lp * 0.25),
+    upper_lip_e_line:            adjustIdeal(maleAsian.upper_lip_e_line!, lp * 0.35, lp * 0.35, lp * 0.3, lp * 0.3),
+    upper_lip_burstone:          adjustIdeal(maleAsian.upper_lip_burstone!, lp * 0.15, lp * 0.15, lp * 0.12, lp * 0.12),
+    lower_lip_s_line:            adjustIdeal(maleAsian.lower_lip_s_line!, lp * 0.3, lp * 0.3, lp * 0.25, lp * 0.25),
+    lower_lip_e_line:            adjustIdeal(maleAsian.lower_lip_e_line!, lp * 0.35, lp * 0.35, lp * 0.3, lp * 0.3),
+    lower_lip_burstone:          adjustIdeal(maleAsian.lower_lip_burstone!, lp * 0.15, lp * 0.15, lp * 0.12, lp * 0.12),
+
+    // Profile convexity
+    facial_convexity_nasion:     adjustIdeal(maleAsian.facial_convexity_nasion!, pc, pc, pc, pc),
+    facial_convexity_glabella:   adjustIdeal(maleAsian.facial_convexity_glabella!, pc * 0.8, pc * 0.8, pc * 0.6, pc * 0.6),
+    total_facial_convexity:      adjustIdeal(maleAsian.total_facial_convexity!, pc, pc, pc, pc),
+
+    // Jaw
+    gonial_angle:                adjustIdeal(maleAsian.gonial_angle!, jw, jw, jw, jw),
+    mandibular_plane_angle:      adjustIdeal(maleAsian.mandibular_plane_angle!, jw * 0.5, jw * 0.5, jw * 0.4, jw * 0.4),
+    ramus_to_mandible:           adjustIdeal(maleAsian.ramus_to_mandible!, jw * 0.003, jw * 0.003, jw * 0.002, jw * 0.002),
+
+    // Unchanged/minimally affected
+    recession_frankfort:         maleAsian.recession_frankfort!,
+    holdaway_h_line:             maleAsian.holdaway_h_line!,
+    mentolabial_angle:           adjustIdeal(maleAsian.mentolabial_angle!, pc * 0.5, pc * 0.5, pc * 0.4, pc * 0.4),
+    upper_forehead_slope:        maleAsian.upper_forehead_slope!,
+    anterior_facial_depth:       maleAsian.anterior_facial_depth!,
+    submental_cervical_angle:    maleAsian.submental_cervical_angle!,
+    facial_depth_to_height:      maleAsian.facial_depth_to_height!,
+    browridge_inclination:       maleAsian.browridge_inclination!,
+    orbital_vector:              adjustIdeal(maleAsian.orbital_vector!, np * 0.5, np * 0.5, np * 0.4, np * 0.4),
+    interior_midface_projection: maleAsian.interior_midface_projection!,
+    z_angle:                     maleAsian.z_angle!,
+    gonion_to_mouth:             adjustIdeal(maleAsian.gonion_to_mouth!, jw * 0.3, jw * 0.3, jw * 0.25, jw * 0.25),
+  }
+}
+
+// ============================================================
+// Female adjustment helpers
+// ============================================================
+
+function buildFemaleFront(maleValues: Partial<MeasurementNorms>): Partial<MeasurementNorms> {
+  const result: Partial<MeasurementNorms> = {}
+  for (const [key, val] of Object.entries(maleValues)) {
+    if (!val) continue
+    // Angles shift slightly, ratios scale
+    if (key === "lateral_canthal_tilt") result[key] = adjustIdeal(val, 1.5, 1.5, 1.5, 1.5)  // Females more upward
+    else if (key === "jaw_slope") result[key] = adjustIdeal(val, 3, 3, 2.5, 2.5)
+    else if (key === "jaw_frontal_angle") result[key] = adjustIdeal(val, 3, 3, 2.5, 2.5)
+    else if (key === "eyebrow_tilt") result[key] = adjustIdeal(val, 2, 2, 1.5, 1.5)
+    else if (key === "bigonial_width") result[key] = adjustIdeal(val, -3, -3, -2.5, -2.5)
+    else if (key === "face_width_to_height") result[key] = scaleIdeal(val, 0.95)
+    else if (key === "total_facial_width_to_height") result[key] = scaleIdeal(val, 0.95)
+    else if (key === "eye_aspect_ratio") result[key] = adjustIdeal(val, 0.2, 0.2, 0.15, 0.15)
+    else if (key === "chin_to_philtrum") result[key] = adjustIdeal(val, -0.1, -0.1, -0.08, -0.08)
+    else if (key === "lower_lip_to_upper_lip") result[key] = adjustIdeal(val, 0.05, 0.05, 0.04, 0.04)
+    else if (key === "nose_bridge_to_width") result[key] = adjustIdeal(val, -0.05, -0.05, -0.04, -0.04)
+    else if (key === "cupids_bow_depth") result[key] = adjustIdeal(val, 0.5, 0.5, 0.4, 0.4)
+    else if (key === "mouth_corner_position") result[key] = adjustIdeal(val, 0.8, 0.8, 0.6, 0.6)
+    else if (key === "nose_tip_position") result[key] = adjustIdeal(val, -0.5, -0.5, -0.4, -0.4)
+    else result[key] = val  // proportions stay similar
+  }
+  return result
+}
+
+function buildFemaleSide(maleValues: Partial<MeasurementNorms>): Partial<MeasurementNorms> {
+  const result: Partial<MeasurementNorms> = {}
+  for (const [key, val] of Object.entries(maleValues)) {
+    if (!val) continue
+    if (key === "nasal_tip_angle") result[key] = adjustIdeal(val, 4, 4, 3, 3)
+    else if (key === "nasolabial_angle") result[key] = adjustIdeal(val, 3, 3, 2.5, 2.5)
+    else if (key === "mentolabial_angle") result[key] = adjustIdeal(val, 4, 4, 3, 3)
+    else if (key === "facial_convexity_nasion") result[key] = adjustIdeal(val, 3, 3, 2.5, 2.5)
+    else if (key === "facial_convexity_glabella") result[key] = adjustIdeal(val, 2, 2, 1.5, 1.5)
+    else if (key === "total_facial_convexity") result[key] = adjustIdeal(val, 3, 3, 2.5, 2.5)
+    else if (key === "gonial_angle") result[key] = adjustIdeal(val, 2, 2, 1.5, 1.5)
+    else if (key === "mandibular_plane_angle") result[key] = adjustIdeal(val, 2, 2, 1.5, 1.5)
+    else if (key === "upper_lip_s_line") result[key] = adjustIdeal(val, -0.3, -0.3, -0.25, -0.25)
+    else if (key === "upper_lip_e_line") result[key] = adjustIdeal(val, -0.3, -0.3, -0.25, -0.25)
+    else if (key === "lower_lip_s_line") result[key] = adjustIdeal(val, -0.3, -0.3, -0.25, -0.25)
+    else if (key === "lower_lip_e_line") result[key] = adjustIdeal(val, -0.3, -0.3, -0.25, -0.25)
+    else if (key === "nasal_projection") result[key] = adjustIdeal(val, -0.02, -0.02, -0.015, -0.015)
+    else if (key === "ramus_to_mandible") result[key] = adjustIdeal(val, -0.02, -0.02, -0.015, -0.015)
+    else result[key] = val
+  }
+  return result
+}
+
+
+// ============================================================
+// CREATE FULL FRONT_IDEALS MAP
+// ============================================================
+
+function createFrontNorms(base: Partial<MeasurementNorms> & { lateral_canthal_tilt: IdealValue; nose_bridge_to_width: IdealValue }): MeasurementNorms {
+  for (const [key, val] of Object.entries(MALE_ASIAN_FRONT)) {
+    if (!(key in base) && val) {
+      ;(base as any)[key] = val
+    }
+  }
+  return base as MeasurementNorms
+}
+
+function createSideNorms(base: Partial<MeasurementNorms> & { nasal_tip_angle: IdealValue }): MeasurementNorms {
+  for (const [key, val] of Object.entries(MALE_ASIAN_SIDE)) {
+    if (!(key in base) && val) {
+      ;(base as any)[key] = val
+    }
+  }
+  return base as MeasurementNorms
+}
+
+// ============================================================
+// EXPORT FULL IDEAL VALUES
 // ============================================================
 
 export const FRONT_IDEALS: Record<Gender, Record<Ethnicity, MeasurementNorms>> = {
   male: {
     asian: createFrontNorms({
-      lateral_canthal_tilt: { min: -2.57, max: 19.67, ideal: 8.55, description: "Lateral Canthal Tilt (degrees)" },
-      nose_bridge_to_width: { min: 1.16, max: 3.04, ideal: 2.1, description: "Nose Bridge to Nose Width Ratio" },
-      bitemporal_width: { min: 75, max: 88, ideal: 82, description: "Bitemporal Width (%)" },
-      cheekbone_height: { min: 49.48, max: 133.52, ideal: 91.5, description: "Cheekbone Height (%)" },
-      bigonial_width: { min: 68.55, max: 110.45, ideal: 89.5, description: "Bigonial Width (%)" },
-      jaw_slope: { min: 115.51, max: 166.99, ideal: 141.25, description: "Jaw Slope - obtuse angle (degrees)" },
-      eye_aspect_ratio: { min: 1.42, max: 4.88, ideal: 3.15, description: "Eye Aspect Ratio (width/height)" },
-      eye_separation_ratio: { min: 37.38, max: 54.98, ideal: 46.18, description: "Eye Separation Ratio (%)" },
-      face_width_to_height: { min: 1.52, max: 2.38, ideal: 1.95, description: "Face Width to Height Ratio (fWHR)" },
-      jaw_frontal_angle: { min: 54.78, max: 124.22, ideal: 89.5, description: "Jaw Frontal Angle (degrees)" },
-      ipsilateral_alar_angle: { min: 68.23, max: 106.77, ideal: 87.5, description: "Ipsilateral Alar Angle (degrees)" },
-      mouth_width_to_nose_width: { min: 1.04, max: 1.80, ideal: 1.42, description: "Mouth Width to Nose Width Ratio" },
-      total_facial_width_to_height: { min: 0.70, max: 0.82, ideal: 0.76, description: "Total Facial Width to Height Ratio" },
-      chin_to_philtrum: { min: 0.78, max: 3.82, ideal: 2.3, description: "Chin to Philtrum Ratio" },
-      eyebrow_low_setedness: { min: -1.96, max: 3.21, ideal: 0.625, description: "Eyebrow Low Setedness (ratio)" },
-      brow_length_to_face_width: { min: 0.33, max: 1.12, ideal: 0.725, description: "Brow Length to Face Width Ratio" },
-      lower_third_proportion: { min: 26.21, max: 38.29, ideal: 32.25, description: "Lower Third Proportion (%)" },
-      midface_ratio: { min: 0.61, max: 1.34, ideal: 0.975, description: "Midface Ratio" },
-      cupids_bow_depth: { min: -2.15, max: 8.53, ideal: 3.19, description: "Cupid's Bow Depth (mm)" },
-      eyebrow_tilt: { min: -14.02, max: 31.52, ideal: 8.75, description: "Eyebrow Tilt (degrees)" },
-      lower_lip_to_upper_lip: { min: -0.44, max: 4.04, ideal: 1.8, description: "Lower Lip to Upper Lip Ratio" },
-      top_third: { min: 20.25, max: 42.75, ideal: 31.5, description: "Top Third (%)" },
-      middle_third: { min: 22.74, max: 43.06, ideal: 32.9, description: "Middle Third (%)" },
-      lower_third: { min: 25.78, max: 44.32, ideal: 35.05, description: "Lower Third (%)" },
-      one_eye_apart: { min: 0.72, max: 1.53, ideal: 1.125, description: "One Eye Apart Test (ratio)" },
-      interpupillary_mouth_width: { min: 37, max: 123, ideal: 80, description: "Interpupillary-Mouth Width Ratio (%)" },
-      deviation_iaa_jfa: { min: -22.21, max: 22.32, ideal: 0.055, description: "Deviation of IAA & JFA (degrees)" },
-      mouth_corner_position: { min: -12.94, max: 16.94, ideal: 2, description: "Mouth Corner Position (mm)" },
+      lateral_canthal_tilt: MALE_ASIAN_FRONT.lateral_canthal_tilt!,
+      nose_bridge_to_width: MALE_ASIAN_FRONT.nose_bridge_to_width!,
     }),
     caucasian: createFrontNorms({
-      lateral_canthal_tilt: { min: 5, max: 12, ideal: 8.5, description: "Slight upward tilt of the lateral canthus" },
-      nose_bridge_to_width: { min: 0.50, max: 0.70, ideal: 0.60, description: "Ratio of nose bridge width to nose width" },
-      bitemporal_width: { min: 78, max: 90, ideal: 84, description: "Ratio of bitemporal width to facial width" },
-      cheekbone_height: { min: 0.42, max: 0.55, ideal: 0.48, description: "Ratio of cheekbone height to facial height" },
-      bigonial_width: { min: 0.68, max: 0.82, ideal: 0.75, description: "Ratio of bigonial width to bizygomatic width" },
-      jaw_slope: { min: 58, max: 78, ideal: 68, description: "Angle of jaw line relative to horizontal" },
-      eye_aspect_ratio: { min: 0.28, max: 0.42, ideal: 0.35, description: "Ratio of eye height to eye width" },
-      eye_separation_ratio: { min: 0.40, max: 0.50, ideal: 0.45, description: "Ratio of intercanthal distance to facial width" },
-      eyebrow_tilt: { min: 8, max: 18, ideal: 13, description: "Angle of eyebrow tilt" },
-      face_width_to_height: { min: 0.72, max: 0.85, ideal: 0.78, description: "Ratio of facial width to facial height" },
-      jaw_frontal_angle: { min: 105, max: 128, ideal: 116, description: "Angle of jaw at gonion in frontal view" },
-      ipsilateral_alar_angle: { min: 28, max: 42, ideal: 35, description: "Angle of alar base on one side" },
-      mouth_width_to_nose_width: { min: 1.40, max: 1.80, ideal: 1.60, description: "Ratio of mouth width to nose width" },
-      total_facial_width_to_height: { min: 0.70, max: 0.82, ideal: 0.76, description: "Ratio of total facial width to total facial height" },
-      chin_to_philtrum: { min: 1.80, max: 2.50, ideal: 2.15, description: "Ratio of chin height to philtrum height" },
-      eyebrow_low_setedness: { min: 0.10, max: 0.20, ideal: 0.15, description: "Distance from brow to eye as ratio" },
-      brow_length_to_face_width: { min: 0.30, max: 0.40, ideal: 0.35, description: "Ratio of brow length to facial width" },
+      lateral_canthal_tilt: buildFrontNorms("caucasian", MALE_ASIAN_FRONT, "").lateral_canthal_tilt!,
+      nose_bridge_to_width: buildFrontNorms("caucasian", MALE_ASIAN_FRONT, "").nose_bridge_to_width!,
+      ...buildFrontNorms("caucasian", MALE_ASIAN_FRONT, ""),
     }),
     black: createFrontNorms({
-      lateral_canthal_tilt: { min: 3, max: 10, ideal: 6.5, description: "Slight upward tilt of the lateral canthus" },
-      nose_bridge_to_width: { min: 0.45, max: 0.65, ideal: 0.55, description: "Ratio of nose bridge width to nose width" },
-      cheekbone_height: { min: 0.45, max: 0.58, ideal: 0.52, description: "Ratio of cheekbone height to facial height" },
-      cupids_bow_depth: { min: 2, max: 6, ideal: 4, description: "Depth of Cupid's bow" },
-      bigonial_width: { min: 0.70, max: 0.85, ideal: 0.78, description: "Ratio of bigonial width to bizygomatic width" },
-      eye_separation_ratio: { min: 0.42, max: 0.54, ideal: 0.48, description: "Ratio of intercanthal distance to facial width" },
-      lower_third: { min: 0.33, max: 0.42, ideal: 0.37, description: "Ratio of lower facial third" },
-      face_width_to_height: { min: 0.75, max: 0.88, ideal: 0.82, description: "Ratio of facial width to facial height" },
-      interpupillary_mouth_width: { min: 80, max: 100, ideal: 90, description: "Ratio of mouth width to interpupillary distance" },
-      jaw_frontal_angle: { min: 100, max: 122, ideal: 110, description: "Angle of jaw at gonion" },
-      intercanthal_nasal_width: { min: 0.85, max: 1.05, ideal: 0.95, description: "Ratio of intercanthal distance to nasal width" },
-      ipsilateral_alar_angle: { min: 22, max: 38, ideal: 30, description: "Angle of alar base on one side" },
-      mouth_width_to_nose_width: { min: 1.20, max: 1.60, ideal: 1.40, description: "Ratio of mouth width to nose width" },
-      chin_to_philtrum: { min: 1.70, max: 2.30, ideal: 2.00, description: "Ratio of chin height to philtrum height" },
-      lower_third_proportion: { min: 0.33, max: 0.42, ideal: 0.37, description: "Proportion of lower third" },
+      lateral_canthal_tilt: buildFrontNorms("black", MALE_ASIAN_FRONT, "").lateral_canthal_tilt!,
+      nose_bridge_to_width: buildFrontNorms("black", MALE_ASIAN_FRONT, "").nose_bridge_to_width!,
+      ...buildFrontNorms("black", MALE_ASIAN_FRONT, ""),
     }),
     hispanic: createFrontNorms({
-      lateral_canthal_tilt: { min: 4, max: 12, ideal: 8, description: "Slight upward tilt of the lateral canthus" },
-      nose_bridge_to_width: { min: 0.50, max: 0.70, ideal: 0.60, description: "Ratio of nose bridge width to nose width" },
-      bitemporal_width: { min: 0.76, max: 0.88, ideal: 0.82, description: "Ratio of bitemporal width to facial width" },
-      cheekbone_height: { min: 0.44, max: 0.57, ideal: 0.50, description: "Ratio of cheekbone height to facial height" },
-      bigonial_width: { min: 0.69, max: 0.84, ideal: 0.76, description: "Ratio of bigonial width to bizygomatic width" },
-      jaw_slope: { min: 56, max: 76, ideal: 66, description: "Angle of jaw line" },
-      eye_aspect_ratio: { min: 0.29, max: 0.43, ideal: 0.36, description: "Ratio of eye height to eye width" },
-      eye_separation_ratio: { min: 0.41, max: 0.52, ideal: 0.46, description: "Ratio of intercanthal distance to facial width" },
-      eyebrow_tilt: { min: 6, max: 16, ideal: 11, description: "Angle of eyebrow tilt" },
-      face_width_to_height: { min: 0.73, max: 0.86, ideal: 0.80, description: "Ratio of facial width to facial height" },
-      jaw_frontal_angle: { min: 102, max: 125, ideal: 113, description: "Angle of jaw at gonion" },
-      ipsilateral_alar_angle: { min: 26, max: 40, ideal: 33, description: "Angle of alar base on one side" },
-      mouth_width_to_nose_width: { min: 1.30, max: 1.70, ideal: 1.50, description: "Ratio of mouth width to nose width" },
-      total_facial_width_to_height: { min: 0.71, max: 0.84, ideal: 0.77, description: "Ratio of total facial width to total facial height" },
-      chin_to_philtrum: { min: 1.80, max: 2.40, ideal: 2.10, description: "Ratio of chin height to philtrum height" },
-      eyebrow_low_setedness: { min: 0.11, max: 0.21, ideal: 0.16, description: "Distance from brow to eye as ratio" },
-      brow_length_to_face_width: { min: 0.29, max: 0.39, ideal: 0.34, description: "Ratio of brow length to facial width" },
+      lateral_canthal_tilt: buildFrontNorms("hispanic", MALE_ASIAN_FRONT, "").lateral_canthal_tilt!,
+      nose_bridge_to_width: buildFrontNorms("hispanic", MALE_ASIAN_FRONT, "").nose_bridge_to_width!,
+      ...buildFrontNorms("hispanic", MALE_ASIAN_FRONT, ""),
     }),
     middle_eastern: createFrontNorms({
-      lateral_canthal_tilt: { min: 4, max: 11, ideal: 7.5, description: "Slight upward tilt of the lateral canthus" },
-      nose_bridge_to_width: { min: 0.50, max: 0.70, ideal: 0.60, description: "Ratio of nose bridge width to nose width" },
-      bitemporal_width: { min: 0.77, max: 0.89, ideal: 0.83, description: "Ratio of bitemporal width to facial width" },
-      cheekbone_height: { min: 0.43, max: 0.56, ideal: 0.49, description: "Ratio of cheekbone height to facial height" },
-      bigonial_width: { min: 0.69, max: 0.83, ideal: 0.76, description: "Ratio of bigonial width to bizygomatic width" },
-      jaw_slope: { min: 57, max: 77, ideal: 67, description: "Angle of jaw line" },
-      eye_separation_ratio: { min: 0.40, max: 0.51, ideal: 0.45, description: "Ratio of intercanthal distance to facial width" },
-      eyebrow_tilt: { min: 7, max: 17, ideal: 12, description: "Angle of eyebrow tilt" },
-      face_width_to_height: { min: 0.73, max: 0.86, ideal: 0.79, description: "Ratio of facial width to facial height" },
-      jaw_frontal_angle: { min: 103, max: 126, ideal: 114, description: "Angle of jaw at gonion" },
-      ipsilateral_alar_angle: { min: 27, max: 41, ideal: 34, description: "Angle of alar base on one side" },
-      mouth_width_to_nose_width: { min: 1.35, max: 1.75, ideal: 1.55, description: "Ratio of mouth width to nose width" },
-      total_facial_width_to_height: { min: 0.71, max: 0.84, ideal: 0.77, description: "Ratio of total facial width to total facial height" },
-      brow_length_to_face_width: { min: 0.29, max: 0.39, ideal: 0.34, description: "Ratio of brow length to facial width" },
+      lateral_canthal_tilt: buildFrontNorms("middle_eastern", MALE_ASIAN_FRONT, "").lateral_canthal_tilt!,
+      nose_bridge_to_width: buildFrontNorms("middle_eastern", MALE_ASIAN_FRONT, "").nose_bridge_to_width!,
+      ...buildFrontNorms("middle_eastern", MALE_ASIAN_FRONT, ""),
     }),
     south_asian: createFrontNorms({
-      lateral_canthal_tilt: { min: 4, max: 12, ideal: 8, description: "Slight upward tilt of the lateral canthus" },
-      nose_bridge_to_width: { min: 0.48, max: 0.68, ideal: 0.58, description: "Ratio of nose bridge width to nose width" },
-      cheekbone_height: { min: 0.44, max: 0.57, ideal: 0.50, description: "Ratio of cheekbone height to facial height" },
-      bigonial_width: { min: 0.70, max: 0.85, ideal: 0.77, description: "Ratio of bigonial width to bizygomatic width" },
-      eye_aspect_ratio: { min: 0.30, max: 0.44, ideal: 0.37, description: "Ratio of eye height to eye width" },
-      eye_separation_ratio: { min: 0.42, max: 0.53, ideal: 0.47, description: "Ratio of intercanthal distance to facial width" },
-      face_width_to_height: { min: 0.74, max: 0.87, ideal: 0.80, description: "Ratio of facial width to facial height" },
-      jaw_frontal_angle: { min: 100, max: 124, ideal: 112, description: "Angle of jaw at gonion" },
-      ipsilateral_alar_angle: { min: 25, max: 39, ideal: 32, description: "Angle of alar base on one side" },
-      total_facial_width_to_height: { min: 0.72, max: 0.85, ideal: 0.78, description: "Ratio of total facial width to total facial height" },
+      lateral_canthal_tilt: buildFrontNorms("south_asian", MALE_ASIAN_FRONT, "").lateral_canthal_tilt!,
+      nose_bridge_to_width: buildFrontNorms("south_asian", MALE_ASIAN_FRONT, "").nose_bridge_to_width!,
+      ...buildFrontNorms("south_asian", MALE_ASIAN_FRONT, ""),
     }),
     mixed: createFrontNorms({
-      lateral_canthal_tilt: { min: 4, max: 12, ideal: 8, description: "Slight upward tilt of the lateral canthus" },
-      nose_bridge_to_width: { min: 0.50, max: 0.70, ideal: 0.60, description: "Ratio of nose bridge width to nose width" },
+      lateral_canthal_tilt: buildFrontNorms("mixed", MALE_ASIAN_FRONT, "").lateral_canthal_tilt!,
+      nose_bridge_to_width: buildFrontNorms("mixed", MALE_ASIAN_FRONT, "").nose_bridge_to_width!,
+      ...buildFrontNorms("mixed", MALE_ASIAN_FRONT, ""),
     }),
   },
   female: {
     asian: createFrontNorms({
-      lateral_canthal_tilt: { min: 6, max: 14, ideal: 10, description: "Slight upward tilt of the lateral canthus" },
-      nose_bridge_to_width: { min: 0.50, max: 0.70, ideal: 0.60, description: "Ratio of nose bridge width to nose width" },
-      bitemporal_width: { min: 0.73, max: 0.86, ideal: 0.80, description: "Ratio of bitemporal width to facial width" },
-      cheekbone_height: { min: 0.43, max: 0.56, ideal: 0.50, description: "Ratio of cheekbone height to facial height" },
-      cupids_bow_depth: { min: 3, max: 6, ideal: 4.5, description: "Depth of Cupid's bow" },
-      bigonial_width: { min: 0.65, max: 0.80, ideal: 0.72, description: "Ratio of bigonial width to bizygomatic width" },
-      jaw_slope: { min: 60, max: 80, ideal: 70, description: "Angle of jaw line" },
-      middle_third: { min: 0.30, max: 0.38, ideal: 0.34, description: "Ratio of middle facial third" },
-      eye_aspect_ratio: { min: 0.32, max: 0.48, ideal: 0.40, description: "Ratio of eye height to eye width" },
-      mouth_corner_position: { min: 0.38, max: 0.52, ideal: 0.45, description: "Vertical position of mouth corners" },
-      eye_separation_ratio: { min: 0.40, max: 0.50, ideal: 0.45, description: "Ratio of intercanthal distance to facial width" },
-      eyebrow_tilt: { min: 8, max: 18, ideal: 13, description: "Angle of eyebrow tilt" },
-      lower_third: { min: 0.30, max: 0.38, ideal: 0.34, description: "Ratio of lower facial third" },
-      face_width_to_height: { min: 0.70, max: 0.83, ideal: 0.76, description: "Ratio of facial width to facial height" },
-      interpupillary_mouth_width: { min: 85, max: 105, ideal: 95, description: "Ratio of mouth width to interpupillary distance" },
-      jaw_frontal_angle: { min: 105, max: 128, ideal: 116, description: "Angle of jaw at gonion" },
-      intercanthal_nasal_width: { min: 0.90, max: 1.10, ideal: 1.00, description: "Ratio of intercanthal distance to nasal width" },
-      top_third: { min: 0.28, max: 0.36, ideal: 0.32, description: "Ratio of upper facial third" },
-      one_eye_apart: { min: 0.90, max: 1.15, ideal: 1.00, description: "Ratio of interpupillary distance to one eye width" },
-      midface_ratio: { min: 0.95, max: 1.10, ideal: 1.02, description: "Ratio of midface width to midface height" },
-      ipsilateral_alar_angle: { min: 25, max: 38, ideal: 31, description: "Angle of alar base on one side" },
-      mouth_width_to_nose_width: { min: 1.30, max: 1.70, ideal: 1.50, description: "Ratio of mouth width to nose width" },
-      total_facial_width_to_height: { min: 0.68, max: 0.80, ideal: 0.74, description: "Ratio of total facial width to total facial height" },
-      chin_to_philtrum: { min: 1.70, max: 2.30, ideal: 2.00, description: "Ratio of chin height to philtrum height" },
-      eyebrow_low_setedness: { min: 0.10, max: 0.20, ideal: 0.15, description: "Distance from brow to eye as ratio" },
-      brow_length_to_face_width: { min: 0.28, max: 0.38, ideal: 0.33, description: "Ratio of brow length to facial width" },
-      nose_tip_position: { min: 0.55, max: 0.70, ideal: 0.62, description: "Vertical position of nose tip" },
-      deviation_iaa_jfa: { min: 0, max: 8, ideal: 3, description: "Deviation between IAA and JFA" },
-      lower_lip_to_upper_lip: { min: 1.20, max: 1.80, ideal: 1.50, description: "Ratio of lower lip to upper lip height" },
-      lower_third_proportion: { min: 0.30, max: 0.38, ideal: 0.34, description: "Proportion of lower third" },
+      lateral_canthal_tilt: buildFemaleFront(MALE_ASIAN_FRONT).lateral_canthal_tilt!,
+      nose_bridge_to_width: buildFemaleFront(MALE_ASIAN_FRONT).nose_bridge_to_width!,
+      ...buildFemaleFront(MALE_ASIAN_FRONT),
     }),
     caucasian: createFrontNorms({
-      lateral_canthal_tilt: { min: 6, max: 14, ideal: 10, description: "Slight upward tilt of the lateral canthus" },
-      nose_bridge_to_width: { min: 0.48, max: 0.68, ideal: 0.58, description: "Ratio of nose bridge width to nose width" },
-      bitemporal_width: { min: 0.75, max: 0.88, ideal: 0.82, description: "Ratio of bitemporal width to facial width" },
-      cheekbone_height: { min: 0.40, max: 0.53, ideal: 0.46, description: "Ratio of cheekbone height to facial height" },
-      cupids_bow_depth: { min: 3, max: 6, ideal: 4.5, description: "Depth of Cupid's bow" },
-      bigonial_width: { min: 0.62, max: 0.78, ideal: 0.70, description: "Ratio of bigonial width to bizygomatic width" },
-      jaw_slope: { min: 62, max: 82, ideal: 72, description: "Angle of jaw line" },
-      eye_aspect_ratio: { min: 0.30, max: 0.45, ideal: 0.37, description: "Ratio of eye height to eye width" },
-      eye_separation_ratio: { min: 0.38, max: 0.48, ideal: 0.43, description: "Ratio of intercanthal distance to facial width" },
-      eyebrow_tilt: { min: 10, max: 20, ideal: 15, description: "Angle of eyebrow tilt" },
-      face_width_to_height: { min: 0.68, max: 0.82, ideal: 0.75, description: "Ratio of facial width to facial height" },
-      jaw_frontal_angle: { min: 108, max: 130, ideal: 118, description: "Angle of jaw at gonion" },
-      ipsilateral_alar_angle: { min: 28, max: 42, ideal: 35, description: "Angle of alar base on one side" },
-      mouth_width_to_nose_width: { min: 1.40, max: 1.80, ideal: 1.60, description: "Ratio of mouth width to nose width" },
-      total_facial_width_to_height: { min: 0.66, max: 0.80, ideal: 0.73, description: "Ratio of total facial width to total facial height" },
-      chin_to_philtrum: { min: 1.70, max: 2.40, ideal: 2.05, description: "Ratio of chin height to philtrum height" },
-      eyebrow_low_setedness: { min: 0.08, max: 0.18, ideal: 0.13, description: "Distance from brow to eye as ratio" },
-      brow_length_to_face_width: { min: 0.30, max: 0.40, ideal: 0.35, description: "Ratio of brow length to facial width" },
+      lateral_canthal_tilt: buildFemaleFront(buildFrontNorms("caucasian", MALE_ASIAN_FRONT, "")).lateral_canthal_tilt!,
+      nose_bridge_to_width: buildFemaleFront(buildFrontNorms("caucasian", MALE_ASIAN_FRONT, "")).nose_bridge_to_width!,
+      ...buildFemaleFront(buildFrontNorms("caucasian", MALE_ASIAN_FRONT, "")),
     }),
     black: createFrontNorms({
-      lateral_canthal_tilt: { min: 4, max: 12, ideal: 8, description: "Slight upward tilt of the lateral canthus" },
-      nose_bridge_to_width: { min: 0.42, max: 0.62, ideal: 0.52, description: "Ratio of nose bridge width to nose width" },
-      cheekbone_height: { min: 0.43, max: 0.56, ideal: 0.50, description: "Ratio of cheekbone height to facial height" },
-      cupids_bow_depth: { min: 3, max: 7, ideal: 5, description: "Depth of Cupid's bow" },
-      bigonial_width: { min: 0.65, max: 0.80, ideal: 0.72, description: "Ratio of bigonial width to bizygomatic width" },
-      eye_separation_ratio: { min: 0.40, max: 0.52, ideal: 0.46, description: "Ratio of intercanthal distance to facial width" },
-      lower_third: { min: 0.31, max: 0.40, ideal: 0.35, description: "Ratio of lower facial third" },
-      face_width_to_height: { min: 0.72, max: 0.85, ideal: 0.78, description: "Ratio of facial width to facial height" },
-      interpupillary_mouth_width: { min: 78, max: 98, ideal: 88, description: "Ratio of mouth width to interpupillary distance" },
-      jaw_frontal_angle: { min: 102, max: 124, ideal: 112, description: "Angle of jaw at gonion" },
-      intercanthal_nasal_width: { min: 0.82, max: 1.02, ideal: 0.92, description: "Ratio of intercanthal distance to nasal width" },
-      ipsilateral_alar_angle: { min: 20, max: 36, ideal: 28, description: "Angle of alar base on one side" },
-      mouth_width_to_nose_width: { min: 1.15, max: 1.55, ideal: 1.35, description: "Ratio of mouth width to nose width" },
-      chin_to_philtrum: { min: 1.60, max: 2.20, ideal: 1.90, description: "Ratio of chin height to philtrum height" },
-      lower_third_proportion: { min: 0.31, max: 0.40, ideal: 0.35, description: "Proportion of lower third" },
+      lateral_canthal_tilt: buildFemaleFront(buildFrontNorms("black", MALE_ASIAN_FRONT, "")).lateral_canthal_tilt!,
+      nose_bridge_to_width: buildFemaleFront(buildFrontNorms("black", MALE_ASIAN_FRONT, "")).nose_bridge_to_width!,
+      ...buildFemaleFront(buildFrontNorms("black", MALE_ASIAN_FRONT, "")),
     }),
     hispanic: createFrontNorms({
-      lateral_canthal_tilt: { min: 5, max: 13, ideal: 9, description: "Slight upward tilt of the lateral canthus" },
-      nose_bridge_to_width: { min: 0.48, max: 0.68, ideal: 0.58, description: "Ratio of nose bridge width to nose width" },
-      bitemporal_width: { min: 0.74, max: 0.86, ideal: 0.80, description: "Ratio of bitemporal width to facial width" },
-      cheekbone_height: { min: 0.42, max: 0.55, ideal: 0.48, description: "Ratio of cheekbone height to facial height" },
-      bigonial_width: { min: 0.64, max: 0.80, ideal: 0.72, description: "Ratio of bigonial width to bizygomatic width" },
-      jaw_slope: { min: 58, max: 78, ideal: 68, description: "Angle of jaw line" },
-      eye_aspect_ratio: { min: 0.30, max: 0.44, ideal: 0.37, description: "Ratio of eye height to eye width" },
-      eye_separation_ratio: { min: 0.39, max: 0.50, ideal: 0.44, description: "Ratio of intercanthal distance to facial width" },
-      eyebrow_tilt: { min: 8, max: 18, ideal: 13, description: "Angle of eyebrow tilt" },
-      face_width_to_height: { min: 0.70, max: 0.84, ideal: 0.77, description: "Ratio of facial width to facial height" },
-      jaw_frontal_angle: { min: 104, max: 126, ideal: 114, description: "Angle of jaw at gonion" },
-      ipsilateral_alar_angle: { min: 26, max: 40, ideal: 33, description: "Angle of alar base on one side" },
-      mouth_width_to_nose_width: { min: 1.30, max: 1.70, ideal: 1.50, description: "Ratio of mouth width to nose width" },
-      total_facial_width_to_height: { min: 0.68, max: 0.82, ideal: 0.75, description: "Ratio of total facial width to total facial height" },
-      chin_to_philtrum: { min: 1.70, max: 2.30, ideal: 2.00, description: "Ratio of chin height to philtrum height" },
-      eyebrow_low_setedness: { min: 0.09, max: 0.19, ideal: 0.14, description: "Distance from brow to eye as ratio" },
-      brow_length_to_face_width: { min: 0.29, max: 0.39, ideal: 0.34, description: "Ratio of brow length to facial width" },
+      lateral_canthal_tilt: buildFemaleFront(buildFrontNorms("hispanic", MALE_ASIAN_FRONT, "")).lateral_canthal_tilt!,
+      nose_bridge_to_width: buildFemaleFront(buildFrontNorms("hispanic", MALE_ASIAN_FRONT, "")).nose_bridge_to_width!,
+      ...buildFemaleFront(buildFrontNorms("hispanic", MALE_ASIAN_FRONT, "")),
     }),
     middle_eastern: createFrontNorms({
-      lateral_canthal_tilt: { min: 5, max: 13, ideal: 9, description: "Slight upward tilt of the lateral canthus" },
-      nose_bridge_to_width: { min: 0.48, max: 0.68, ideal: 0.58, description: "Ratio of nose bridge width to nose width" },
-      bitemporal_width: { min: 0.75, max: 0.87, ideal: 0.81, description: "Ratio of bitemporal width to facial width" },
-      cheekbone_height: { min: 0.41, max: 0.54, ideal: 0.47, description: "Ratio of cheekbone height to facial height" },
-      bigonial_width: { min: 0.64, max: 0.79, ideal: 0.71, description: "Ratio of bigonial width to bizygomatic width" },
-      jaw_slope: { min: 60, max: 80, ideal: 70, description: "Angle of jaw line" },
-      eye_separation_ratio: { min: 0.38, max: 0.49, ideal: 0.43, description: "Ratio of intercanthal distance to facial width" },
-      eyebrow_tilt: { min: 9, max: 19, ideal: 14, description: "Angle of eyebrow tilt" },
-      face_width_to_height: { min: 0.70, max: 0.84, ideal: 0.77, description: "Ratio of facial width to facial height" },
-      jaw_frontal_angle: { min: 105, max: 128, ideal: 116, description: "Angle of jaw at gonion" },
-      ipsilateral_alar_angle: { min: 27, max: 41, ideal: 34, description: "Angle of alar base on one side" },
-      mouth_width_to_nose_width: { min: 1.35, max: 1.75, ideal: 1.55, description: "Ratio of mouth width to nose width" },
-      total_facial_width_to_height: { min: 0.68, max: 0.82, ideal: 0.75, description: "Ratio of total facial width to total facial height" },
-      brow_length_to_face_width: { min: 0.29, max: 0.39, ideal: 0.34, description: "Ratio of brow length to facial width" },
+      lateral_canthal_tilt: buildFemaleFront(buildFrontNorms("middle_eastern", MALE_ASIAN_FRONT, "")).lateral_canthal_tilt!,
+      nose_bridge_to_width: buildFemaleFront(buildFrontNorms("middle_eastern", MALE_ASIAN_FRONT, "")).nose_bridge_to_width!,
+      ...buildFemaleFront(buildFrontNorms("middle_eastern", MALE_ASIAN_FRONT, "")),
     }),
     south_asian: createFrontNorms({
-      lateral_canthal_tilt: { min: 5, max: 13, ideal: 9, description: "Slight upward tilt of the lateral canthus" },
-      nose_bridge_to_width: { min: 0.46, max: 0.66, ideal: 0.56, description: "Ratio of nose bridge width to nose width" },
-      cheekbone_height: { min: 0.42, max: 0.55, ideal: 0.48, description: "Ratio of cheekbone height to facial height" },
-      bigonial_width: { min: 0.65, max: 0.80, ideal: 0.72, description: "Ratio of bigonial width to bizygomatic width" },
-      eye_aspect_ratio: { min: 0.32, max: 0.46, ideal: 0.39, description: "Ratio of eye height to eye width" },
-      eye_separation_ratio: { min: 0.40, max: 0.51, ideal: 0.45, description: "Ratio of intercanthal distance to facial width" },
-      face_width_to_height: { min: 0.71, max: 0.85, ideal: 0.78, description: "Ratio of facial width to facial height" },
-      jaw_frontal_angle: { min: 102, max: 125, ideal: 113, description: "Angle of jaw at gonion" },
-      ipsilateral_alar_angle: { min: 25, max: 39, ideal: 32, description: "Angle of alar base on one side" },
-      total_facial_width_to_height: { min: 0.69, max: 0.83, ideal: 0.76, description: "Ratio of total facial width to total facial height" },
+      lateral_canthal_tilt: buildFemaleFront(buildFrontNorms("south_asian", MALE_ASIAN_FRONT, "")).lateral_canthal_tilt!,
+      nose_bridge_to_width: buildFemaleFront(buildFrontNorms("south_asian", MALE_ASIAN_FRONT, "")).nose_bridge_to_width!,
+      ...buildFemaleFront(buildFrontNorms("south_asian", MALE_ASIAN_FRONT, "")),
     }),
     mixed: createFrontNorms({
-      lateral_canthal_tilt: { min: 5, max: 13, ideal: 9, description: "Slight upward tilt of the lateral canthus" },
-      nose_bridge_to_width: { min: 0.48, max: 0.68, ideal: 0.58, description: "Ratio of nose bridge width to nose width" },
+      lateral_canthal_tilt: buildFemaleFront(buildFrontNorms("mixed", MALE_ASIAN_FRONT, "")).lateral_canthal_tilt!,
+      nose_bridge_to_width: buildFemaleFront(buildFrontNorms("mixed", MALE_ASIAN_FRONT, "")).nose_bridge_to_width!,
+      ...buildFemaleFront(buildFrontNorms("mixed", MALE_ASIAN_FRONT, "")),
     }),
   },
 }
 
-// ============================================================
-// SIDE PROFILE IDEAL VALUES
-// ============================================================
-
 export const SIDE_IDEALS: Record<Gender, Record<Ethnicity, MeasurementNorms>> = {
   male: {
     asian: createSideNorms({
-      nasal_tip_angle: { min: 106.16, max: 166.84, ideal: 136.5, description: "Angle of the nasal tip" },
-      nasofrontal_angle: { min: 79.18, max: 173.22, ideal: 126.2, description: "Angle between forehead and nasal bridge" },
-      nasolabial_angle: { min: 55.02, max: 145.98, ideal: 100.5, description: "Angle between nose base and upper lip" },
-      nasofacial_angle: { min: 15.93, max: 48.07, ideal: 32, description: "Angle between nasal bridge and facial plane" },
-      nasomental_angle: { min: 105.26, max: 153.74, ideal: 129.5, description: "Angle between nose and chin" },
-      gonial_angle: { min: 94.34, max: 145.66, ideal: 120, description: "Angle of the mandible at gonion" },
-      mandibular_plane_angle: { min: -4.68, max: 43.68, ideal: 19.5, description: "Angle of mandibular plane" },
-      z_angle: { min: 54.18, max: 105.82, ideal: 80, description: "Z-angle of soft tissue profile" },
-      nose_tip_rotation: { min: -15.08, max: 48.08, ideal: 16.5, description: "Nose tip rotation angle" },
-      facial_convexity_nasion: { min: 134.63, max: 196.37, ideal: 165.5, description: "Facial convexity angle at nasion" },
-      total_facial_convexity: { min: 120.14, max: 170.86, ideal: 145.5, description: "Total facial convexity angle" },
-      facial_convexity_glabella: { min: 153.31, max: 193.69, ideal: 173.5, description: "Facial convexity angle at glabella" },
-      browridge_inclination: { min: -0.75, max: 37.75, ideal: 18.5, description: "Inclination angle of brow ridge" },
-      upper_forehead_slope: { min: -13.30, max: 15.30, ideal: 1.0, description: "Slope of upper forehead" },
-      mentolabial_angle: { min: 60.13, max: 185.87, ideal: 123, description: "Angle between lower lip and chin" },
-      frankfort_tip_angle: { min: 5.59, max: 64.41, ideal: 35, description: "Angle between Frankfort plane and nose tip" },
-      interior_midface_projection: { min: 35.75, max: 85.25, ideal: 60.5, description: "Interior midface projection angle" },
-      anterior_facial_depth: { min: 36.12, max: 103.88, ideal: 70, description: "Angle at subalare between tragus and orbitale (degrees)" },
-      nasal_width_to_height: { min: -0.01, max: 1.31, ideal: 0.65, description: "Ratio of nasal width to nasal height" },
-      upper_lip_s_line: { min: -8.19, max: 7.19, ideal: -0.5, description: "Upper lip position relative to S-line (mm)" },
-      nasal_projection: { min: 0.11, max: 1.02, ideal: 0.565, description: "Ratio of nasal projection to nasal length" },
-      recession_frankfort: { min: -24.08, max: 39.05, ideal: 7.485, description: "Recession relative to Frankfort plane (mm)" },
-      holdaway_h_line: { min: -9.79, max: 8.79, ideal: -0.5, description: "Holdaway H-line measurement (mm)" },
-      upper_lip_e_line: { min: -7.56, max: 12.56, ideal: 2.5, description: "Upper lip position relative to E-line (mm)" },
-      submental_cervical_angle: { min: 56.02, max: 143.98, ideal: 100, description: "Angle between submental and cervical planes" },
-      facial_depth_to_height: { min: 0.94, max: 1.76, ideal: 1.35, description: "Ratio of facial depth to facial height" },
-      orbital_vector: { min: -10.33, max: 19.25, ideal: 4.46, description: "Orbital vector measurement (mm)" },
-      lower_lip_s_line: { min: -8.19, max: 7.19, ideal: -0.5, description: "Lower lip position relative to S-line (mm)" },
-      lower_lip_e_line: { min: -7.74, max: 11.24, ideal: 1.75, description: "Lower lip position relative to E-line (mm)" },
-      lower_lip_burstone: { min: -9.47, max: 3.48, ideal: -2.995, description: "Lower lip position relative to Burstone line (mm)" },
-      ramus_to_mandible: { min: -0.20, max: 1.57, ideal: 0.685, description: "Ratio of ramus height to mandibular body length" },
-      gonion_to_mouth: { min: -4.95, max: 64.95, ideal: 30, description: "Gonion to mouth line distance (mm)" },
+      nasal_tip_angle: MALE_ASIAN_SIDE.nasal_tip_angle!,
     }),
     caucasian: createSideNorms({
-      nasal_tip_angle: { min: 68, max: 82, ideal: 75, description: "Angle of the nasal tip" },
-      nasofrontal_angle: { min: 115, max: 135, ideal: 125, description: "Angle between forehead and nasal bridge" },
-      nasolabial_angle: { min: 90, max: 110, ideal: 100, description: "Angle between nose base and upper lip" },
-      nasofacial_angle: { min: 30, max: 40, ideal: 35, description: "Angle between nasal bridge and facial plane" },
-      nasomental_angle: { min: 120, max: 135, ideal: 128, description: "Angle between nose and chin" },
-      gonial_angle: { min: 115, max: 135, ideal: 125, description: "Angle of the mandible at gonion" },
-      mandibular_plane_angle: { min: 20, max: 35, ideal: 28, description: "Angle of mandibular plane" },
-      z_angle: { min: 60, max: 80, ideal: 70, description: "Z-angle of soft tissue profile" },
-      nose_tip_rotation: { min: 90, max: 115, ideal: 102, description: "Nose tip rotation angle" },
-      facial_convexity_nasion: { min: 155, max: 175, ideal: 165, description: "Facial convexity angle at nasion" },
-      total_facial_convexity: { min: 155, max: 175, ideal: 165, description: "Total facial convexity angle" },
-      facial_convexity_glabella: { min: 160, max: 178, ideal: 169, description: "Facial convexity angle at glabella" },
-      browridge_inclination: { min: 50, max: 70, ideal: 60, description: "Inclination angle of brow ridge" },
-      upper_forehead_slope: { min: 5, max: 15, ideal: 10, description: "Slope of upper forehead" },
-      mentolabial_angle: { min: 100, max: 130, ideal: 115, description: "Angle between lower lip and chin" },
-      frankfort_tip_angle: { min: 105, max: 125, ideal: 115, description: "Angle between Frankfort plane and nose tip" },
-      interior_midface_projection: { min: 10, max: 20, ideal: 15, description: "Interior midface projection angle" },
+      nasal_tip_angle: buildSideNorms("caucasian", MALE_ASIAN_SIDE).nasal_tip_angle!,
+      ...buildSideNorms("caucasian", MALE_ASIAN_SIDE),
     }),
     black: createSideNorms({
-      nasal_tip_angle: { min: 62, max: 78, ideal: 70, description: "Angle of the nasal tip" },
-      nasofrontal_angle: { min: 120, max: 140, ideal: 130, description: "Angle between forehead and nasal bridge" },
-      nasolabial_angle: { min: 85, max: 105, ideal: 95, description: "Angle between nose base and upper lip" },
-      nasofacial_angle: { min: 32, max: 42, ideal: 37, description: "Angle between nasal bridge and facial plane" },
-      nasomental_angle: { min: 122, max: 138, ideal: 130, description: "Angle between nose and chin" },
-      gonial_angle: { min: 118, max: 138, ideal: 128, description: "Angle of the mandible at gonion" },
-      mandibular_plane_angle: { min: 22, max: 38, ideal: 30, description: "Angle of mandibular plane" },
-      z_angle: { min: 58, max: 78, ideal: 68, description: "Z-angle of soft tissue profile" },
-      nose_tip_rotation: { min: 92, max: 118, ideal: 105, description: "Nose tip rotation angle" },
-      facial_convexity_nasion: { min: 158, max: 178, ideal: 168, description: "Facial convexity angle at nasion" },
-      total_facial_convexity: { min: 158, max: 178, ideal: 168, description: "Total facial convexity angle" },
-      facial_convexity_glabella: { min: 162, max: 180, ideal: 171, description: "Facial convexity angle at glabella" },
-      browridge_inclination: { min: 48, max: 68, ideal: 58, description: "Inclination angle of brow ridge" },
-      upper_forehead_slope: { min: 4, max: 14, ideal: 9, description: "Slope of upper forehead" },
-      mentolabial_angle: { min: 102, max: 132, ideal: 117, description: "Angle between lower lip and chin" },
-      frankfort_tip_angle: { min: 108, max: 128, ideal: 118, description: "Angle between Frankfort plane and nose tip" },
-      interior_midface_projection: { min: 12, max: 22, ideal: 17, description: "Interior midface projection angle" },
+      nasal_tip_angle: buildSideNorms("black", MALE_ASIAN_SIDE).nasal_tip_angle!,
+      ...buildSideNorms("black", MALE_ASIAN_SIDE),
     }),
     hispanic: createSideNorms({
-      nasal_tip_angle: { min: 66, max: 80, ideal: 73, description: "Angle of the nasal tip" },
-      nasofrontal_angle: { min: 116, max: 136, ideal: 126, description: "Angle between forehead and nasal bridge" },
-      nasolabial_angle: { min: 88, max: 108, ideal: 98, description: "Angle between nose base and upper lip" },
-      nasofacial_angle: { min: 30, max: 40, ideal: 35, description: "Angle between nasal bridge and facial plane" },
-      nasomental_angle: { min: 120, max: 136, ideal: 128, description: "Angle between nose and chin" },
-      gonial_angle: { min: 116, max: 136, ideal: 126, description: "Angle of the mandible at gonion" },
-      mandibular_plane_angle: { min: 20, max: 36, ideal: 28, description: "Angle of mandibular plane" },
-      z_angle: { min: 60, max: 80, ideal: 70, description: "Z-angle of soft tissue profile" },
-      nose_tip_rotation: { min: 90, max: 116, ideal: 103, description: "Nose tip rotation angle" },
-      facial_convexity_nasion: { min: 156, max: 176, ideal: 166, description: "Facial convexity angle at nasion" },
-      total_facial_convexity: { min: 156, max: 176, ideal: 166, description: "Total facial convexity angle" },
-      facial_convexity_glabella: { min: 160, max: 179, ideal: 170, description: "Facial convexity angle at glabella" },
-      browridge_inclination: { min: 50, max: 70, ideal: 60, description: "Inclination angle of brow ridge" },
-      upper_forehead_slope: { min: 5, max: 15, ideal: 10, description: "Slope of upper forehead" },
-      mentolabial_angle: { min: 100, max: 130, ideal: 115, description: "Angle between lower lip and chin" },
-      frankfort_tip_angle: { min: 106, max: 126, ideal: 116, description: "Angle between Frankfort plane and nose tip" },
-      interior_midface_projection: { min: 10, max: 20, ideal: 15, description: "Interior midface projection angle" },
+      nasal_tip_angle: buildSideNorms("hispanic", MALE_ASIAN_SIDE).nasal_tip_angle!,
+      ...buildSideNorms("hispanic", MALE_ASIAN_SIDE),
     }),
     middle_eastern: createSideNorms({
-      nasal_tip_angle: { min: 66, max: 80, ideal: 73, description: "Angle of the nasal tip" },
-      nasofrontal_angle: { min: 114, max: 134, ideal: 124, description: "Angle between forehead and nasal bridge" },
-      nasolabial_angle: { min: 88, max: 108, ideal: 98, description: "Angle between nose base and upper lip" },
-      nasofacial_angle: { min: 30, max: 40, ideal: 35, description: "Angle between nasal bridge and facial plane" },
-      nasomental_angle: { min: 120, max: 135, ideal: 128, description: "Angle between nose and chin" },
-      gonial_angle: { min: 115, max: 135, ideal: 125, description: "Angle of the mandible at gonion" },
-      mandibular_plane_angle: { min: 20, max: 35, ideal: 28, description: "Angle of mandibular plane" },
-      z_angle: { min: 60, max: 80, ideal: 70, description: "Z-angle of soft tissue profile" },
-      nose_tip_rotation: { min: 90, max: 115, ideal: 102, description: "Nose tip rotation angle" },
-      facial_convexity_nasion: { min: 155, max: 175, ideal: 165, description: "Facial convexity angle at nasion" },
-      total_facial_convexity: { min: 155, max: 175, ideal: 165, description: "Total facial convexity angle" },
-      facial_convexity_glabella: { min: 160, max: 178, ideal: 169, description: "Facial convexity angle at glabella" },
-      browridge_inclination: { min: 50, max: 70, ideal: 60, description: "Inclination angle of brow ridge" },
-      upper_forehead_slope: { min: 5, max: 15, ideal: 10, description: "Slope of upper forehead" },
-      mentolabial_angle: { min: 100, max: 130, ideal: 115, description: "Angle between lower lip and chin" },
-      frankfort_tip_angle: { min: 105, max: 125, ideal: 115, description: "Angle between Frankfort plane and nose tip" },
-      interior_midface_projection: { min: 10, max: 20, ideal: 15, description: "Interior midface projection angle" },
+      nasal_tip_angle: buildSideNorms("middle_eastern", MALE_ASIAN_SIDE).nasal_tip_angle!,
+      ...buildSideNorms("middle_eastern", MALE_ASIAN_SIDE),
     }),
     south_asian: createSideNorms({
-      nasal_tip_angle: { min: 64, max: 78, ideal: 71, description: "Angle of the nasal tip" },
-      nasofrontal_angle: { min: 118, max: 138, ideal: 128, description: "Angle between forehead and nasal bridge" },
-      nasolabial_angle: { min: 86, max: 106, ideal: 96, description: "Angle between nose base and upper lip" },
-      nasofacial_angle: { min: 30, max: 40, ideal: 35, description: "Angle between nasal bridge and facial plane" },
-      nasomental_angle: { min: 122, max: 138, ideal: 130, description: "Angle between nose and chin" },
-      gonial_angle: { min: 118, max: 138, ideal: 128, description: "Angle of the mandible at gonion" },
-      mandibular_plane_angle: { min: 22, max: 38, ideal: 30, description: "Angle of mandibular plane" },
-      z_angle: { min: 60, max: 80, ideal: 70, description: "Z-angle of soft tissue profile" },
-      nose_tip_rotation: { min: 92, max: 118, ideal: 105, description: "Nose tip rotation angle" },
-      facial_convexity_nasion: { min: 158, max: 178, ideal: 168, description: "Facial convexity angle at nasion" },
-      total_facial_convexity: { min: 158, max: 178, ideal: 168, description: "Total facial convexity angle" },
-      facial_convexity_glabella: { min: 162, max: 180, ideal: 171, description: "Facial convexity angle at glabella" },
-      browridge_inclination: { min: 50, max: 70, ideal: 60, description: "Inclination angle of brow ridge" },
-      upper_forehead_slope: { min: 5, max: 15, ideal: 10, description: "Slope of upper forehead" },
-      mentolabial_angle: { min: 102, max: 132, ideal: 117, description: "Angle between lower lip and chin" },
-      frankfort_tip_angle: { min: 108, max: 128, ideal: 118, description: "Angle between Frankfort plane and nose tip" },
-      interior_midface_projection: { min: 12, max: 22, ideal: 17, description: "Interior midface projection angle" },
+      nasal_tip_angle: buildSideNorms("south_asian", MALE_ASIAN_SIDE).nasal_tip_angle!,
+      ...buildSideNorms("south_asian", MALE_ASIAN_SIDE),
     }),
     mixed: createSideNorms({
-      nasal_tip_angle: { min: 66, max: 80, ideal: 73, description: "Angle of the nasal tip" },
+      nasal_tip_angle: buildSideNorms("mixed", MALE_ASIAN_SIDE).nasal_tip_angle!,
+      ...buildSideNorms("mixed", MALE_ASIAN_SIDE),
     }),
   },
   female: {
     asian: createSideNorms({
-      nasal_tip_angle: { min: 68, max: 84, ideal: 76, description: "Angle of the nasal tip" },
-      nasofrontal_angle: { min: 120, max: 140, ideal: 130, description: "Angle between forehead and nasal bridge" },
-      nasolabial_angle: { min: 92, max: 112, ideal: 102, description: "Angle between nose base and upper lip" },
-      nasofacial_angle: { min: 32, max: 42, ideal: 37, description: "Angle between nasal bridge and facial plane" },
-      nasomental_angle: { min: 124, max: 140, ideal: 132, description: "Angle between nose and chin" },
-      gonial_angle: { min: 120, max: 140, ideal: 130, description: "Angle of the mandible at gonion" },
-      mandibular_plane_angle: { min: 24, max: 40, ideal: 32, description: "Angle of mandibular plane" },
-      z_angle: { min: 64, max: 84, ideal: 74, description: "Z-angle of soft tissue profile" },
-      nose_tip_rotation: { min: 95, max: 120, ideal: 108, description: "Nose tip rotation angle" },
-      facial_convexity_nasion: { min: 160, max: 180, ideal: 170, description: "Facial convexity angle at nasion" },
-      total_facial_convexity: { min: 160, max: 180, ideal: 170, description: "Total facial convexity angle" },
-      facial_convexity_glabella: { min: 164, max: 182, ideal: 173, description: "Facial convexity angle at glabella" },
-      browridge_inclination: { min: 48, max: 68, ideal: 58, description: "Inclination angle of brow ridge" },
-      upper_forehead_slope: { min: 6, max: 16, ideal: 11, description: "Slope of upper forehead" },
-      mentolabial_angle: { min: 104, max: 134, ideal: 119, description: "Angle between lower lip and chin" },
-      frankfort_tip_angle: { min: 110, max: 130, ideal: 120, description: "Angle between Frankfort plane and nose tip" },
-      interior_midface_projection: { min: 14, max: 24, ideal: 19, description: "Interior midface projection angle" },
+      nasal_tip_angle: buildFemaleSide(MALE_ASIAN_SIDE).nasal_tip_angle!,
+      ...buildFemaleSide(MALE_ASIAN_SIDE),
     }),
     caucasian: createSideNorms({
-      nasal_tip_angle: { min: 70, max: 86, ideal: 78, description: "Angle of the nasal tip" },
-      nasofrontal_angle: { min: 118, max: 138, ideal: 128, description: "Angle between forehead and nasal bridge" },
-      nasolabial_angle: { min: 95, max: 115, ideal: 105, description: "Angle between nose base and upper lip" },
-      nasofacial_angle: { min: 32, max: 42, ideal: 37, description: "Angle between nasal bridge and facial plane" },
-      nasomental_angle: { min: 122, max: 138, ideal: 130, description: "Angle between nose and chin" },
-      gonial_angle: { min: 118, max: 138, ideal: 128, description: "Angle of the mandible at gonion" },
-      mandibular_plane_angle: { min: 22, max: 38, ideal: 30, description: "Angle of mandibular plane" },
-      z_angle: { min: 62, max: 82, ideal: 72, description: "Z-angle of soft tissue profile" },
-      nose_tip_rotation: { min: 92, max: 118, ideal: 105, description: "Nose tip rotation angle" },
-      facial_convexity_nasion: { min: 158, max: 178, ideal: 168, description: "Facial convexity angle at nasion" },
-      total_facial_convexity: { min: 158, max: 178, ideal: 168, description: "Total facial convexity angle" },
-      facial_convexity_glabella: { min: 162, max: 180, ideal: 171, description: "Facial convexity angle at glabella" },
-      browridge_inclination: { min: 46, max: 66, ideal: 56, description: "Inclination angle of brow ridge" },
-      upper_forehead_slope: { min: 5, max: 15, ideal: 10, description: "Slope of upper forehead" },
-      mentolabial_angle: { min: 102, max: 132, ideal: 117, description: "Angle between lower lip and chin" },
-      frankfort_tip_angle: { min: 108, max: 128, ideal: 118, description: "Angle between Frankfort plane and nose tip" },
-      interior_midface_projection: { min: 12, max: 22, ideal: 17, description: "Interior midface projection angle" },
+      nasal_tip_angle: buildFemaleSide(buildSideNorms("caucasian", MALE_ASIAN_SIDE)).nasal_tip_angle!,
+      ...buildFemaleSide(buildSideNorms("caucasian", MALE_ASIAN_SIDE)),
     }),
     black: createSideNorms({
-      nasal_tip_angle: { min: 65, max: 80, ideal: 72, description: "Angle of the nasal tip" },
-      nasofrontal_angle: { min: 122, max: 142, ideal: 132, description: "Angle between forehead and nasal bridge" },
-      nasolabial_angle: { min: 88, max: 108, ideal: 98, description: "Angle between nose base and upper lip" },
-      nasofacial_angle: { min: 34, max: 44, ideal: 39, description: "Angle between nasal bridge and facial plane" },
-      nasomental_angle: { min: 124, max: 140, ideal: 132, description: "Angle between nose and chin" },
-      gonial_angle: { min: 120, max: 140, ideal: 130, description: "Angle of the mandible at gonion" },
-      mandibular_plane_angle: { min: 24, max: 40, ideal: 32, description: "Angle of mandibular plane" },
-      z_angle: { min: 60, max: 80, ideal: 70, description: "Z-angle of soft tissue profile" },
-      nose_tip_rotation: { min: 95, max: 120, ideal: 108, description: "Nose tip rotation angle" },
-      facial_convexity_nasion: { min: 160, max: 180, ideal: 170, description: "Facial convexity angle at nasion" },
-      total_facial_convexity: { min: 160, max: 180, ideal: 170, description: "Total facial convexity angle" },
-      facial_convexity_glabella: { min: 164, max: 182, ideal: 173, description: "Facial convexity angle at glabella" },
-      browridge_inclination: { min: 44, max: 64, ideal: 54, description: "Inclination angle of brow ridge" },
-      upper_forehead_slope: { min: 4, max: 14, ideal: 9, description: "Slope of upper forehead" },
-      mentolabial_angle: { min: 104, max: 134, ideal: 119, description: "Angle between lower lip and chin" },
-      frankfort_tip_angle: { min: 110, max: 130, ideal: 120, description: "Angle between Frankfort plane and nose tip" },
-      interior_midface_projection: { min: 14, max: 24, ideal: 19, description: "Interior midface projection angle" },
+      nasal_tip_angle: buildFemaleSide(buildSideNorms("black", MALE_ASIAN_SIDE)).nasal_tip_angle!,
+      ...buildFemaleSide(buildSideNorms("black", MALE_ASIAN_SIDE)),
     }),
     hispanic: createSideNorms({
-      nasal_tip_angle: { min: 68, max: 84, ideal: 76, description: "Angle of the nasal tip" },
-      nasofrontal_angle: { min: 118, max: 138, ideal: 128, description: "Angle between forehead and nasal bridge" },
-      nasolabial_angle: { min: 92, max: 112, ideal: 102, description: "Angle between nose base and upper lip" },
-      nasofacial_angle: { min: 32, max: 42, ideal: 37, description: "Angle between nasal bridge and facial plane" },
-      nasomental_angle: { min: 122, max: 138, ideal: 130, description: "Angle between nose and chin" },
-      gonial_angle: { min: 118, max: 138, ideal: 128, description: "Angle of the mandible at gonion" },
-      mandibular_plane_angle: { min: 22, max: 38, ideal: 30, description: "Angle of mandibular plane" },
-      z_angle: { min: 62, max: 82, ideal: 72, description: "Z-angle of soft tissue profile" },
-      nose_tip_rotation: { min: 92, max: 118, ideal: 105, description: "Nose tip rotation angle" },
-      facial_convexity_nasion: { min: 158, max: 178, ideal: 168, description: "Facial convexity angle at nasion" },
-      total_facial_convexity: { min: 158, max: 178, ideal: 168, description: "Total facial convexity angle" },
-      facial_convexity_glabella: { min: 162, max: 180, ideal: 171, description: "Facial convexity angle at glabella" },
-      browridge_inclination: { min: 46, max: 66, ideal: 56, description: "Inclination angle of brow ridge" },
-      upper_forehead_slope: { min: 5, max: 15, ideal: 10, description: "Slope of upper forehead" },
-      mentolabial_angle: { min: 102, max: 132, ideal: 117, description: "Angle between lower lip and chin" },
-      frankfort_tip_angle: { min: 108, max: 128, ideal: 118, description: "Angle between Frankfort plane and nose tip" },
-      interior_midface_projection: { min: 12, max: 22, ideal: 17, description: "Interior midface projection angle" },
+      nasal_tip_angle: buildFemaleSide(buildSideNorms("hispanic", MALE_ASIAN_SIDE)).nasal_tip_angle!,
+      ...buildFemaleSide(buildSideNorms("hispanic", MALE_ASIAN_SIDE)),
     }),
     middle_eastern: createSideNorms({
-      nasal_tip_angle: { min: 68, max: 84, ideal: 76, description: "Angle of the nasal tip" },
-      nasofrontal_angle: { min: 116, max: 136, ideal: 126, description: "Angle between forehead and nasal bridge" },
-      nasolabial_angle: { min: 92, max: 112, ideal: 102, description: "Angle between nose base and upper lip" },
-      nasofacial_angle: { min: 32, max: 42, ideal: 37, description: "Angle between nasal bridge and facial plane" },
-      nasomental_angle: { min: 122, max: 138, ideal: 130, description: "Angle between nose and chin" },
-      gonial_angle: { min: 118, max: 138, ideal: 128, description: "Angle of the mandible at gonion" },
-      mandibular_plane_angle: { min: 22, max: 38, ideal: 30, description: "Angle of mandibular plane" },
-      z_angle: { min: 62, max: 82, ideal: 72, description: "Z-angle of soft tissue profile" },
-      nose_tip_rotation: { min: 92, max: 118, ideal: 105, description: "Nose tip rotation angle" },
-      facial_convexity_nasion: { min: 158, max: 178, ideal: 168, description: "Facial convexity angle at nasion" },
-      total_facial_convexity: { min: 158, max: 178, ideal: 168, description: "Total facial convexity angle" },
-      facial_convexity_glabella: { min: 162, max: 180, ideal: 171, description: "Facial convexity angle at glabella" },
-      browridge_inclination: { min: 46, max: 66, ideal: 56, description: "Inclination angle of brow ridge" },
-      upper_forehead_slope: { min: 5, max: 15, ideal: 10, description: "Slope of upper forehead" },
-      mentolabial_angle: { min: 102, max: 132, ideal: 117, description: "Angle between lower lip and chin" },
-      frankfort_tip_angle: { min: 108, max: 128, ideal: 118, description: "Angle between Frankfort plane and nose tip" },
-      interior_midface_projection: { min: 12, max: 22, ideal: 17, description: "Interior midface projection angle" },
+      nasal_tip_angle: buildFemaleSide(buildSideNorms("middle_eastern", MALE_ASIAN_SIDE)).nasal_tip_angle!,
+      ...buildFemaleSide(buildSideNorms("middle_eastern", MALE_ASIAN_SIDE)),
     }),
     south_asian: createSideNorms({
-      nasal_tip_angle: { min: 66, max: 82, ideal: 74, description: "Angle of the nasal tip" },
-      nasofrontal_angle: { min: 120, max: 140, ideal: 130, description: "Angle between forehead and nasal bridge" },
-      nasolabial_angle: { min: 90, max: 110, ideal: 100, description: "Angle between nose base and upper lip" },
-      nasofacial_angle: { min: 32, max: 42, ideal: 37, description: "Angle between nasal bridge and facial plane" },
-      nasomental_angle: { min: 124, max: 140, ideal: 132, description: "Angle between nose and chin" },
-      gonial_angle: { min: 120, max: 140, ideal: 130, description: "Angle of the mandible at gonion" },
-      mandibular_plane_angle: { min: 24, max: 40, ideal: 32, description: "Angle of mandibular plane" },
-      z_angle: { min: 62, max: 82, ideal: 72, description: "Z-angle of soft tissue profile" },
-      nose_tip_rotation: { min: 95, max: 120, ideal: 108, description: "Nose tip rotation angle" },
-      facial_convexity_nasion: { min: 160, max: 180, ideal: 170, description: "Facial convexity angle at nasion" },
-      total_facial_convexity: { min: 160, max: 180, ideal: 170, description: "Total facial convexity angle" },
-      facial_convexity_glabella: { min: 164, max: 182, ideal: 173, description: "Facial convexity angle at glabella" },
-      browridge_inclination: { min: 46, max: 66, ideal: 56, description: "Inclination angle of brow ridge" },
-      upper_forehead_slope: { min: 5, max: 15, ideal: 10, description: "Slope of upper forehead" },
-      mentolabial_angle: { min: 104, max: 134, ideal: 119, description: "Angle between lower lip and chin" },
-      frankfort_tip_angle: { min: 110, max: 130, ideal: 120, description: "Angle between Frankfort plane and nose tip" },
-      interior_midface_projection: { min: 14, max: 24, ideal: 19, description: "Interior midface projection angle" },
+      nasal_tip_angle: buildFemaleSide(buildSideNorms("south_asian", MALE_ASIAN_SIDE)).nasal_tip_angle!,
+      ...buildFemaleSide(buildSideNorms("south_asian", MALE_ASIAN_SIDE)),
     }),
     mixed: createSideNorms({
-      nasal_tip_angle: { min: 68, max: 84, ideal: 76, description: "Angle of the nasal tip" },
+      nasal_tip_angle: buildFemaleSide(buildSideNorms("mixed", MALE_ASIAN_SIDE)).nasal_tip_angle!,
+      ...buildFemaleSide(buildSideNorms("mixed", MALE_ASIAN_SIDE)),
     }),
   },
 }
@@ -709,7 +692,3 @@ export const SIDE_MEASUREMENTS_META: MeasurementMeta[] = [
   { id: "ramus_to_mandible", name: "Ramus to Mandible Ratio", unit: "ratio", category: "Jaw", description: "Ratio of ramus height to mandibular body length" },
   { id: "gonion_to_mouth", name: "Gonion to Mouth Line", unit: "ratio", category: "Jaw", description: "Ratio of gonion-to-mouth distance to facial height" },
 ]
-
-
-
-

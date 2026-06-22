@@ -121,46 +121,93 @@ function vDist(a: LandmarkPoint, b: LandmarkPoint): number {
 // H_i = 10 × exp(-0.5 × D_i^2)
 // ============================================================
 
-function calculateHarmonyScore(value: number, idealMin: number, idealMax: number, ideal: number): number {
-  const range = (idealMax - idealMin) / 2
-  if (range === 0) return 10
-  const deviation = Math.abs(value - ideal) / range
-  const score = 10 * Math.exp(-0.3 * deviation * deviation)
-  return Math.round(score * 10) / 10
+/**
+ * Plateau Gaussian Curve Scoring (K=5.0)
+ * Bước 1: Nếu IdealMin <= V <= IdealMax → 10.0
+ * Bước 2: Nếu V <= RangeMin hoặc V >= RangeMax → 0.0
+ * Bước 3: Tính tỷ lệ lệch R = D / L
+ * Bước 4: Đối chiếu bảng điểm Gaussian
+ */
+function calculatePlateauGaussianScore(value: number, rangeMin: number, rangeMax: number, idealMin: number, idealMax: number): number {
+  // Step 1: In plateau → perfect 10
+  if (value >= idealMin && value <= idealMax) return 10.0
+
+  // Step 2: Outside full range → 0
+  if (value <= rangeMin || value >= rangeMax) return 0.0
+
+  // Step 3: Calculate R
+  let D: number, L: number
+  if (value < idealMin) {
+    D = idealMin - value
+    L = idealMin - rangeMin
+  } else {
+    D = value - idealMax
+    L = rangeMax - idealMax
+  }
+
+  if (L <= 0) return 0.0
+  const R = D / L // 0.0 to 1.0
+
+  // Step 4: Gaussian lookup table (K=5.0)
+  if (R <= 0.15) {
+    // 0.01-0.15: 9.0 → 9.8 (linear map)
+    return Math.round((9.8 - (R / 0.15) * 0.8) * 10) / 10
+  } else if (R <= 0.30) {
+    // 0.16-0.30: 7.0 → 8.9
+    const t = (R - 0.16) / 0.14 // 0→1
+    return Math.round((8.9 - t * 1.9) * 10) / 10
+  } else if (R <= 0.45) {
+    // 0.31-0.45: 4.5 → 6.9
+    const t = (R - 0.31) / 0.14
+    return Math.round((6.9 - t * 2.4) * 10) / 10
+  } else if (R <= 0.60) {
+    // 0.46-0.60: 2.5 → 4.4
+    const t = (R - 0.46) / 0.14
+    return Math.round((4.4 - t * 1.9) * 10) / 10
+  } else if (R <= 0.80) {
+    // 0.61-0.80: 1.0 → 2.4
+    const t = (R - 0.61) / 0.19
+    return Math.round((2.4 - t * 1.4) * 10) / 10
+  } else {
+    // R > 0.80: 0.1 → 0.9
+    const t = Math.min((R - 0.81) / 0.19, 1.0)
+    return Math.round((0.9 - t * 0.8) * 10) / 10
+  }
 }
 
-function classifyDeviation(value: number, idealMin: number, idealMax: number, ideal: number): "low" | "ideal" | "high" {
-  const range = (idealMax - idealMin) / 2
-  if (range === 0) return "ideal"
-  const deviation = Math.abs(value - ideal) / range
-  if (deviation <= 1.0) return "ideal"
-  if (value < ideal) return "low"
+function classifyDeviation(value: number, idealMin: number, idealMax: number): "low" | "ideal" | "high" {
+  if (value >= idealMin && value <= idealMax) return "ideal"
+  if (value < idealMin) return "low"
   return "high"
 }
 
 function createMeasurement(
   id: string, name: string, value: number, unit: "degrees" | "ratio" | "mm" | "percentage",
-  category: string, description: string, idealMin: number, idealMax: number, ideal: number
+  category: string, description: string, rangeMin: number, rangeMax: number, idealMin: number, idealMax: number
 ): MeasurementResult {
-  const score = calculateHarmonyScore(value, idealMin, idealMax, ideal)
-  const deviation = classifyDeviation(value, idealMin, idealMax, ideal)
-  const range = (idealMax - idealMin) / 2
-  const devValue = range > 0 ? Math.abs(value - ideal) / range : 0
+  const score = calculatePlateauGaussianScore(value, rangeMin, rangeMax, idealMin, idealMax)
+  const deviation = classifyDeviation(value, idealMin, idealMax)
 
   let interpretation = ""
-  if (devValue <= 1.0) {
-    interpretation = `Your ${name.toLowerCase()} of ${value.toFixed(1)} ${unit} is within the ideal range (${idealMin}-${idealMax} ${unit}). This indicates good facial harmony.`
-  } else if (devValue <= 2.0) {
-    interpretation = `Your ${name.toLowerCase()} of ${value.toFixed(1)} ${unit} is slightly outside the ideal range (${idealMin}-${idealMax} ${unit}). This is acceptable but could be improved.`
+  if (score >= 10.0) {
+    interpretation = `Your ${name.toLowerCase()} of ${value.toFixed(1)} ${unit} falls within the ideal plateau (${idealMin.toFixed(1)}-${idealMax.toFixed(1)} ${unit}). Perfect score!`
+  } else if (score >= 7.0) {
+    interpretation = `Your ${name.toLowerCase()} of ${value.toFixed(1)} ${unit} is slightly outside the ideal range (${idealMin.toFixed(1)}-${idealMax.toFixed(1)} ${unit}). Minor deviation, still very good.`
+  } else if (score >= 4.5) {
+    interpretation = `Your ${name.toLowerCase()} of ${value.toFixed(1)} ${unit} shows moderate deviation from the ideal range (${idealMin.toFixed(1)}-${idealMax.toFixed(1)} ${unit}). Room for improvement.`
+  } else if (score >= 2.5) {
+    interpretation = `Your ${name.toLowerCase()} of ${value.toFixed(1)} ${unit} is significantly off from the ideal range (${idealMin.toFixed(1)}-${idealMax.toFixed(1)} ${unit}). Consider this area for enhancement.`
+  } else if (score > 0) {
+    interpretation = `Your ${name.toLowerCase()} of ${value.toFixed(1)} ${unit} is far from the ideal range (${idealMin.toFixed(1)}-${idealMax.toFixed(1)} ${unit}). This may indicate notable facial disharmony.`
   } else {
-    interpretation = `Your ${name.toLowerCase()} of ${value.toFixed(1)} ${unit} is significantly outside the ideal range (${idealMin}-${idealMax} ${unit}). This may indicate facial disharmony.`
+    interpretation = `Your ${name.toLowerCase()} of ${value.toFixed(1)} ${unit} falls completely outside the measurable range (${rangeMin.toFixed(1)}-${rangeMax.toFixed(1)} ${unit}).`
   }
 
   return {
     id, name, value: Math.round(value * 100) / 100,
     unit, score: Math.round(score * 10) / 10,
     idealRange: [idealMin, idealMax],
-    description, category, isIdeal: devValue <= 1.0,
+    description, category, isIdeal: score >= 10.0,
     deviation, interpretation
   }
 }
@@ -185,7 +232,7 @@ function calculateFrontMeasurements(
   ) => {
     const ideal = ideals[id]
     if (!ideal) return
-    results.push(createMeasurement(id, name, value, unit, category, description, ideal.min, ideal.max, ideal.ideal))
+    results.push(createMeasurement(id, name, value, unit, category, description, ideal.min, ideal.max, ideal.idealMin, ideal.idealMax))
   }
 
   const L = (...ids: string[]) => {
@@ -537,9 +584,9 @@ function calculateFrontMeasurements(
   if (hairline && chinBottom && leftCheekbone && rightCheekbone) {
     const totalHeight = vDist(hairline, chinBottom)
     const totalWidth = dist(leftCheekbone, rightCheekbone)
-    if (totalWidth > 0) {
-      addMeasurement("total_facial_width_to_height", "Total Facial Width to Height Ratio", totalHeight / totalWidth, "ratio", "Proportions",
-        "Ratio of total facial height (hairline to chin) to bizygomatic width.")
+    if (totalHeight > 0) {
+      addMeasurement("total_facial_width_to_height", "Total Facial Width to Height Ratio", totalWidth / totalHeight, "ratio", "Proportions",
+        "Ratio of bizygomatic width (47,48) to total facial height (hairline to chin, 1→7).")
     }
   }
 
@@ -578,24 +625,23 @@ function calculateFrontMeasurements(
   }
 
   // ---- 29. Brow Length to Face Width Ratio ----
-  // avg length of (16,19) and (27,30) divided by length of (47,48)
+  // total length of (16,19) + (27,30) divided by length of (47,48)
   if (leftCheekbone && rightCheekbone) {
-    let browLenSum = 0
-    let browLenCount = 0
+    let totalBrowLen = 0
+    let browCount = 0
     if (leftBrowInner && leftBrowTail) {
-      browLenSum += dist(leftBrowInner, leftBrowTail)  // full Euclidean distance (16,19)
-      browLenCount++
+      totalBrowLen += dist(leftBrowInner, leftBrowTail)  // full Euclidean distance (16,19)
+      browCount++
     }
     if (rightBrowInner && rightBrowTail) {
-      browLenSum += dist(rightBrowInner, rightBrowTail) // full Euclidean distance (27,30)
-      browLenCount++
+      totalBrowLen += dist(rightBrowInner, rightBrowTail) // full Euclidean distance (27,30)
+      browCount++
     }
-    if (browLenCount > 0) {
-      const avgBrowLen = browLenSum / browLenCount
+    if (browCount > 0) {
       const faceWidth2 = dist(leftCheekbone, rightCheekbone) // (47,48)
       if (faceWidth2 > 0) {
-        addMeasurement("brow_length_to_face_width", "Brow Length to Face Width Ratio", avgBrowLen / faceWidth2, "ratio", "Brows",
-          "Ratio of average brow length (inner corner to tail) divided by bizygomatic face width.")
+        addMeasurement("brow_length_to_face_width", "Brow Length to Face Width Ratio", totalBrowLen / faceWidth2, "ratio", "Brows",
+          "Ratio of total brow span (left inner-to-tail + right inner-to-tail) divided by bizygomatic face width.")
       }
     }
   }
@@ -669,7 +715,7 @@ function calculateSideMeasurements(
   ) => {
     const ideal = ideals[id]
     if (!ideal) return
-    results.push(createMeasurement(id, name, value, unit, category, description, ideal.min, ideal.max, ideal.ideal))
+    results.push(createMeasurement(id, name, value, unit, category, description, ideal.min, ideal.max, ideal.idealMin, ideal.idealMax))
   }
 
   const L = (...ids: string[]) => {
