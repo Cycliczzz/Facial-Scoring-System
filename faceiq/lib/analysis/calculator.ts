@@ -744,10 +744,13 @@ function calculateSideMeasurements(
   }
 
   // ---- 4. Nasal Projection ----
-  if (noseTip && subnasale && rhinion) {
-    const nproj = angle(subnasale, noseTip, rhinion)
-    addMeasurement("nasal_projection", "Nasal Projection", nproj, "degrees", "Nose",
-      "Angle at nose tip between subnasale and rhinion. Measures nasal tip projection.")
+  if (subalare && noseTip && nasion) {
+    const w = dist(subalare, noseTip)
+    const h = dist(noseTip, nasion)
+    if (h > 0) {
+      addMeasurement("nasal_projection", "Nasal Projection", w / h, "ratio", "Nose",
+        "Ratio of nasal width (subalare to nose tip) to nasal height (nose tip to nasion).")
+    }
   }
 
   // ---- 5. Nasofrontal Angle ----
@@ -830,10 +833,12 @@ function calculateSideMeasurements(
   }
 
   // ---- 15. Browridge Inclination Angle ----
-  if (glabella && forehead) {
-    const bia = slopeAngle(glabella, forehead)
-    addMeasurement("browridge_inclination", "Browridge Inclination Angle", bia, "degrees", "Brows",
-      "Angle of brow ridge inclination from horizontal.")
+  if (glabella && hairline) {
+    const dx = hairline.x - glabella.x
+    const dy = hairline.y - glabella.y
+    const angleFromVert = Math.abs(Math.atan2(dx, -(hairline.y - glabella.y)) * (180 / Math.PI))
+    addMeasurement("browridge_inclination", "Browridge Inclination Angle", angleFromVert, "degrees", "Brows",
+      "Angle between vertical at glabella and the brow line to hairline.")
   }
 
   // ---- 16. Total Facial Convexity ----
@@ -873,10 +878,21 @@ function calculateSideMeasurements(
   }
 
   // ---- 20. Z-Angle ----
-  if (porion && orbitale && chinPoint && upperLip) {
-    const zAngle = angleBetweenLines(porion, orbitale, chinPoint, upperLip)
-    addMeasurement("z_angle", "Z Angle", zAngle, "degrees", "Profile",
-      "Angle between Frankfort plane and chin-upper lip line.")
+  if (cheekbone && rhinion && chinPoint && infratip) {
+    const dx1 = rhinion.x - cheekbone.x, dy1 = rhinion.y - cheekbone.y
+    const dx2 = infratip.x - chinPoint.x, dy2 = infratip.y - chinPoint.y
+    const det = dx1 * dy2 - dy1 * dx2
+    if (Math.abs(det) > 0.001) {
+      const t = ((chinPoint.x - cheekbone.x) * dy2 - (chinPoint.y - cheekbone.y) * dx2) / det
+      const ix = cheekbone.x + dx1 * t, iy = cheekbone.y + dy1 * t
+      const v1x = cheekbone.x - ix, v1y = cheekbone.y - iy
+      const v2x = chinPoint.x - ix, v2y = chinPoint.y - iy
+      const dot = v1x * v2x + v1y * v2y
+      const cross = v1x * v2y - v1y * v2x
+      const zAngle = Math.abs(Math.atan2(cross, dot)) * (180 / Math.PI)
+      addMeasurement("z_angle", "Z Angle", zAngle, "degrees", "Profile",
+        "Angle at intersection of cheekbone-rhinion and chin point-infratip lines.")
+    }
   }
 
   // ---- 21. Nose Tip Rotation Angle ----
@@ -884,19 +900,17 @@ function calculateSideMeasurements(
     const dx1 = cheekbone.x - rhinion.x, dy1 = cheekbone.y - rhinion.y
     const dx2 = infratip.x - subnasale.x, dy2 = infratip.y - subnasale.y
     const det = dx1 * dy2 - dy1 * dx2
-    let ntr = 0
     if (Math.abs(det) > 0.001) {
       const t = ((subnasale.x - rhinion.x) * dy2 - (subnasale.y - rhinion.y) * dx2) / det
       const ix = rhinion.x + t * dx1, iy = rhinion.y + t * dy1
-      const v1x = ix - rhinion.x, v1y = iy - rhinion.y, v2x = infratip.x - subnasale.x, v2y = infratip.y - subnasale.y
+      const v1x = rhinion.x - ix, v1y = rhinion.y - iy
+      const v2x = subnasale.x - ix, v2y = subnasale.y - iy
       const dot = v1x * v2x + v1y * v2y
       const cross = v1x * v2y - v1y * v2x
-      const acuteAngle = Math.abs(Math.atan2(cross, dot)) * (180 / Math.PI)
-      const sign = ix > subnasale.x + subnasale.y * 0 ? -1 : 1
-      ntr = acuteAngle * sign
+      const ntr = Math.abs(Math.atan2(cross, dot)) * (180 / Math.PI)
+      addMeasurement("nose_tip_rotation", "Nose Tip Rotation Angle", ntr, "degrees", "Nose",
+        "Angle at intersection of rhinion-cheekbone and subnasale-infratip lines.")
     }
-    addMeasurement("nose_tip_rotation", "Nose Tip Rotation Angle", ntr, "degrees", "Nose",
-      "Angle between rhinion-cheekbone and subnasale-infratip lines at their intersection.")
   }
 
   // ---- 22. Nasolabial Angle ----
@@ -979,27 +993,47 @@ function calculateSideMeasurements(
   }
 
   // ---- 30. Mandibular Plane Angle ----
-  if (lowerJawAngle && chinPoint && porion && orbitale) {
-    const mpa = angleBetweenLines(lowerJawAngle, chinPoint, porion, orbitale)
-    addMeasurement("mandibular_plane_angle", "Mandibular Plane Angle", mpa, "degrees", "Jaw",
-      "Angle between mandibular plane and Frankfort plane. Ideal is ~20-35°.")
+  if (lowerJawAngle && chinBottom) {
+    const dx = chinBottom.x - lowerJawAngle.x
+    const dy = chinBottom.y - lowerJawAngle.y
+    const angleFromHoriz = Math.abs(Math.atan2(dy, dx) * (180 / Math.PI))
+    addMeasurement("mandibular_plane_angle", "Mandibular Plane Angle", angleFromHoriz, "degrees", "Jaw",
+      "Angle between mandibular plane (lower jaw to chin bottom) and horizontal. Ideal is ~20-35°.")
   }
 
   // ---- 31. Ramus to Mandible Ratio ----
-  if (tragus && lowerJawAngle && chinPoint) {
-    const ramusH = dist(tragus, lowerJawAngle)
-    const mandibleL = dist(lowerJawAngle, chinPoint)
-    if (mandibleL > 0) {
-      addMeasurement("ramus_to_mandible", "Ramus to Mandible Ratio", ramusH / mandibleL, "ratio", "Jaw",
-        "Ratio of ramus height to mandibular body length. Ideal is ~0.55-0.75.")
+  // Intersection of lines (67→69) and (71→68), vertical from 66, then ratio d(71,A)/d(A,B)
+  if (chinBottom && lowerJawAngle && tragus && upperJawAngle && chinPoint) {
+    const dx1 = lowerJawAngle.x - chinBottom.x, dy1 = lowerJawAngle.y - chinBottom.y
+    const dx2 = upperJawAngle.x - tragus.x, dy2 = upperJawAngle.y - tragus.y
+    const det = dx1 * dy2 - dy1 * dx2
+    if (Math.abs(det) > 0.001) {
+      const t = ((tragus.x - chinBottom.x) * dy2 - (tragus.y - chinBottom.y) * dx2) / det
+      const ax = chinBottom.x + dx1 * t, ay = chinBottom.y + dy1 * t
+      const s2 = (chinPoint.x - chinBottom.x) / dx1
+      const bx = chinBottom.x + dx1 * s2, by = chinBottom.y + dy1 * s2
+      const da = Math.sqrt((ax - tragus.x) ** 2 + (ay - tragus.y) ** 2)
+      const dab = Math.sqrt((bx - ax) ** 2 + (by - ay) ** 2)
+      if (dab > 0) {
+        addMeasurement("ramus_to_mandible", "Ramus to Mandible Ratio", da / dab, "ratio", "Jaw",
+          "Ratio of ramus height to mandibular body length. Ideal is ~0.55-0.75.")
+      }
     }
   }
 
   // ---- 32. Gonion to Mouth Line ----
-  if (lowerJawAngle && mouthCorner) {
-    const gmd = dist(lowerJawAngle, mouthCorner)
-    addMeasurement("gonion_to_mouth", "Gonion to Mouth Line", gmd, "mm", "Jaw",
-      "Distance from lower jaw angle (gonion) to mouth corner.")
+  // Intersection A of (67→69) and (71→68), then perpendicular distance from A to horizontal through 63
+  if (chinBottom && lowerJawAngle && tragus && upperJawAngle && mouthCorner) {
+    const dx1 = lowerJawAngle.x - chinBottom.x, dy1 = lowerJawAngle.y - chinBottom.y
+    const dx2 = upperJawAngle.x - tragus.x, dy2 = upperJawAngle.y - tragus.y
+    const det = dx1 * dy2 - dy1 * dx2
+    if (Math.abs(det) > 0.001) {
+      const t = ((tragus.x - chinBottom.x) * dy2 - (tragus.y - chinBottom.y) * dx2) / det
+      const ax = chinBottom.x + dx1 * t, ay = chinBottom.y + dy1 * t
+      const gmd = Math.abs(ay - mouthCorner.y)
+      addMeasurement("gonion_to_mouth", "Gonion to Mouth Line", gmd, "mm", "Jaw",
+        "Vertical distance from gonion intersection A to mouth corner horizontal line.")
+    }
   }
 
   return results

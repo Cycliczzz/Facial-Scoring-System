@@ -664,7 +664,7 @@ export const SIDE_MEASUREMENTS_META: MeasurementMeta[] = [
   { id: "nasal_width_to_height", name: "Nasal Width to Height Ratio", unit: "ratio", category: "Nose", description: "Ratio of nasal width to nasal height" },
   { id: "upper_lip_s_line", name: "Upper Lip S-Line Position", unit: "mm", category: "Lips", description: "Upper lip position relative to S-line" },
   { id: "upper_lip_burstone", name: "Upper Lip Burstone Line", unit: "mm", category: "Lips", description: "Upper lip position relative to Burstone line" },
-  { id: "nasal_projection", name: "Nasal Projection", unit: "degrees", category: "Nose", description: "Angle at nose tip between subnasale and rhinion" },
+  { id: "nasal_projection", name: "Nasal Projection", unit: "ratio", category: "Nose", description: "Ratio of nasal width (subalare to nose tip) to nasal height (nose tip to nasion)" },
   { id: "nasofrontal_angle", name: "Nasofrontal Angle", unit: "degrees", category: "Nose", description: "Angle between forehead and nasal bridge" },
   { id: "recession_frankfort", name: "Recession (Frankfort Plane)", unit: "mm", category: "Profile", description: "Recession relative to Frankfort plane" },
   { id: "holdaway_h_line", name: "Holdaway H Line", unit: "mm", category: "Profile", description: "Holdaway H-line measurement" },

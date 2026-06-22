@@ -993,7 +993,7 @@ function drawMeasurement(
         const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
         const midA = (a1 + a2) / 2
         ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
-        ctx.fillText(`${val.toFixed(1)}°`, nt.x + dx + (rad + 18) * Math.cos(midA), nt.y + dy + (rad + 18) * Math.sin(midA))
+        ctx.fillText(`${val.toFixed(1)}°`, nt.x + dx + (rad - 44) * Math.cos(midA), nt.y + dy + (rad - 44) * Math.sin(midA))
       }
       break
     }
@@ -1051,25 +1051,15 @@ function drawMeasurement(
       break
     }
     case "nasal_projection": {
-      const s = L("subnasale"), nt = L("nose_tip"), r = L("rhinion")
-      if (s && nt && r) {
-        // Connect (60,57) = subnasale to nose_tip
+      const sb = L("subalare"), nt = L("nose_tip"), nb = L("nasal_bridge_root")
+      if (sb && nt) {
         ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
-        drawMeasurementLine(ctx, s.x + dx, s.y + dy, nt.x + dx, nt.y + dy, GLOW, 1.0)
-        // Connect (57,55) = nose_tip to rhinion
-        drawMeasurementLine(ctx, nt.x + dx, nt.y + dy, r.x + dx, r.y + dy, GLOW, 1.0)
+        drawMeasurementLine(ctx, sb.x + dx, sb.y + dy, nt.x + dx, nt.y + dy, GLOW, 1.0)
         ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
-        // Angle at vertex 57 between (60,57) and (57,55)
-        const v1x = s.x - nt.x, v1y = s.y - nt.y
-        const v2x = r.x - nt.x, v2y = r.y - nt.y
-        const a1 = Math.atan2(v1y, v1x), a2 = Math.atan2(v2y, v2x)
-        const rad = 12
-        ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
-        ctx.beginPath(); ctx.arc(nt.x + dx, nt.y + dy, rad, a1, a2); ctx.stroke()
-        const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
-        const midA = (a1 + a2) / 2
-        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
-        ctx.fillText(`${val.toFixed(1)}°`, nt.x + dx + (rad + 18) * Math.cos(midA), nt.y + dy + (rad + 18) * Math.sin(midA))
+        if (nb) drawMeasurementLine(ctx, nt.x + dx, nt.y + dy, nb.x + dx, nb.y + dy, WHITE_DIM, alpha)
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(2)) : 0
+        ctx.font = "bold 13px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "bottom"
+        ctx.fillText(`${val}`, (sb.x + nt.x) / 2 + dx, Math.min(sb.y, nt.y) + dy - 8)
       }
       break
     }
@@ -1089,7 +1079,7 @@ function drawMeasurement(
         const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
         const midA = (a1 + a2) / 2
         ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
-        ctx.fillText(`${val}°`, nbr.x + dx + (rad + 16) * Math.cos(midA), nbr.y + dy + (rad + 16) * Math.sin(midA))
+        ctx.fillText(`${val}°`, nbr.x + dx + (rad + 20) * Math.cos(midA), nbr.y + dy + (rad + 20) * Math.sin(midA))
       }
       break
     }
@@ -1112,7 +1102,7 @@ function drawMeasurement(
         const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
         const midA = (a1 + a2) / 2
         ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
-        ctx.fillText(`${val.toFixed(1)}°`, sn.x + dx + (rad + 20) * Math.cos(midA), sn.y + dy + (rad + 20) * Math.sin(midA))
+        ctx.fillText(`${val.toFixed(1)}°`, sn.x + dx + (rad - 65) * Math.cos(midA), sn.y + dy + (rad - 65) * Math.sin(midA))
       }
       break
     }
@@ -1167,7 +1157,7 @@ function drawMeasurement(
             ctx.font = "bold 11px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
             ctx.fillText(`${val.toFixed(1)}mm`, Math.max(cx, projX) + 8, (cy + projY) / 2)
             // Sign label based on computed value
-            const signedLabel = val < 0 ? "negative" : "positive"
+            const signedLabel = val < 0 ? "" : ""
             ctx.font = "bold 10px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "bottom"
             ctx.fillText(signedLabel, cx, cy - 10)
           }
@@ -1193,8 +1183,20 @@ function drawMeasurement(
     case "mentolabial_angle": {
       const ll = L("lower_lip"), lf = L("labiomental_fold"), cp = L("chin_point")
       if (ll && lf && cp) {
-        drawMeasurementLine(ctx, ll.x + dx, ll.y + dy, lf.x + dx, lf.y + dy, WHITE, alpha, "MLA")
-        drawMeasurementLine(ctx, lf.x + dx, lf.y + dy, cp.x + dx, cp.y + dy, WHITE_DIM, alpha)
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, lf.x + dx, lf.y + dy, cp.x + dx, cp.y + dy, GLOW, 1.0)
+        drawMeasurementLine(ctx, lf.x + dx, lf.y + dy, ll.x + dx, ll.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        const v1x = cp.x - lf.x, v1y = cp.y - lf.y
+        const v2x = ll.x - lf.x, v2y = ll.y - lf.y
+        const a1 = Math.atan2(v1y, v1x), a2 = Math.atan2(v2y, v2x)
+        const rad = 18
+        ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.arc(lf.x + dx, lf.y + dy, rad, a1, a2, true); ctx.stroke()
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        const midA = (a1 + a2) / 2
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+        ctx.fillText(`${val.toFixed(1)}°`, lf.x + dx + (rad + 20) * Math.cos(midA), lf.y + dy + (rad + 20) * Math.sin(midA))
       }
       break
     }
@@ -1214,15 +1216,16 @@ function drawMeasurement(
         while (diff < -Math.PI) diff += 2 * Math.PI
         while (diff > Math.PI) diff -= 2 * Math.PI
         // Draw arc small, text far outside
-        const rad = 18
+        const rad = 20
         const drawCCW = diff < 0
         const bisector = a1 + diff / 2
         ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5; ctx.setLineDash([])
         ctx.beginPath(); ctx.arc(g.x + dx, g.y + dy, rad, a1, a2, drawCCW); ctx.stroke()
         const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
-        const textR = rad + 26
+        const offsetX = 20
+        const textR = 20
         ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
-        ctx.fillText(`${val.toFixed(1)}°`, g.x + dx + textR * Math.cos(bisector), g.y + dy + textR * Math.sin(bisector))
+        ctx.fillText(`${val.toFixed(1)}°`, g.x + dx + textR * Math.cos(bisector) + offsetX, g.y + dy + textR * Math.sin(bisector))
       }
       break
     }
@@ -1263,8 +1266,51 @@ function drawMeasurement(
       break
     }
     case "browridge_inclination": {
-      const f = L("forehead"), g = L("glabella")
-      if (f && g) drawMeasurementLine(ctx, f.x + dx, f.y + dy, g.x + dx, g.y + dy, WHITE, alpha, "Browridge")
+      const g = L("glabella"), hp = L("hairline_profile") // g là 53, hp là 51
+      if (g && hp) {
+        // 1. KẺ ĐƯỜNG NÉT ĐỨT THẲNG ĐỨNG TỪ 53 (g) LÊN TRÊN
+        ctx.setLineDash([5, 5]); ctx.strokeStyle = WHITE_DIM; ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.moveTo(g.x + dx, g.y + dy); ctx.lineTo(g.x + dx, g.y + dy - 120); ctx.stroke()
+        ctx.setLineDash([])
+
+        // 2. NỐI (53, 51) VÀ HIGHLIGHT ĐOẠN THẲNG NÀY
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, g.x + dx, g.y + dy, hp.x + dx, hp.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+
+        // TÍNH TOÁN PHÂN GIÁC CHO PHÍA BÊN TRÁI (Giữa đường thẳng đứng và đường trán)
+        const v1x = hp.x - g.x, v1y = hp.y - g.y
+        const aSeg = Math.atan2(v1y, v1x)  // Hướng đoạn (53,51)
+        const aVert = -Math.PI / 2         // Hướng thẳng đứng lên trên
+        
+        // Đường phân giác chuẩn nằm ở giữa hai tia này (quét ngược chiều kim đồng hồ)
+        const bisector = (aVert + aSeg) / 2 
+        const rad = 25 // Bán kính vòng cung nhỏ vừa vặn
+
+        // 3. HIGHLIGHT CUNG TRÒN VÀ CHỮ SỐ ĐO Ở PHÍA TRONG GÓC
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
+        
+        // Vẽ cung tròn đi từ tia trán (aSeg) đến tia đứng (aVert) theo chiều kim đồng hồ (false)
+        ctx.beginPath(); 
+        ctx.arc(g.x + dx, g.y + dy, rad, aSeg, aVert, false); 
+        ctx.stroke()
+
+        // Lấy giá trị góc hiển thị
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        
+        // Thay đổi textAlign thành "left" để chữ tự động mở rộng sang phải từ điểm đặt tọa độ
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+        
+        // --- ĐOẠN SỬA ĐỔI ĐỂ DỊCH CHỮ SANG PHẢI ---
+        // g.x + dx + 15: Đẩy chữ dịch sang phải so với điểm 53 một khoảng 15px để né đường thẳng đứng
+        // g.y + dy - 30: Đẩy chữ lên trên một chút (khoảng 30px) để nó nằm ngang tầm với vòng cung arc
+        const textX = g.x + dx + 15
+        const textY = g.y + dy - 30
+        ctx.fillText(`${val.toFixed(1)}°`, textX, textY)
+        
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+      }
       break
     }
     case "total_facial_convexity": {
@@ -1283,7 +1329,7 @@ function drawMeasurement(
         const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
         const midA = (a1 + a2) / 2
         ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
-        ctx.fillText(`${val.toFixed(1)}°`, nt.x + dx + (rad + 16) * Math.cos(midA), nt.y + dy + (rad + 16) * Math.sin(midA))
+        ctx.fillText(`${val.toFixed(1)}°`, nt.x + dx + (rad - 60) * Math.cos(midA), nt.y + dy + (rad - 60) * Math.sin(midA))
       }
       break
     }
@@ -1303,7 +1349,7 @@ function drawMeasurement(
         const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
         const midA = (a1 + a2) / 2
         ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
-        ctx.fillText(`${val.toFixed(1)}°`, sn.x + dx + (rad + 20) * Math.cos(midA), sn.y + dy + (rad + 20) * Math.sin(midA))
+        ctx.fillText(`${val.toFixed(1)}°`, sn.x + dx + (rad - 65) * Math.cos(midA), sn.y + dy + (rad - 65) * Math.sin(midA))
       }
       break
     }
@@ -1374,13 +1420,13 @@ function drawMeasurement(
         const v1x = cp.x - nb.x, v1y = cp.y - nb.y
         const v2x = nt.x - nb.x, v2y = nt.y - nb.y
         const a1 = Math.atan2(v1y, v1x), a2 = Math.atan2(v2y, v2x)
-        const rad = 20
+        const rad = 60
         ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
-        ctx.beginPath(); ctx.arc(nb.x + dx, nb.y + dy, rad, a1, a2); ctx.stroke()
+        ctx.beginPath(); ctx.arc(nb.x + dx, nb.y + dy, rad, a1, a2, true); ctx.stroke()
         const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
         const midA = (a1 + a2) / 2
         ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
-        ctx.fillText(`${val.toFixed(1)}°`, nb.x + dx + (rad + 16) * Math.cos(midA), nb.y + dy + (rad + 16) * Math.sin(midA))
+        ctx.fillText(`${val.toFixed(1)}°`, nb.x + dx + (rad + 30) * Math.cos(midA), nb.y + dy + (rad + 30) * Math.sin(midA))
       }
       break
     }
@@ -1396,11 +1442,11 @@ function drawMeasurement(
         const a1 = Math.atan2(v1y, v1x), a2 = Math.atan2(v2y, v2x)
         const rad = 20
         ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
-        ctx.beginPath(); ctx.arc(nt.x + dx, nt.y + dy, rad, a1, a2); ctx.stroke()
+        ctx.beginPath(); ctx.arc(nt.x + dx, nt.y + dy, rad, a1, a2, true); ctx.stroke()
         const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
         const midA = (a1 + a2) / 2
         ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
-        ctx.fillText(`${val.toFixed(1)}°`, nt.x + dx + (rad + 16) * Math.cos(midA), nt.y + dy + (rad + 16) * Math.sin(midA))
+        ctx.fillText(`${val.toFixed(1)}°`, nt.x + dx + (rad - 60) * Math.cos(midA), nt.y + dy + (rad - 60) * Math.sin(midA))
       }
       break
     }
@@ -1424,13 +1470,13 @@ function drawMeasurement(
           const v1x = cl.x - ix, v1y = cl.y - iy
           const v2x = rh.x - ix, v2y = rh.y - iy
           const a1 = Math.atan2(v1y, v1x), a2 = Math.atan2(v2y, v2x)
-          const rad = 25
+          const rad = 90
           ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
           ctx.beginPath(); ctx.arc(ix + dx, iy + dy, rad, a1, a2); ctx.stroke()
           const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
           const midA = (a1 + a2) / 2
           ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
-          ctx.fillText(`${val.toFixed(1)}°`, ix + dx + (rad + 14) * Math.cos(midA), iy + dy + (rad + 14) * Math.sin(midA))
+          ctx.fillText(`${val.toFixed(1)}°`, ix + dx + (rad + 50) * Math.cos(midA), iy + dy + (rad + 50) * Math.sin(midA))
         }
       }
       break
@@ -1525,13 +1571,25 @@ function drawMeasurement(
           while (diff < -Math.PI) diff += 2 * Math.PI
           while (diff > Math.PI) diff -= 2 * Math.PI
           const drawCCW = diff < 0
-          const rad = 25
+          const rad = 130
           ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
           ctx.beginPath(); ctx.arc(ix + dx, iy + dy, rad, a1, a2, drawCCW); ctx.stroke()
-          const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+
+          // --- ĐOẠN SỬA ĐỔI ĐỔI DẤU THEO VỊ TRÍ ĐỈNH GÓC ix VỚI ĐIỂM 55 (sn) ---
+          let val = boxValue !== undefined ? Math.abs(Number(boxValue.toFixed(1))) : 0
+
+          if (ix.x < sn.x) { 
+            val = -val; // Nằm bên trái điểm 55 (sn) -> Góc âm (-)
+          } else {
+            val = Math.abs(val); // Nằm bên phải điểm 55 (sn) -> Góc dương (+)
+          }
+
           const midA = a1 + diff / 2
           ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
-          ctx.fillText(`${val}°`, ix + dx + (rad + 12) * Math.cos(midA), iy + dy + (rad + 12) * Math.sin(midA))
+          
+          // Đã chỉnh từ (rad + 50) thành (rad + 15) để con số ôm sát vòng cung, không bị văng ra rìa màn hình
+          ctx.fillText(`${val}°`, ix + dx + (rad + 15) * Math.cos(midA), iy + dy + (rad + 15) * Math.sin(midA))
+          // -----------------------------------------------------------------
         }
       }
       break
@@ -1621,8 +1679,37 @@ function drawMeasurement(
           const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
           const midA = a1 + diff / 2
           ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
-          ctx.fillText(`${val}°`, ix + dx + (rad + 12) * Math.cos(midA), iy + dy + (rad + 12) * Math.sin(midA))
+          ctx.fillText(`${val}°`, ix + dx + (rad + 20) * Math.cos(midA), iy + dy + (rad + 20) * Math.sin(midA))
         }
+      }
+      break
+    }
+    case "mandibular_plane_angle": {
+      const lj = L("lower_jaw_angle"), cb = L("chin_bottom")
+      if (lj && cb) {
+        // Dashed horizontal from point 69 going right
+        ctx.setLineDash([5, 5]); ctx.strokeStyle = WHITE_DIM; ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.moveTo(lj.x + dx, lj.y + dy); ctx.lineTo(lj.x + dx + 150, lj.y + dy); ctx.stroke()
+        ctx.setLineDash([])
+        // Highlight segment (69,67)
+        ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+        drawMeasurementLine(ctx, lj.x + dx, lj.y + dy, cb.x + dx, cb.y + dy, GLOW, 1.0)
+        ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+        // Angle between horizontal and (69,67) at vertex 69
+        const v1x = cb.x - lj.x, v1y = cb.y - lj.y
+        const aSeg = Math.atan2(v1y, v1x)
+        const aHoriz = 0
+        let diff = aSeg - aHoriz
+        while (diff < -Math.PI) diff += 2 * Math.PI
+        while (diff > Math.PI) diff -= 2 * Math.PI
+        const rad = 30
+        const drawCCW = diff < 0
+        const bisector = aHoriz + diff / 2
+        ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.arc(lj.x + dx, lj.y + dy, rad, aHoriz, aSeg, drawCCW); ctx.stroke()
+        const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+        ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+        ctx.fillText(`${val.toFixed(1)}°`, lj.x + dx + (rad + 20) * Math.cos(bisector), lj.y + dy + (rad + 20) * Math.sin(bisector))
       }
       break
     }
@@ -1638,6 +1725,142 @@ function drawMeasurement(
         const val2 = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
         ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
         ctx.fillText(`${val2}mm`, Math.max(ll.x, p3x) + dx + 8, (ll.y + p3y) / 2 + dy)
+      }
+      break
+    }
+    case "ramus_to_mandible": {
+      const cb = L("chin_bottom"), lj = L("lower_jaw_angle"), tr = L("tragus"), uj = L("upper_jaw_angle"), cp = L("chin_point")
+      if (cb && lj && tr && uj) {
+        const dx1 = lj.x - cb.x, dy1 = lj.y - cb.y
+        const dx2 = uj.x - tr.x, dy2 = uj.y - tr.y
+        const det = dx1 * dy2 - dy1 * dx2
+          if (Math.abs(det) > 0.001) {
+          const uu = ((tr.x - cb.x) * dy2 - (tr.y - cb.y) * dx2) / det
+          const ax = cb.x + dx1 * uu, ay = cb.y + dy1 * uu
+          
+          // --- ĐOẠN SỬA ĐỔI: Vẽ đường nối kéo dài qua hai giao điểm ---
+          // Sử dụng nét liền (setLineDash([])), màu trắng (WHITE hoặc định nghĩa màu trắng của bạn)
+          ctx.setLineDash([]); 
+          ctx.strokeStyle = "#FFFFFF"; // Nét màu trắng bình thường
+          ctx.lineWidth = 1.5;
+
+          if (cp) {
+            const s2 = (cp.x - cb.x) / dx1
+            const bx = cb.x + dx1 * s2, by = cb.y + dy1 * s2
+            
+            // Vẽ đường thẳng liên tục kéo dài từ giao điểm B (phía cằm) đến giao điểm A (phía góc hàm)
+            ctx.beginPath(); 
+            ctx.moveTo(bx + dx, by + dy); 
+            ctx.lineTo(ax + dx, ay + dy); 
+            ctx.stroke();
+
+            // Giữ lại nét đứt dọc từ điểm 66 xuống đường hàm (nếu bạn vẫn cần đường gióng này)
+            ctx.setLineDash([5, 5]);
+            ctx.strokeStyle = WHITE_DIM;
+            ctx.beginPath(); 
+            ctx.moveTo(cp.x + dx, cp.y + dy); 
+            ctx.lineTo(bx + dx, by + dy); 
+            ctx.stroke();
+          } else {
+            // Trường hợp không có cp, vẫn vẽ đường nối từ góc hàm cb đến giao điểm A
+            ctx.beginPath();
+            ctx.moveTo(cb.x + dx, cb.y + dy);
+            ctx.lineTo(ax + dx, ay + dy);
+            ctx.stroke();
+          }
+          // --------------------------------------------------------
+
+          ctx.setLineDash([])
+          // Highlighted segment (71, A)
+          ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+          drawMeasurementLine(ctx, tr.x + dx, tr.y + dy, ax + dx, ay + dy, GLOW, 1.0)
+          ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+          const val = boxValue !== undefined ? Number(boxValue.toFixed(2)) : 0
+          ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+          ctx.fillText(`${val}`, Math.max(tr.x, ax) + dx + 8, (tr.y + ay) / 2 + dy)
+        }
+      }
+      break
+    }
+    case "gonion_to_mouth": {
+      const cb = L("chin_bottom"), lj = L("lower_jaw_angle"), tr = L("tragus"), uj = L("upper_jaw_angle"), mc = L("mouth_corner")
+      if (cb && lj && tr && uj) {
+        const dx1 = lj.x - cb.x, dy1 = lj.y - cb.y
+        const dx2 = uj.x - tr.x, dy2 = uj.y - tr.y
+        const det = dx1 * dy2 - dy1 * dx2
+        if (Math.abs(det) > 0.001) {
+          const uu = ((tr.x - cb.x) * dy2 - (tr.y - cb.y) * dx2) / det
+          const ax = cb.x + dx1 * uu, ay = cb.y + dy1 * uu
+
+          // 1. VẼ HAI ĐOẠN XƯƠNG HÀM NÉT LIỀN MÀU TRẮNG, DỪNG TẠI ĐIỂM CẮT (ax, ay)
+          ctx.setLineDash([]);            // Đổi thành nét liền
+          ctx.strokeStyle = "#FFFFFF";    // Màu trắng bình thường
+          ctx.lineWidth = 1.5
+
+          // Đoạn từ cằm (67) đến điểm cắt góc hàm A
+          ctx.beginPath(); 
+          ctx.moveTo(cb.x + dx, cb.y + dy); 
+          ctx.lineTo(ax + dx, ay + dy); 
+          ctx.stroke()
+
+          // Đoạn từ tai (71) xuống điểm cắt góc hàm A
+          ctx.beginPath(); 
+          ctx.moveTo(tr.x + dx, tr.y + dy); 
+          ctx.lineTo(ax + dx, ay + dy); 
+          ctx.stroke()
+
+          // 2. VẼ ĐƯỜNG NÉT ĐỨT NGANG TỪ 63 CHỈ KÉO DÀI VỀ BÊN TRÁI
+          // 2. VẼ ĐƯỜNG NÉT ĐỨT NGANG TỪ 63 CHỈ KÉO DÀI VỀ BÊN TRÁI ĐẾN ĐƯỜNG HIGHLIGHT
+          if (mc) {
+            ctx.setLineDash([5, 5]);       // Bật lại nét đứt
+            ctx.strokeStyle = WHITE_DIM;
+            ctx.beginPath(); 
+            ctx.moveTo(mc.x + dx, mc.y + dy); // Bắt đầu từ vị trí miệng (điểm 63)
+            ctx.lineTo(ax + dx, mc.y + dy);   // Kéo dài sang trái và dừng chính xác tại hoành độ ax của đường dọc
+            ctx.stroke()
+          } 
+          
+          // 3. ĐOẠN ĐO LƯỜNG PHÁT SÁNG (Từ góc hàm A lên đường ngang miệng)
+          if (mc) {
+            ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+            drawMeasurementLine(ctx, ax + dx, ay + dy, ax + dx, mc.y + dy, GLOW, 1.0)
+            ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+            const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+            ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "left"; ctx.textBaseline = "middle"
+            ctx.fillText(`${val.toFixed(1)}mm`, ax + dx + 8, (ay + mc.y) / 2 + dy + 4)
+          }
+        }
+      }
+      break
+    }
+    case "z_angle": {
+      const cb = L("cheekbone"), rh = L("rhinion"), cp = L("chin_point"), it = L("infratip")
+      if (cb && rh && cp && it) {
+        const dx1 = rh.x - cb.x, dy1 = rh.y - cb.y
+        const dx2 = it.x - cp.x, dy2 = it.y - cp.y
+        const det = dx1 * dy2 - dy1 * dx2
+        if (Math.abs(det) > 0.001) {
+          const t = ((cp.x - cb.x) * dy2 - (cp.y - cb.y) * dx2) / det
+          const ix = cb.x + dx1 * t, iy = cb.y + dy1 * t
+          const ext1 = 2.5, ext2 = 2.5
+          const e1x = ix + (cb.x - ix) * ext1, e1y = iy + (cb.y - iy) * ext1
+          const e2x = ix + (cp.x - ix) * ext2, e2y = iy + (cp.y - iy) * ext2
+          ctx.shadowBlur = 10; ctx.shadowColor = GLOW_SHADOW
+          ctx.strokeStyle = GLOW; ctx.lineWidth = 2; ctx.setLineDash([])
+          ctx.beginPath(); ctx.moveTo(e1x + dx, e1y + dy); ctx.lineTo(ix + dx, iy + dy); ctx.lineTo(e2x + dx, e2y + dy); ctx.stroke()
+          ctx.fillStyle = GLOW; ctx.beginPath(); ctx.arc(ix + dx, iy + dy, 3, 0, 2*Math.PI); ctx.fill()
+          ctx.shadowBlur = 0; ctx.shadowColor = "transparent"
+          const v1x = cb.x - ix, v1y = cb.y - iy
+          const v2x = cp.x - ix, v2y = cp.y - iy
+          const a1 = Math.atan2(v1y, v1x), a2 = Math.atan2(v2y, v2x)
+          const rad = 50
+          ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5
+          ctx.beginPath(); ctx.arc(ix + dx, iy + dy, rad, a1, a2, true); ctx.stroke()
+          const val = boxValue !== undefined ? Number(boxValue.toFixed(1)) : 0
+          const midA = (a1 + a2) / 2
+          ctx.font = "bold 12px sans-serif"; ctx.fillStyle = GLOW; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+          ctx.fillText(`${val.toFixed(1)}°`, ix + dx + (rad + 30) * Math.cos(midA), iy + dy + (rad + 30) * Math.sin(midA))
+        }
       }
       break
     }
