@@ -121,21 +121,43 @@ function vDist(a: LandmarkPoint, b: LandmarkPoint): number {
 // H_i = 10 × exp(-0.5 × D_i^2)
 // ============================================================
 
+// ============================================================
+// SCORING CONFIGURATION — Adjust these to tune the model
+// ============================================================
+
+/** Gaussian steepness factor (higher = score drops faster as R increases) */
+const SCORING_K = 1.2
+
+/** Minimum score floor for any measurement */
+const SCORING_FLOOR = 1.0
+
+/** Critical flaw penalty: scores below this threshold trigger penalty */
+const PENALTY_THRESHOLD = 3.5
+
+/** Critical flaw penalty: multiplier per unit below threshold */
+const PENALTY_MULTIPLIER = 0.25
+
+/** Critical flaw penalty: maximum penalty cap */
+const PENALTY_CAP = 1
+
+// ============================================================
+
 /**
- * Plateau Gaussian Curve Scoring (K=5.0)
+ * Plateau Gaussian Curve Scoring
+ * score = max(floor, 10 × exp(-K × R²))
  * Bước 1: Nếu IdealMin <= V <= IdealMax → 10.0
- * Bước 2: Nếu V <= RangeMin hoặc V >= RangeMax → 0.0
+ * Bước 2: Nếu V <= RangeMin hoặc V >= RangeMax → floor
  * Bước 3: Tính tỷ lệ lệch R = D / L
- * Bước 4: Đối chiếu bảng điểm Gaussian
+ * Bước 4: score = max(floor, 10 × exp(-K × R²))
  */
 function calculatePlateauGaussianScore(value: number, rangeMin: number, rangeMax: number, idealMin: number, idealMax: number): number {
   // Step 1: In plateau → perfect 10
   if (value >= idealMin && value <= idealMax) return 10.0
 
-  // Step 2: Outside full range → 0
-  if (value <= rangeMin || value >= rangeMax) return 0.0
+  // Step 2: Outside full range → floor
+  if (value <= rangeMin || value >= rangeMax) return SCORING_FLOOR
 
-  // Step 3: Calculate R
+  // Step 3: Calculate R = D / L
   let D: number, L: number
   if (value < idealMin) {
     D = idealMin - value
@@ -145,34 +167,13 @@ function calculatePlateauGaussianScore(value: number, rangeMin: number, rangeMax
     L = rangeMax - idealMax
   }
 
-  if (L <= 0) return 0.0
+  if (L <= 0) return SCORING_FLOOR
   const R = D / L // 0.0 to 1.0
 
-  // Step 4: Gaussian lookup table (K=5.0)
-  if (R <= 0.15) {
-    // 0.01-0.15: 9.0 → 9.8 (linear map)
-    return Math.round((9.8 - (R / 0.15) * 0.8) * 10) / 10
-  } else if (R <= 0.30) {
-    // 0.16-0.30: 7.0 → 8.9
-    const t = (R - 0.16) / 0.14 // 0→1
-    return Math.round((8.9 - t * 1.9) * 10) / 10
-  } else if (R <= 0.45) {
-    // 0.31-0.45: 4.5 → 6.9
-    const t = (R - 0.31) / 0.14
-    return Math.round((6.9 - t * 2.4) * 10) / 10
-  } else if (R <= 0.60) {
-    // 0.46-0.60: 2.5 → 4.4
-    const t = (R - 0.46) / 0.14
-    return Math.round((4.4 - t * 1.9) * 10) / 10
-  } else if (R <= 0.80) {
-    // 0.61-0.80: 1.0 → 2.4
-    const t = (R - 0.61) / 0.19
-    return Math.round((2.4 - t * 1.4) * 10) / 10
-  } else {
-    // R > 0.80: 0.1 → 0.9
-    const t = Math.min((R - 0.81) / 0.19, 1.0)
-    return Math.round((0.9 - t * 0.8) * 10) / 10
-  }
+  // Step 4: Continuous Gaussian formula
+  const score = 10 * Math.exp(-SCORING_K * R * R)
+
+  return Math.round(Math.max(SCORING_FLOOR, score) * 10) / 10
 }
 
 function classifyDeviation(value: number, idealMin: number, idealMax: number): "low" | "ideal" | "high" {
@@ -1112,22 +1113,66 @@ export function calculateAnalysis(
   const frontMeasurements = calculateFrontMeasurements(frontLm, gender, ethnicity)
   const sideMeasurements = calculateSideMeasurements(sideLm, gender, ethnicity)
 
-  // Calculate scores
   const allMeasurements = [...frontMeasurements, ...sideMeasurements]
-  const frontScore = frontMeasurements.length > 0
-    ? Math.round((frontMeasurements.reduce((s, m) => s + m.score, 0) / frontMeasurements.length) * 10) / 10
-    : 0
-  const sideScore = sideMeasurements.length > 0
-    ? Math.round((sideMeasurements.reduce((s, m) => s + m.score, 0) / sideMeasurements.length) * 10) / 10
-    : 0
-  const overallScore = allMeasurements.length > 0
-    ? Math.round((allMeasurements.reduce((s, m) => s + m.score, 0) / allMeasurements.length) * 10) / 10
-    : 0
 
-  // Harmony score = weighted average of front and side
-  const harmonyScore = Math.round(((frontScore + sideScore) / 2) * 10) / 10
+  // ============================================================
+  // HIERARCHICAL WEIGHTED HARMONY SCORING
+  // (Front 60%, Side 40% of overall)
+  // ============================================================
 
-  // Category scores
+  // Helper: get score of a measurement by ID
+  const scoreOf = (measurements: MeasurementResult[], id: string): number => {
+    const m = measurements.find(m => m.id === id)
+    return m ? m.score : 0
+  }
+
+  // --- FRONT PROFILE GROUPS ---
+  // Group F1: Craniofacial Framework & Global Proportions (40%)
+  const F1_KEY = ["midface_ratio", "face_width_to_height", "lower_third"]
+  const F1_STD = ["bitemporal_width", "bigonial_width", "jaw_slope", "middle_third", "top_third", "total_facial_width_to_height", "lower_third_proportion"]
+  const G_F1 = weightedGroupScore(frontMeasurements, F1_KEY, F1_STD)
+
+  // Group F2: Periorbital Complex (Eyes & Brows) (30%)
+  const F2_KEY = ["lateral_canthal_tilt", "eye_separation_ratio"]
+  const F2_STD = ["cheekbone_height", "eye_aspect_ratio", "eyebrow_tilt", "one_eye_apart", "eyebrow_low_setedness", "brow_length_to_face_width"]
+  const G_F2 = weightedGroupScore(frontMeasurements, F2_KEY, F2_STD)
+
+  // Group F3: Perioral & Nasal Complex (30%)
+  const F3_KEY = ["jaw_frontal_angle", "chin_to_philtrum"]
+  const F3_STD = ["nose_bridge_to_width", "cupids_bow_depth", "mouth_corner_position", "interpupillary_mouth_width", "intercanthal_nasal_width", "ipsilateral_alar_angle", "mouth_width_to_nose_width", "nose_tip_position", "deviation_iaa_jfa", "lower_lip_to_upper_lip"]
+  const G_F3 = weightedGroupScore(frontMeasurements, F3_KEY, F3_STD)
+
+  // --- SIDE PROFILE GROUPS ---
+  // Group S1: Profile Convexity & Structural Depth (35%)
+  const S1_KEY = ["recession_frankfort", "total_facial_convexity"]
+  const S1_STD = ["facial_convexity_nasion", "anterior_facial_depth", "facial_depth_to_height", "facial_convexity_glabella", "interior_midface_projection", "z_angle"]
+  const G_S1 = weightedGroupScore(sideMeasurements, S1_KEY, S1_STD)
+
+  // Group S2: Nasal Architecture & Forehead Slope (35%)
+  const S2_KEY = ["nasal_projection", "nasolabial_angle"]
+  const S2_STD = ["nasal_tip_angle", "nasal_width_to_height", "nasofrontal_angle", "upper_forehead_slope", "browridge_inclination", "nose_tip_rotation", "nasofacial_angle", "nasomental_angle", "frankfort_tip_angle"]
+  const G_S2 = weightedGroupScore(sideMeasurements, S2_KEY, S2_STD)
+
+  // Group S3: Mandibulofascial & Labial Contours (30%)
+  const S3_KEY = ["gonial_angle", "lower_lip_e_line"]
+  const S3_STD = ["upper_lip_s_line", "upper_lip_burstone", "holdaway_h_line", "mentolabial_angle", "upper_lip_e_line", "submental_cervical_angle", "orbital_vector", "lower_lip_s_line", "lower_lip_burstone", "mandibular_plane_angle", "ramus_to_mandible", "gonion_to_mouth"]
+  const G_S3 = weightedGroupScore(sideMeasurements, S3_KEY, S3_STD)
+
+  // --- CRITICAL FLAW PENALTY (scores < 3.5) ---
+  const P_front = calculatePenalty(frontMeasurements)
+  const P_side = calculatePenalty(sideMeasurements)
+
+  // --- FINAL SCORES ---
+  const rawFrontScore = (G_F1 * 0.40 + G_F2 * 0.30 + G_F3 * 0.30) - P_front
+  const rawSideScore = (G_S1 * 0.35 + G_S2 * 0.35 + G_S3 * 0.30) - P_side
+  const rawOverallScore = rawFrontScore * 0.60 + rawSideScore * 0.40
+
+  const frontScore = clampScore(rawFrontScore)
+  const sideScore = clampScore(rawSideScore)
+  const harmonyScore = clampScore(rawFrontScore) // H_front = harmony score
+  const overallScore = clampScore(rawOverallScore)
+
+  // Category scores (old format for compatibility)
   const categoryScores: Record<string, number> = {}
   allMeasurements.forEach(m => {
     if (!categoryScores[m.category]) categoryScores[m.category] = 0
@@ -1143,6 +1188,13 @@ export function calculateAnalysis(
   const topStrengths = sorted.slice(0, 3).map(m => m.name)
   const topWeaknesses = sorted.slice(-3).reverse().map(m => m.name)
 
+  // Store group scores for external use
+  const groupScores: Record<string, number> = {
+    G_F1, G_F2, G_F3,
+    G_S1, G_S2, G_S3,
+    P_front, P_side,
+  }
+
   return {
     gender,
     ethnicity,
@@ -1156,4 +1208,48 @@ export function calculateAnalysis(
     topStrengths,
     topWeaknesses,
   }
+}
+
+// ============================================================
+// HIERARCHICAL SCORING HELPERS
+// ============================================================
+
+/** Calculate weighted group score: key metrics have weight 2.0, standard have 1.0 */
+function weightedGroupScore(measurements: MeasurementResult[], keyIds: string[], stdIds: string[]): number {
+  let weightedSum = 0
+  let totalWeight = 0
+
+  for (const id of keyIds) {
+    const m = measurements.find(m => m.id === id)
+    if (m) {
+      weightedSum += m.score * 2.0
+      totalWeight += 2.0
+    }
+  }
+  for (const id of stdIds) {
+    const m = measurements.find(m => m.id === id)
+    if (m) {
+      weightedSum += m.score * 1.0
+      totalWeight += 1.0
+    }
+  }
+
+  if (totalWeight === 0) return 0
+  return Math.round((weightedSum / totalWeight) * 100) / 100
+}
+
+/** Critical flaw penalty: P = Min(cap, Sum over all (threshold - S_fail) * multiplier) */
+function calculatePenalty(measurements: MeasurementResult[]): number {
+  let penalty = 0
+  for (const m of measurements) {
+    if (m.score < PENALTY_THRESHOLD) {
+      penalty += (PENALTY_THRESHOLD - m.score) * PENALTY_MULTIPLIER
+    }
+  }
+  return Math.min(PENALTY_CAP, Math.round(penalty * 100) / 100)
+}
+
+/** Clamp score to [0, 10] and round to 2 decimals */
+function clampScore(score: number): number {
+  return Math.round(Math.max(0, Math.min(10, score)) * 100) / 100
 }

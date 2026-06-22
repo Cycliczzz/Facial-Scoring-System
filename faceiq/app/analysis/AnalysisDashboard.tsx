@@ -1994,6 +1994,7 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
   const [showLandmarks, setShowLandmarks] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState<"front" | "side">("front")
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc")
 
   const imgRef = useRef<HTMLImageElement | null>(null)
   const loadedImagesRef = useRef<Set<string>>(new Set())
@@ -2225,7 +2226,9 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
 
 
 
-  const sortedMeasurements = [...filteredMeasurements].sort((a, b) => b.score - a.score)
+  const sortedMeasurements = [...filteredMeasurements].sort((a, b) =>
+    sortOrder === "desc" ? b.score - a.score : a.score - b.score
+  )
 
   return (
     <div className="min-h-screen bg-background">
@@ -2256,7 +2259,7 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
               <div className="flex items-center gap-3">
                 <div className="text-right"><div className="text-[10px] text-muted-foreground uppercase tracking-wider">Front</div><div className={`text-sm font-bold ${getScoreColor(results.frontScore)}`}>{results.frontScore.toFixed(1)}</div></div>
                 <div className="text-right"><div className="text-[10px] text-muted-foreground uppercase tracking-wider">Side</div><div className={`text-sm font-bold ${getScoreColor(results.sideScore)}`}>{results.sideScore.toFixed(1)}</div></div>
-                <div className="text-right"><div className="text-[10px] text-muted-foreground uppercase tracking-wider">Harmony</div><div className={`text-sm font-bold ${getScoreColor(results.harmonyScore)}`}>{results.harmonyScore.toFixed(1)}</div></div>
+                <div className="text-right"><div className="text-[10px] text-muted-foreground uppercase tracking-wider">Overall</div><div className={`text-sm font-bold ${getScoreColor(results.overallScore)}`}>{results.overallScore.toFixed(1)}</div></div>
               </div>
             )}
           </div>
@@ -2276,12 +2279,51 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
               <input type="text" placeholder="Search measurements..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full h-9 pl-8 pr-8 rounded-lg bg-card border border-border/50 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50" />
               {searchQuery && <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"><X className="size-3" /></button>}
             </div>
-            <div className="flex items-center gap-1 bg-card border border-border/50 rounded-lg p-0.5">
+            <div className="flex items-center gap-0.5 bg-card border border-border/50 rounded-lg p-0.5">
               {(["front","side"] as const).map(t => (
                 <button key={t} onClick={() => { setActiveTab(t); setSelectedMeasurement(null); if (t === "front" && profileView !== "front") { setProfileView("front"); setZoomLevel(1); setPanOffset({ x: 0, y: 0 }); setImageLoaded(false) } else if (t === "side" && profileView !== "side") { setProfileView("side"); setZoomLevel(1); setPanOffset({ x: 0, y: 0 }); setImageLoaded(false) } }} className={`flex-1 px-2 py-1 rounded text-[10px] font-medium transition-all ${activeTab === t ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary/50"}`}>
                   {t === "front" ? `Front (${results?.frontMeasurements.length || 0})` : `Side (${results?.sideMeasurements.length || 0})`}
                 </button>
               ))}
+              <div className="w-px h-4 bg-border/50 mx-0.5" />
+              {/* Sort dropdown */}
+              <div className="relative group/sort">
+                <button className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-all">
+                  <span>{sortOrder === "desc" ? "▼" : "▲"}</span>
+                  <span className="hidden sm:inline">{sortOrder === "desc" ? "Highest" : "Lowest"}</span>
+                </button>
+                {/* Dropdown menu */}
+                <div className="absolute right-0 top-full mt-0.5 w-36 bg-card border border-border/60 rounded-lg shadow-xl opacity-0 invisible group-hover/sort:opacity-100 group-hover/sort:visible transition-all duration-200 z-50 overflow-hidden">
+                  <button
+                    onClick={() => setSortOrder("desc")}
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-[11px] transition-all ${
+                      sortOrder === "desc"
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
+                    }`}
+                  >
+                    <TrendingDown className={`size-3 ${sortOrder === "desc" ? "text-emerald-400" : ""}`} />
+                    <span>Highest First</span>
+                    {sortOrder === "desc" && (
+                      <div className="ml-auto size-1.5 rounded-full bg-primary animate-pulse" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setSortOrder("asc")}
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-[11px] transition-all ${
+                      sortOrder === "asc"
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
+                    }`}
+                  >
+                    <TrendingUp className={`size-3 ${sortOrder === "asc" ? "text-amber-400" : ""}`} />
+                    <span>Lowest First</span>
+                    {sortOrder === "asc" && (
+                      <div className="ml-auto size-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="space-y-1.5 max-h-[calc(100vh-280px)] overflow-y-auto pr-1 custom-scrollbar">
               {sortedMeasurements.length === 0 ? <div className="text-center py-8 text-xs text-muted-foreground">No measurements found</div> : sortedMeasurements.map(m => (
@@ -2340,7 +2382,7 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
             {results && (
               <div className="bg-card/50 border border-border/50 rounded-xl p-4 shadow-lg">
                 <h3 className="text-xs font-semibold text-foreground mb-3 flex items-center gap-1.5"><Award className="size-3.5 text-primary" />Score Overview</h3>
-                <div className="grid grid-cols-3 gap-2"><ScoreGauge score={results.frontScore} label="Front" size="sm" /><ScoreGauge score={results.sideScore} label="Side" size="sm" /><ScoreGauge score={results.harmonyScore} label="Harmony" size="sm" /></div>
+                <div className="grid grid-cols-2 gap-2"><ScoreGauge score={results.frontScore} label="Front" size="sm" /><ScoreGauge score={results.sideScore} label="Side" size="sm" /></div>
                 <div className="mt-3 pt-3 border-t border-border/30 text-center">
                   <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Overall</div>
                   <div className={`text-3xl font-bold ${getScoreColor(results.overallScore)}`}>{results.overallScore.toFixed(1)}</div>

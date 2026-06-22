@@ -145,10 +145,10 @@ export function SidePhotoUploader({ initialGender = "male", initialEthnicity }: 
 
       setSuccess(true)
 
-      // Redirect to analysis dashboard
+      // Redirect to results score card page
       const genderQuery = initialGender ?? "male"
       const ethnicityQuery = initialEthnicity ? `&ethnicity=${initialEthnicity}` : ""
-      router.push(`/analysis?gender=${genderQuery}${ethnicityQuery}`)
+      router.push(`/onboarding/results?gender=${genderQuery}${ethnicityQuery}`)
     } catch (err) {
       console.error(err)
       setError(err instanceof Error ? err.message : "Something went wrong during analysis. Please try again.")
