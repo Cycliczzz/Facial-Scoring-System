@@ -17,6 +17,7 @@ import { calculateAnalysis } from "@/lib/analysis/calculator"
 import type { AnalysisResults, MeasurementResult, LandmarkPoint } from "@/lib/analysis/types"
 import { FRONT_MEASUREMENTS_META, SIDE_MEASUREMENTS_META } from "@/lib/analysis/idealValues"
 import AIBeautyTab from "@/components/AIBeautyTab"
+import FeatureAnalysisTab from "@/components/FeatureAnalysisTab"
 
 // ============================================================
 // Types
@@ -27,7 +28,7 @@ interface AnalysisDashboardProps {
   initialEthnicity: string
 }
 
-type ProfileView = "front" | "side" | "ai" | "facegpt"
+type ProfileView = "front" | "side" | "features" | "facegpt"
 
 // ============================================================
 // Color helpers
@@ -2058,6 +2059,7 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
   const [sideLandmarks, setSideLandmarks] = useState<LandmarkPoint[]>([])
   const [frontImageUrl, setFrontImageUrl] = useState("")
   const [sideImageUrl, setSideImageUrl] = useState("")
+  const [frontImageBase64, setFrontImageBase64] = useState<string | null>(null)
   const [profileView, setProfileView] = useState<ProfileView>("front")
   const [selectedMeasurement, setSelectedMeasurement] = useState<MeasurementResult | null>(null)
   const [imageLoaded, setImageLoaded] = useState(false)
@@ -2093,6 +2095,14 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
 
     setFrontImageUrl(frontImg || "/hero-samples/sample-1.jpg")
     setSideImageUrl(sideImg || "/hero-samples/sample-3.jpg")
+    // Store base64 if available
+    if (frontImg && frontImg.startsWith("data:")) {
+      setFrontImageBase64(frontImg)
+    } else {
+      // Try to load from separate key
+      const frontB64 = localStorage.getItem("frontProfileImageBase64")
+      if (frontB64) setFrontImageBase64(frontB64)
+    }
 
     if (frontLm) {
       setFrontLandmarks(JSON.parse(frontLm))
@@ -2379,7 +2389,7 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
               <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-0.5">
                 {([
                   { id: "front" as ProfileView, label: "Harmony" },
-                  { id: "ai" as ProfileView, label: "Dimorphism & Angularity", icon: Brain },
+                  { id: "features" as ProfileView, label: "Features" },
                   { id: "facegpt" as ProfileView, label: "FaceGPT" },
                 ]).map(v => (
                   <button
@@ -2391,7 +2401,7 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
                         : "text-muted-foreground hover:bg-secondary/50"
                     } ${v.id === "facegpt" ? "opacity-60 cursor-not-allowed" : ""}`}
                   >
-                    {v.icon && <Brain className="size-3" />}
+                    {v.label === "FaceGPT" && <Brain className="size-3" />}
                     {v.label}
                     {v.id === "facegpt" && <span className="ml-1 text-[8px] bg-sky-500/20 text-sky-300 px-1.5 py-0.5 rounded-full">soon</span>}
                   </button>
@@ -2410,11 +2420,11 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
       </header>
 
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-4">
-        {profileView === "ai" && results && (
-          <AIBeautyTab results={results} frontLandmarks={frontLandmarks} sideLandmarks={sideLandmarks} frontImage={frontImageUrl} sideImage={sideImageUrl} isFemaleAccent={isFemaleAccent} />
+        {profileView === "features" && (
+          <FeatureAnalysisTab imageBase64={frontImageBase64} />
         )}
 
-        {profileView !== "ai" && (
+        {profileView !== "features" && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           <div className="lg:col-span-3 space-y-3">
             <div className="relative">
