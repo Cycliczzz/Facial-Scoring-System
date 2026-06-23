@@ -2525,12 +2525,7 @@ export function AnalysisDashboard({ initialGender, initialEthnicity }: AnalysisD
             {results && (
               <div className="bg-card/50 border border-border/50 rounded-xl p-4 shadow-lg">
                 <h3 className="text-xs font-semibold text-foreground mb-3 flex items-center gap-1.5"><Award className="size-3.5 text-primary" />Score Overview</h3>
-                <div className="grid grid-cols-2 gap-2"><ScoreGauge score={results.frontScore} label="Front" size="sm" /><ScoreGauge score={results.sideScore} label="Side" size="sm" /></div>
-                <div className="mt-3 pt-3 border-t border-border/30 text-center">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Overall</div>
-                  <div className={`text-3xl font-bold ${getScoreColor(results.overallScore)}`}>{results.overallScore.toFixed(1)}</div>
-                  <div className="text-[10px] text-muted-foreground mt-1">out of 10.0</div>
-                </div>
+                <div className="grid grid-cols-3 gap-2"><ScoreGauge score={results.frontScore} label="Front" size="sm" /><ScoreGauge score={results.overallScore} label="Overall" size="md" /><ScoreGauge score={results.sideScore} label="Side" size="sm" /></div>
               </div>
             )}
 

@@ -1,0 +1,850 @@
+\section{Foundation Knowledge: Comprehensive Facial Metrics and Ethnic Benchmarks}
+
+\subsection{Standardized Facial Landmark System}
+
+Our facial analysis system employs a comprehensive landmark detection framework consisting of \textbf{80 anatomical points} distributed across frontal and lateral facial views. These landmarks serve as the geometric foundation for all subsequent measurements and analyses.
+
+\subsubsection{Frontal Profile Landmarks (49 Points)}
+
+The frontal view captures bilateral facial symmetry and proportional relationships through 49 precisely defined anatomical landmarks, organized into functional anatomical regions:
+
+\paragraph{Craniofacial Region (3 landmarks):}
+\begin{itemize}
+    \item $F_1$ \textbf{(Hairline)}: Midpoint of the superior hairline where the forehead meets the scalp
+    \item $F_{10}$ \textbf{(Left Temple)}: Temporal hollow region between the lateral orbital rim and ear
+    \item $F_{11}$ \textbf{(Right Temple)}: Contralateral temporal hollow
+\end{itemize}
+
+\paragraph{Left Ocular Complex (11 landmarks):}
+\begin{itemize}
+    \item $F_2$ \textbf{(Left Pupil)}: Center of the left pupil
+    \item $F_{12}$ \textbf{(Left Medial Canthus)}: Inner corner of the left eye (near nasal bridge)
+    \item $F_{13}$ \textbf{(Left Lateral Canthus)}: Outer corner of the left eye
+    \item $F_{14}$ \textbf{(Left Upper Eyelid)}: Superior point of the left upper eyelid
+    \item $F_{15}$ \textbf{(Left Lower Eyelid)}: Inferior point of the left lower eyelid
+    \item $F_{16}$ \textbf{(Left Eyelid Hood End)}: Lateral terminus of the left upper eyelid fold
+    \item $F_{17}$ \textbf{(Left Brow Head)}: Medial origin of the left eyebrow
+    \item $F_{18}$ \textbf{(Left Brow Inner Corner)}: Inferior medial point of the left eyebrow
+    \item $F_{19}$ \textbf{(Left Brow Arch)}: Apex of the left eyebrow arch
+    \item $F_{20}$ \textbf{(Left Brow Peak)}: Midpoint of the left brow arch
+    \item $F_{21}$ \textbf{(Left Brow Tail)}: Lateral terminus of the left eyebrow
+    \item $F_{22}$ \textbf{(Left Upper Eyelid Crease)}: Medial origin of the left upper eyelid fold
+\end{itemize}
+
+\paragraph{Right Ocular Complex (11 landmarks):}
+\begin{itemize}
+    \item $F_3$ \textbf{(Right Pupil)}: Center of the right pupil
+    \item $F_{23}$--$F_{33}$: Mirror anatomical points of the left ocular complex
+\end{itemize}
+
+\paragraph{Nasal Region (6 landmarks):}
+\begin{itemize}
+    \item $F_4$ \textbf{(Left Nose Side)}: Left alar base (widest point of left nostril)
+    \item $F_5$ \textbf{(Right Nose Side)}: Right alar base
+    \item $F_{34}$ \textbf{(Nasal Base)}: Subnasale (junction of columella and upper lip)
+    \item $F_{35}$ \textbf{(Nose Bottom)}: Inferior tip of the nasal apex
+    \item $F_{36}$ \textbf{(Left Nose Bridge)}: Left lateral point of the nasal bridge at its narrowest width
+    \item $F_{37}$ \textbf{(Right Nose Bridge)}: Right lateral point of the nasal bridge
+\end{itemize}
+
+\paragraph{Oral Region (6 landmarks):}
+\begin{itemize}
+    \item $F_6$ \textbf{(Lower Lip Center)}: Inferior midpoint of the lower lip vermillion
+    \item $F_{38}$ \textbf{(Left Mouth Corner)}: Left oral commissure
+    \item $F_{39}$ \textbf{(Right Mouth Corner)}: Right oral commissure
+    \item $F_{40}$ \textbf{(Cupid's Bow)}: Midpoint connecting the two peaks of the upper lip
+    \item $F_{41}$ \textbf{(Inner Cupid's Bow)}: Central depression of the Cupid's bow
+    \item $F_{42}$ \textbf{(Mouth Middle)}: Midpoint between upper and lower lip centers
+\end{itemize}
+
+\paragraph{Mandibular and Facial Contour (12 landmarks):}
+\begin{itemize}
+    \item $F_7$ \textbf{(Chin Bottom)}: Menton (inferior point of the chin)
+    \item $F_{43}$ \textbf{(Left Upper Jaw Angle)}: Superior attachment of the left mandible near the ear
+    \item $F_{44}$ \textbf{(Right Upper Jaw Angle)}: Contralateral superior mandibular attachment
+    \item $F_{45}$ \textbf{(Left Lower Jaw Angle)}: Left gonion (angle of the mandible)
+    \item $F_{46}$ \textbf{(Right Lower Jaw Angle)}: Right gonion
+    \item $F_{47}$ \textbf{(Left Chin)}: Left lateral chin point where jaw transitions to chin
+    \item $F_{48}$ \textbf{(Right Chin)}: Right lateral chin point
+    \item $F_{51}$ \textbf{(Left Cheekbone)}: Left zygion (most lateral point of the zygomatic arch)
+    \item $F_{52}$ \textbf{(Right Cheekbone)}: Right zygion
+\end{itemize}
+
+\subsubsection{Side Profile Landmarks (31 Points)}
+
+The lateral view provides critical information about facial projection, convexity, and anteroposterior relationships through 31 anatomical landmarks:
+
+\paragraph{Cranial and Superior Facial (5 landmarks):}
+\begin{itemize}
+    \item $S_1$ \textbf{(Top of Head)}: Vertex (highest point of the cranium)
+    \item $S_2$ \textbf{(Occiput)}: Most posterior point of the occipital bone
+    \item $S_{13}$ \textbf{(Hairline Profile)}: Intersection of the hairline with the superior facial boundary
+    \item $S_{14}$ \textbf{(Glabella)}: Most anterior point of the forehead between the eyebrows
+    \item $S_{15}$ \textbf{(Forehead)}: Most prominent point of the frontal bone
+\end{itemize}
+
+\paragraph{Orbital and Auricular (7 landmarks):}
+\begin{itemize}
+    \item $S_5$ \textbf{(Porion)}: Superior point of the external auditory meatus
+    \item $S_6$ \textbf{(Orbitale)}: Inferior point of the orbital rim
+    \item $S_7$ \textbf{(Tragus)}: Cartilaginous projection anterior to the external auditory canal
+    \item $S_8$ \textbf{(Intertragic Notch)}: Depression between the tragus and antitragus
+    \item $S_9$ \textbf{(Corneal Apex)}: Most anterior point of the cornea
+    \item $S_{11}$ \textbf{(Eyelid End)}: Lateral terminus of the upper eyelid
+    \item $S_{12}$ \textbf{(Lower Eyelid)}: Inferior point of the lower eyelid
+\end{itemize}
+
+\paragraph{Nasal Architecture (9 landmarks):}
+\begin{itemize}
+    \item $S_3$ \textbf{(Nose Tip)}: Pronasale (most anterior point of the nasal tip)
+    \item $S_{16}$ \textbf{(Nasal Bridge Root)}: Nasion (junction of nasal bones and frontal bone)
+    \item $S_{17}$ \textbf{(Rhinion)}: Midpoint of the nasal bridge where bone meets cartilage
+    \item $S_{18}$ \textbf{(Supratip)}: Point immediately superior to the nasal tip
+    \item $S_{19}$ \textbf{(Infratip)}: Point immediately inferior to the nasal tip
+    \item $S_{20}$ \textbf{(Columella)}: Inferior point of the columella (tissue between nostrils)
+    \item $S_{21}$ \textbf{(Subnasale)}: Junction of the columella and upper lip
+    \item $S_{22}$ \textbf{(Subalare)}: Inferior point of the alar base
+\end{itemize}
+
+\paragraph{Lower Facial and Cervical (10 landmarks):}
+\begin{itemize}
+    \item $S_4$ \textbf{(Neck Point)}: Anterior cervical point below the cervical angle
+    \item $S_{10}$ \textbf{(Cheekbone)}: Most anterior point of the zygomatic prominence
+    \item $S_{23}$ \textbf{(Upper Lip)}: Labrale superius (most anterior point of the upper lip)
+    \item $S_{24}$ \textbf{(Mouth Corner)}: Lateral oral commissure
+    \item $S_{25}$ \textbf{(Lower Lip)}: Labrale inferius (most anterior point of the lower lip)
+    \item $S_{26}$ \textbf{(Labiomental Fold)}: Deepest point of the labiomental sulcus
+    \item $S_{27}$ \textbf{(Chin Point)}: Pogonion (most anterior point of the chin)
+    \item $S_{28}$ \textbf{(Chin Bottom)}: Menton (inferior point of the chin)
+    \item $S_{29}$ \textbf{(Cervical Point)}: Cervical angle (junction of chin and neck)
+    \item $S_{30}$ \textbf{(Upper Jaw Angle)}: Superior attachment of the mandible
+    \item $S_{31}$ \textbf{(Lower Jaw Angle)}: Gonion (angle of the mandible)
+\end{itemize}
+
+\subsection{Comprehensive Aesthetic Indices and Mathematical Formulations}
+
+Our system computes \textbf{65 distinct facial measurements} derived from the 80 anatomical landmarks. Each measurement is calculated using precise geometric operations including Euclidean distances, angular measurements, and proportional ratios.
+
+\subsubsection{Frontal Profile Indices (33 Metrics)}
+
+\paragraph{Notation:}
+\begin{itemize}
+    \item $d(A, B)$: Euclidean distance between landmarks $A$ and $B$
+    \item $\theta(A, B, C)$: Angle formed at vertex $B$ by rays $BA$ and $BC$
+    \item $\theta_h(A, B)$: Angle of line segment $AB$ relative to horizontal
+    \item $d_\perp(P, L)$: Perpendicular distance from point $P$ to line $L$
+\end{itemize}
+
+\paragraph{Ocular Metrics (6 measurements):}
+\begin{enumerate}
+    \item \textbf{Lateral Canthal Tilt (LCT):}
+    \begin{equation}
+    \text{LCT} = \frac{1}{2}\left[\theta_h(F_{12}, F_{13}) + \theta_h(F_{23}, F_{24})\right]
+    \end{equation}
+    Measures the upward tilt of the palpebral fissure. Positive values indicate upward-slanting eyes.
+    
+    \item \textbf{Eye Aspect Ratio (EAR):}
+    \begin{equation}
+    \text{EAR} = \frac{1}{2}\left[\frac{d(F_{12}, F_{13})}{d(F_{14}, F_{15})} + \frac{d(F_{23}, F_{24})}{d(F_{25}, F_{26})}\right]
+    \end{equation}
+    Quantifies eye shape elongation. Higher values indicate more horizontally elongated eyes.
+    
+    \item \textbf{Eye Separation Ratio (ESR):}
+    \begin{equation}
+    \text{ESR} = \frac{d(F_2, F_3)}{d(F_{51}, F_{52})} \times 100\%
+    \end{equation}
+    Interpupillary distance as a percentage of bizygomatic width.
+    
+    \item \textbf{One Eye Apart Test (OEAT):}
+    \begin{equation}
+    \text{OEAT} = \frac{d(F_{12}, F_{23})}{\frac{1}{2}[d(F_{12}, F_{13}) + d(F_{23}, F_{24})]}
+    \end{equation}
+    Ideal value near 1.0 indicates intercanthal distance equals one eye width.
+    
+    \item \textbf{Eyebrow Tilt (EBT):}
+    \begin{equation}
+    \text{EBT} = \frac{1}{2}\left[\theta_h\left(\text{mid}(F_{17}, F_{18}), \text{mid}(F_{19}, F_{20})\right) + \theta_h\left(\text{mid}(F_{28}, F_{29}), \text{mid}(F_{30}, F_{31})\right)\right]
+    \end{equation}
+    Average eyebrow inclination angle.
+    
+    \item \textbf{Eyebrow Low-Setedness (EBLS):}
+    \begin{equation}
+    \text{EBLS} = \frac{d\left(\text{mid}(F_2, F_3), \text{mid}(F_{18}, F_{29})\right)}{\frac{1}{2}[d(F_{14}, F_{15}) + d(F_{25}, F_{26})]}
+    \end{equation}
+    Ratio of brow-to-pupil distance to average eye height.
+\end{enumerate}
+
+\paragraph{Nasal Metrics (5 measurements):}
+\begin{enumerate}[resume]
+    \item \textbf{Nose Bridge to Width Ratio (NBWR):}
+    \begin{equation}
+    \text{NBWR} = \frac{d(F_4, F_5)}{d(F_{36}, F_{37})}
+    \end{equation}
+    Ratio of alar base width to nasal bridge width.
+    
+    \item \textbf{Ipsilateral Alar Angle (IAA):}
+    \begin{equation}
+    \text{IAA} = \theta(F_{16}, F_{34}, F_{27})
+    \end{equation}
+    Angle at nasal base between left and right eyelid hood ends.
+    
+    \item \textbf{Intercanthal-Nasal Width Ratio (INWR):}
+    \begin{equation}
+    \text{INWR} = \frac{d(F_4, F_5)}{d(F_{12}, F_{23})}
+    \end{equation}
+    Nasal width relative to intercanthal distance.
+    
+    \item \textbf{Mouth Width to Nose Width Ratio (MWNR):}
+    \begin{equation}
+    \text{MWNR} = \frac{d(F_{38}, F_{39})}{d(F_4, F_5)}
+    \end{equation}
+    Ideal ratio approximately 1.4--1.5.
+    
+    \item \textbf{Nose Tip Position (NTP):}
+    \begin{equation}
+    \text{NTP} = d(F_{34}, F_{35})
+    \end{equation}
+    Vertical distance from nasal base to nose bottom.
+\end{enumerate}
+
+\paragraph{Oral and Labial Metrics (5 measurements):}
+\begin{enumerate}[resume]
+    \item \textbf{Cupid's Bow Depth (CBD):}
+    \begin{equation}
+    \text{CBD} = |y_{F_{40}} - y_{F_{41}}|
+    \end{equation}
+    Vertical distance between Cupid's bow peaks and central depression.
+    
+    \item \textbf{Mouth Corner Position (MCP):}
+    \begin{equation}
+    \text{MCP} = \frac{1}{2}\left[(y_{F_{42}} - y_{F_{38}}) + (y_{F_{42}} - y_{F_{39}})\right]
+    \end{equation}
+    Average vertical offset of mouth corners from mouth midline. Positive values indicate upturned corners.
+    
+    \item \textbf{Interpupillary-Mouth Width Ratio (IMWR):}
+    \begin{equation}
+    \text{IMWR} = \frac{d(F_{38}, F_{39})}{d(F_2, F_3)} \times 100\%
+    \end{equation}
+    Mouth width as percentage of interpupillary distance.
+    
+    \item \textbf{Lower Lip to Upper Lip Ratio (LLULR):}
+    \begin{equation}
+    \text{LLULR} = \frac{d(F_6, F_{42})}{d(F_{42}, F_{40})}
+    \end{equation}
+    Ratio of lower lip height to upper lip height.
+    
+    \item \textbf{Chin to Philtrum Ratio (CPR):}
+    \begin{equation}
+    \text{CPR} = \frac{d(F_7, F_6)}{d(F_{40}, F_{34})}
+    \end{equation}
+    Ratio of chin height to philtrum length.
+\end{enumerate}
+
+\paragraph{Mandibular and Jaw Metrics (5 measurements):}
+\begin{enumerate}[resume]
+    \item \textbf{Bigonial Width (BGW):}
+    \begin{equation}
+    \text{BGW} = \frac{d(F_{43}, F_{44})}{d(F_{51}, F_{52})} \times 100\%
+    \end{equation}
+    Upper jaw width as percentage of bizygomatic width.
+    
+    \item \textbf{Jaw Slope (JS):}
+    \begin{equation}
+    \text{JS} = \frac{1}{2}\left[\theta(F_{51}, F_{43}, F_{45}, F_{47}) + \theta(F_{52}, F_{44}, F_{46}, F_{48})\right]
+    \end{equation}
+    Average angle between upper jaw-cheekbone line and lower jaw-chin line.
+    
+    \item \textbf{Jaw Frontal Angle (JFA):}
+    \begin{equation}
+    \text{JFA} = \theta_{\text{intersection}}(F_{45} \to F_{47}, F_{46} \to F_{48})
+    \end{equation}
+    Angle at intersection of extended left and right jaw-to-chin lines.
+    
+    \item \textbf{Deviation of IAA \& JFA (DIAA):}
+    \begin{equation}
+    \text{DIAA} = |\text{JFA} - \text{IAA}|
+    \end{equation}
+    Absolute difference between jaw frontal angle and ipsilateral alar angle. Ideal value near 0°.
+\end{enumerate}
+
+\paragraph{Facial Proportions (12 measurements):}
+\begin{enumerate}[resume]
+    \item \textbf{Bitemporal Width (BTW):}
+    \begin{equation}
+    \text{BTW} = \frac{d(F_{10}, F_{11})}{d(F_{51}, F_{52})} \times 100\%
+    \end{equation}
+    Temple width as percentage of cheekbone width.
+    
+    \item \textbf{Cheekbone Height (CBH):}
+    \begin{equation}
+    \text{CBH} = \frac{d_\perp(F_{40}, \overline{F_{51}F_{52}})}{d_\perp(F_{40}, \overline{F_2F_3})} \times 100\%
+    \end{equation}
+    Ratio of Cupid's bow distance to cheekbone line vs pupil line.
+    
+    \item \textbf{Middle Third (MT):}
+    \begin{equation}
+    \text{MT} = \frac{d\left(\text{mid}(\text{mid}(F_{17}, F_{18}), \text{mid}(F_{28}, F_{29})), F_{34}\right)}{d(F_1, F_7)} \times 100\%
+    \end{equation}
+    Mid-face height (brow midpoint to nasal base) as percentage of total facial height.
+    
+    \item \textbf{Lower Third (LT):}
+    \begin{equation}
+    \text{LT} = \frac{d(F_{34}, F_7)}{d(F_1, F_7)} \times 100\%
+    \end{equation}
+    Lower face height as percentage of total facial height.
+    
+    \item \textbf{Top Third (TT):}
+    \begin{equation}
+    \text{TT} = \frac{d\left(F_1, \text{mid}(\text{mid}(F_{17}, F_{18}), \text{mid}(F_{28}, F_{29}))\right)}{d(F_1, F_7)} \times 100\%
+    \end{equation}
+    Upper face height as percentage of total facial height.
+    
+    \item \textbf{Face Width to Height Ratio (fWHR):}
+    \begin{equation}
+    \text{fWHR} = \frac{d(F_{51}, F_{52})}{d\left(F_{40}, \text{mid}(\text{mid}(F_{17}, F_{18}), \text{mid}(F_{28}, F_{29}))\right)}
+    \end{equation}
+    Bizygomatic width divided by mid-face height.
+    
+    \item \textbf{Total Facial Width to Height Ratio (TFWHR):}
+    \begin{equation}
+    \text{TFWHR} = \frac{d(F_{51}, F_{52})}{d(F_1, F_7)}
+    \end{equation}
+    Bizygomatic width divided by total facial height.
+    
+    \item \textbf{Midface Ratio (MFR):}
+    \begin{equation}
+    \text{MFR} = \frac{d(F_2, F_3)}{d_\perp(F_{41}, \overline{F_2F_3})}
+    \end{equation}
+    Interpupillary distance divided by inner Cupid's bow height from pupil line.
+    
+    \item \textbf{Lower Third Proportion (LTP):}
+    \begin{equation}
+    \text{LTP} = \frac{d(F_{34}, F_{42})}{d(F_{34}, F_7)} \times 100\%
+    \end{equation}
+    Upper lip height as percentage of lower face height.
+    
+    \item \textbf{Brow Length to Face Width Ratio (BLFWR):}
+    \begin{equation}
+    \text{BLFWR} = \frac{d(F_{18}, F_{21}) + d(F_{29}, F_{32})}{d(F_{51}, F_{52})}
+    \end{equation}
+    Combined brow span divided by bizygomatic width.
+\end{enumerate}
+
+\subsubsection{Side Profile Indices (32 Metrics)}
+
+\paragraph{Nasal Architecture (9 measurements):}
+\begin{enumerate}
+    \item \textbf{Nasal Tip Angle (NTA):}
+    \begin{equation}
+    \text{NTA} = \theta(S_{19}, S_3, S_{18})
+    \end{equation}
+    Angle at nasal tip between infratip and supratip. Ideal range: 130°--142°.
+    
+    \item \textbf{Nasal Width to Height Ratio (NWHR):}
+    \begin{equation}
+    \text{NWHR} = \frac{d(S_3, S_{22})}{d_\perp(S_{16}, \overline{S_3S_{22}})}
+    \end{equation}
+    Ratio of nasal width to perpendicular height from nasion.
+    
+    \item \textbf{Nasal Projection (NP):}
+    \begin{equation}
+    \text{NP} = \frac{d(S_{22}, S_3)}{d(S_3, S_{16})}
+    \end{equation}
+    Ratio of nasal width to nasal height.
+    
+    \item \textbf{Nasofrontal Angle (NFA):}
+    \begin{equation}
+    \text{NFA} = \theta(S_{14}, S_{16}, S_{17})
+    \end{equation}
+    Angle at nasion between glabella and rhinion. Ideal: 120°--135°.
+    
+    \item \textbf{Nasolabial Angle (NLA):}
+    \begin{equation}
+    \text{NLA} = 180° - \theta(S_{20}, S_{21}, S_{23})
+    \end{equation}
+    Supplementary angle at subnasale between columella and upper lip. Ideal: 95°--110°.
+    
+    \item \textbf{Nasofacial Angle (NfA):}
+    \begin{equation}
+    \text{NfA} = \theta(S_{27}, S_{16}, S_3)
+    \end{equation}
+    Angle at nasion between chin point and nose tip.
+    
+    \item \textbf{Nasomental Angle (NMA):}
+    \begin{equation}
+    \text{NMA} = \theta(S_{16}, S_3, S_{27})
+    \end{equation}
+    Angle at nose tip between nasion and chin point.
+    
+    \item \textbf{Frankfort-Tip Angle (FTA):}
+    \begin{equation}
+    \text{FTA} = \theta_{\text{intersection}}(\overline{S_{20}S_{21}}, \overline{S_{10}S_{17}})
+    \end{equation}
+    Angle at intersection of columella-subnasale and cheekbone-rhinion lines.
+    
+    \item \textbf{Nose Tip Rotation Angle (NTRA):}
+    \begin{equation}
+    \text{NTRA} = \theta_{\text{intersection}}(\overline{S_{17}S_{10}}, \overline{S_{21}S_{19}})
+    \end{equation}
+    Angle at intersection of rhinion-cheekbone and subnasale-infratip lines.
+\end{enumerate}
+
+\paragraph{Profile Convexity and Depth (6 measurements):}
+\begin{enumerate}[resume]
+    \item \textbf{Facial Convexity (Nasion) (FCN):}
+    \begin{equation}
+    \text{FCN} = \theta(S_{16}, S_{21}, S_{27})
+    \end{equation}
+    Angle at subnasale between nasion and chin point. Measures mid-face convexity.
+    
+    \item \textbf{Facial Convexity (Glabella) (FCG):}
+    \begin{equation}
+    \text{FCG} = \theta(S_{14}, S_{21}, S_{27})
+    \end{equation}
+    Angle at subnasale between glabella and chin point.
+    
+    \item \textbf{Total Facial Convexity (TFC):}
+    \begin{equation}
+    \text{TFC} = \theta(S_{27}, S_3, S_{14})
+    \end{equation}
+    Angle at nose tip between chin point and glabella.
+    
+    \item \textbf{Anterior Facial Depth (AFD):}
+    \begin{equation}
+    \text{AFD} = \theta(S_7, S_{22}, S_6)
+    \end{equation}
+    Angle at subalare between tragus and orbitale.
+    
+    \item \textbf{Facial Depth to Height Ratio (FDHR):}
+    \begin{equation}
+    \text{FDHR} = \frac{d(S_{21}, S_7)}{d(S_{16}, S_{26})}
+    \end{equation}
+    Ratio of facial depth to facial height.
+    
+    \item \textbf{Recession Relative to Frankfort Plane (RFP):}
+    \begin{equation}
+    \text{RFP} = d_{\perp,\text{signed}}(S_{27}, L_{\perp\text{FH}})
+    \end{equation}
+    where $L_{\perp\text{FH}}$ is the line through nasion perpendicular to Frankfort plane (porion-orbitale). Negative values indicate recession.
+\end{enumerate}
+
+\paragraph{Lip Position and Aesthetics (7 measurements):}
+\begin{enumerate}[resume]
+    \item \textbf{Upper Lip S-Line Position (ULSL):}
+    \begin{equation}
+    \text{ULSL} = d_{\perp,\text{signed}}(S_{23}, \overline{S_{20}S_{27}})
+    \end{equation}
+    Signed distance from upper lip to S-line (columella to chin). Negative = behind line.
+    
+    \item \textbf{Upper Lip E-Line Position (ULEL):}
+    \begin{equation}
+    \text{ULEL} = d_{\perp,\text{signed}}(S_{23}, \overline{S_3S_{27}})
+    \end{equation}
+    Signed distance from upper lip to Ricketts' E-line (nose tip to chin).
+    
+    \item \textbf{Upper Lip Burstone Line (ULBL):}
+    \begin{equation}
+    \text{ULBL} = d_{\perp,\text{signed}}(S_{23}, \overline{S_{21}S_{27}})
+    \end{equation}
+    Signed distance from upper lip to Burstone line (subnasale to chin).
+    
+    \item \textbf{Lower Lip S-Line Position (LLSL):}
+    \begin{equation}
+    \text{LLSL} = d_{\perp,\text{signed}}(S_{25}, \overline{S_{20}S_{27}})
+    \end{equation}
+    
+    \item \textbf{Lower Lip E-Line Position (LLEL):}
+    \begin{equation}
+    \text{LLEL} = d_{\perp,\text{signed}}(S_{25}, \overline{S_3S_{27}})
+    \end{equation}
+    
+    \item \textbf{Lower Lip Burstone Line (LLBL):}
+    \begin{equation}
+    \text{LLBL} = d_{\perp,\text{signed}}(S_{25}, \overline{S_{21}S_{27}})
+    \end{equation}
+    
+    \item \textbf{Holdaway H-Line (HHL):}
+    \begin{equation}
+    \text{HHL} = d_{\perp,\text{signed}}(S_{25}, \overline{S_{23}S_{27}})
+    \end{equation}
+    Signed distance from lower lip to Holdaway H-line (upper lip to chin).
+\end{enumerate}
+
+\paragraph{Mandibular and Jaw Analysis (5 measurements):}
+\begin{enumerate}[resume]
+    \item \textbf{Gonial Angle (GA):}
+    \begin{equation}
+    \text{GA} = \theta_{\text{intersection}}(\overline{S_8S_{30}}, \overline{S_{28}S_{31}})
+    \end{equation}
+    Angle at gonion between intertragic notch-upper jaw and chin bottom-lower jaw lines. Ideal: 117°--123°.
+    
+    \item \textbf{Mandibular Plane Angle (MPA):}
+    \begin{equation}
+    \text{MPA} = \theta_h(S_{31}, S_{28})
+    \end{equation}
+    Angle of mandibular plane relative to horizontal. Ideal: 14°--24°.
+    
+    \item \textbf{Ramus to Mandible Ratio (RMR):}
+    \begin{equation}
+    \text{RMR} = \frac{d(S_7, A)}{d(A, B)}
+    \end{equation}
+    where $A$ is the intersection of lines $\overline{S_{28}S_{31}}$ and $\overline{S_7S_{30}}$, and $B$ is the vertical projection of $S_{27}$ onto line $\overline{S_{28}S_{31}}$.
+    
+    \item \textbf{Gonion to Mouth Line (GML):}
+    \begin{equation}
+    \text{GML} = |y_A - y_{S_{24}}|
+    \end{equation}
+    Vertical distance from gonion intersection to mouth corner horizontal line.
+    
+    \item \textbf{Mentolabial Angle (MLA):}
+    \begin{equation}
+    \text{MLA} = \theta(S_{25}, S_{26}, S_{27})
+    \end{equation}
+    Angle at labiomental fold between lower lip and chin. Ideal: 114°--132°.
+\end{enumerate}
+
+\paragraph{Forehead and Cranial (3 measurements):}
+\begin{enumerate}[resume]
+    \item \textbf{Upper Forehead Slope (UFS):}
+    \begin{equation}
+    \text{UFS} = \theta(S_{15}, S_{14}, S_{13})
+    \end{equation}
+    Angle at glabella between forehead and hairline.
+    
+    \item \textbf{Browridge Inclination Angle (BIA):}
+    \begin{equation}
+    \text{BIA} = \theta_v(S_{14}, S_{13})
+    \end{equation}
+    Angle of glabella-hairline line from vertical.
+    
+    \item \textbf{Submental Cervical Angle (SCA):}
+    \begin{equation}
+    \text{SCA} = \theta(S_{28}, S_{29}, S_4)
+    \end{equation}
+    Angle at cervical point between chin bottom and neck point. Ideal: 90°--110°.
+\end{enumerate}
+
+\paragraph{Midface and Orbital (2 measurements):}
+\begin{enumerate}[resume]
+    \item \textbf{Orbital Vector (OV):}
+    \begin{equation}
+    \text{OV} = x_{S_6} - x_{S_{12}}
+    \end{equation}
+    Horizontal distance from orbitale to vertical line through lower eyelid. Negative = orbitale behind (recessed).
+    
+    \item \textbf{Interior Midface Projection Angle (IMPA):}
+    \begin{equation}
+    \text{IMPA} = \theta_h(S_{22}, S_{11})
+    \end{equation}
+    Angle at subalare between ray to eyelid end and leftward horizontal.
+\end{enumerate}
+
+\paragraph{Additional Profile Metrics (2 measurements):}
+\begin{enumerate}[resume]
+    \item \textbf{Z-Angle (ZA):}
+    \begin{equation}
+    \text{ZA} = \theta_{\text{intersection}}(\overline{S_{10}S_{17}}, \overline{S_{27}S_{19}})
+    \end{equation}
+    Angle at intersection of cheekbone-rhinion and chin point-infratip lines.
+\end{enumerate}
+
+\subsection{Ethnicity-Calibrated Ideal Value Database}
+
+Our system maintains comprehensive ethnically-specific ideal ranges for all 65 measurements, derived from peer-reviewed anthropometric research \cite{farkas1994, legan1980, arnett1999}. The database covers \textbf{7 major ethnic groups} with \textbf{gender-specific adjustments}.
+
+\subsubsection{Ethnic Groups and Adjustment Methodology}
+
+\paragraph{Baseline Reference:} Male East Asian population serves as the computational baseline, with all other ethnicities derived through validated adjustment factors.
+
+\paragraph{Supported Ethnicities:}
+\begin{enumerate}
+    \item \textbf{East Asian} (Baseline)
+    \item \textbf{Caucasian} (White/European)
+    \item \textbf{Black} (African/African-American)
+    \item \textbf{Hispanic} (Latin American)
+    \item \textbf{Middle Eastern} (Arab/Persian)
+    \item \textbf{South Asian} (Indian subcontinent)
+    \item \textbf{Mixed} (Population average)
+\end{enumerate}
+
+\paragraph{Ethnic Adjustment Factors:}
+
+Each ethnicity is characterized by a set of adjustment factors applied to the baseline:
+
+\begin{table}[h!]
+\centering
+\caption{Ethnic Adjustment Factors Relative to East Asian Baseline}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{|l|c|c|c|c|c|c|}
+\hline
+\textbf{Ethnicity} & \textbf{Size Scale} & \textbf{Nose Width} & \textbf{Nasal Proj.} & \textbf{Lip Prot.} & \textbf{Canthal Tilt} & \textbf{Jaw Width} \\ \hline
+Caucasian & 0.95 & $-8°$ & $+0.12$ & $-2$ mm & $-1.5°$ & $-5°$ \\ \hline
+Black & 1.02 & $+12°$ & $-0.05$ & $+3$ mm & $-2.5°$ & $+5°$ \\ \hline
+Hispanic & 0.98 & $+2°$ & $+0.06$ & $+1$ mm & $-0.5°$ & $-2°$ \\ \hline
+Middle Eastern & 0.97 & $-3°$ & $+0.15$ & $-1$ mm & $-1.0°$ & $-3°$ \\ \hline
+South Asian & 0.99 & $+4°$ & $+0.04$ & $+0.5$ mm & $0°$ & $-1°$ \\ \hline
+Mixed & 0.98 & $+1°$ & $+0.05$ & $0$ mm & $-0.5°$ & $-2°$ \\ \hline
+\end{tabular}}
+\end{table}
+
+\paragraph{Gender Dimorphism Adjustments:}
+
+Female values are derived from male values using established sexual dimorphism patterns:
+
+\begin{itemize}
+    \item \textbf{Facial Width:} Female values scaled by 0.95--0.96 (5--6\% narrower)
+    \item \textbf{Canthal Tilt:} Female values $+1.5°$ more upward
+    \item \textbf{Jaw Angles:} Female values $+2°$ to $+3°$ (softer jawline)
+    \item \textbf{Nasal Projection:} Female values $-0.02$ (less prominent)
+    \item \textbf{Lip Protrusion:} Female values $-0.3$ mm (less protrusive)
+    \item \textbf{Profile Convexity:} Female values $+2°$ to $+3°$ (more convex)
+\end{itemize}
+
+\subsubsection{Sample Ideal Value Tables}
+
+\begin{table}[h!]
+\centering
+\caption{Frontal Measurements: Male East Asian Baseline (Selected Metrics)}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\textbf{Measurement} & \textbf{Unit} & \textbf{Range Min} & \textbf{Range Max} & \textbf{Ideal Min} & \textbf{Ideal Max} \\ \hline
+Lateral Canthal Tilt & degrees & $-2.57$ & $19.67$ & $6.50$ & $10.50$ \\ \hline
+Eye Aspect Ratio & ratio & $1.42$ & $4.88$ & $2.85$ & $3.45$ \\ \hline
+Eye Separation Ratio & \% & $37.38$ & $54.98$ & $44.00$ & $48.00$ \\ \hline
+Nose Bridge to Width & ratio & $1.16$ & $3.04$ & $1.85$ & $2.35$ \\ \hline
+Jaw Frontal Angle & degrees & $54.78$ & $124.22$ & $84.50$ & $94.50$ \\ \hline
+Face Width to Height (fWHR) & ratio & $1.52$ & $2.38$ & $1.85$ & $2.05$ \\ \hline
+Midface Ratio & ratio & $0.61$ & $1.34$ & $0.92$ & $1.03$ \\ \hline
+\end{tabular}}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\caption{Side Profile Measurements: Male East Asian Baseline (Selected Metrics)}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\textbf{Measurement} & \textbf{Unit} & \textbf{Range Min} & \textbf{Range Max} & \textbf{Ideal Min} & \textbf{Ideal Max} \\ \hline
+Nasal Tip Angle & degrees & $106.16$ & $166.84$ & $130.00$ & $142.00$ \\ \hline
+Nasal Projection & ratio & $0.11$ & $1.02$ & $0.50$ & $0.63$ \\ \hline
+Nasofrontal Angle & degrees & $79.18$ & $173.22$ & $120.00$ & $132.50$ \\ \hline
+Nasolabial Angle & degrees & $55.02$ & $145.98$ & $95.00$ & $106.00$ \\ \hline
+Gonial Angle & degrees & $94.34$ & $145.66$ & $117.00$ & $123.00$ \\ \hline
+Facial Convexity (Nasion) & degrees & $134.63$ & $196.37$ & $160.00$ & $171.00$ \\ \hline
+Upper Lip E-Line & mm & $-7.56$ & $12.56$ & $1.00$ & $4.00$ \\ \hline
+\end{tabular}}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\caption{Ethnic Variation in Key Frontal Measurements (Male)}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\textbf{Measurement} & \textbf{East Asian} & \textbf{Caucasian} & \textbf{Black} & \textbf{Hispanic} & \textbf{Mid-East} \\ \hline
+\multicolumn{6}{|c|}{\textit{Lateral Canthal Tilt (degrees)}} \\ \hline
+Ideal Range & $6.5$--$10.5$ & $5.0$--$9.0$ & $4.0$--$8.0$ & $6.0$--$10.0$ & $5.5$--$9.5$ \\ \hline
+\multicolumn{6}{|c|}{\textit{Nose Bridge to Width Ratio}} \\ \hline
+Ideal Range & $1.85$--$2.35$ & $1.73$--$2.23$ & $2.03$--$2.53$ & $1.88$--$2.38$ & $1.81$--$2.31$ \\ \hline
+\multicolumn{6}{|c|}{\textit{Jaw Frontal Angle (degrees)}} \\ \hline
+Ideal Range & $84.5$--$94.5$ & $79.5$--$89.5$ & $89.5$--$99.5$ & $82.5$--$92.5$ & $81.5$--$91.5$ \\ \hline
+\multicolumn{6}{|c|}{\textit{Face Width to Height Ratio (fWHR)}} \\ \hline
+Ideal Range & $1.85$--$2.05$ & $1.76$--$1.95$ & $1.89$--$2.09$ & $1.81$--$2.01$ & $1.79$--$1.99$ \\ \hline
+\end{tabular}}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\caption{Ethnic Variation in Key Side Profile Measurements (Male)}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\textbf{Measurement} & \textbf{East Asian} & \textbf{Caucasian} & \textbf{Black} & \textbf{Hispanic} & \textbf{Mid-East} \\ \hline
+\multicolumn{6}{|c|}{\textit{Nasal Projection (ratio)}} \\ \hline
+Ideal Range & $0.50$--$0.63$ & $0.62$--$0.75$ & $0.45$--$0.58$ & $0.56$--$0.69$ & $0.65$--$0.78$ \\ \hline
+\multicolumn{6}{|c|}{\textit{Nasofrontal Angle (degrees)}} \\ \hline
+Ideal Range & $120$--$132.5$ & $112$--$124.5$ & $116$--$128.5$ & $116$--$128.5$ & $110$--$122.5$ \\ \hline
+\multicolumn{6}{|c|}{\textit{Nasolabial Angle (degrees)}} \\ \hline
+Ideal Range & $95$--$106$ & $90$--$101$ & $88$--$99$ & $92$--$103$ & $91$--$102$ \\ \hline
+\multicolumn{6}{|c|}{\textit{Upper Lip E-Line Position (mm)}} \\ \hline
+Ideal Range & $1.0$--$4.0$ & $-1.0$--$2.0$ & $4.0$--$7.0$ & $2.0$--$5.0$ & $0.5$--$3.5$ \\ \hline
+\multicolumn{6}{|c|}{\textit{Gonial Angle (degrees)}} \\ \hline
+Ideal Range & $117$--$123$ & $117$--$123$ & $122$--$128$ & $119$--$125$ & $120$--$126$ \\ \hline
+\end{tabular}}
+\end{table}
+
+\subsection{Harmony Scoring Algorithm}
+
+\subsubsection{Plateau Gaussian Scoring Model}
+
+Each measurement receives an individual harmony score $H_i \in [0, 10]$ using a \textbf{Plateau Gaussian Curve} that rewards values within the ideal range and penalizes deviations:
+
+\paragraph{Step 1: Plateau Zone (Perfect Score)}
+\begin{equation}
+\text{If } V_i \in [\text{IdealMin}_i, \text{IdealMax}_i], \quad H_i = 10.0
+\end{equation}
+
+\paragraph{Step 2: Out-of-Range Floor}
+\begin{equation}
+\text{If } V_i \leq \text{RangeMin}_i \text{ or } V_i \geq \text{RangeMax}_i, \quad H_i = H_{\text{floor}} = 1.0
+\end{equation}
+
+\paragraph{Step 3: Transition Zone (Gaussian Decay)}
+
+For values in the transition zone, compute normalized deviation:
+
+\begin{equation}
+D_i = \begin{cases}
+\frac{\text{IdealMin}_i - V_i}{\text{IdealMin}_i - \text{RangeMin}_i} & \text{if } V_i < \text{IdealMin}_i \\[10pt]
+\frac{V_i - \text{IdealMax}_i}{\text{RangeMax}_i - \text{IdealMax}_i} & \text{if } V_i > \text{IdealMax}_i
+\end{cases}
+\end{equation}
+
+where $D_i \in [0, 1]$ represents the proportional deviation from the ideal range.
+
+\paragraph{Step 4: Gaussian Score Calculation}
+\begin{equation}
+H_i = \max\left(H_{\text{floor}}, 10 \times \exp(-K \times D_i^2)\right)
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $K = 2.0$ is the steepness factor (higher values create steeper decay)
+    \item $H_{\text{floor}} = 1.0$ is the minimum score
+\end{itemize}
+
+\paragraph{Score Interpretation:}
+\begin{itemize}
+    \item $H_i = 10.0$: \textbf{Ideal} -- Within optimal range
+    \item $7.0 \leq H_i < 10.0$: \textbf{Good} -- Minor deviation
+    \item $4.5 \leq H_i < 7.0$: \textbf{Acceptable} -- Moderate deviation
+    \item $2.5 \leq H_i < 4.5$: \textbf{Below Average} -- Significant deviation
+    \item $H_i < 2.5$: \textbf{Poor} -- Major disharmony
+\end{itemize}
+
+\subsubsection{Hierarchical Weighted Harmony Aggregation}
+
+The overall facial harmony score is computed through a \textbf{hierarchical weighted aggregation} system that reflects the clinical importance of different facial regions.
+
+\paragraph{Frontal Profile Groups (60\% of Overall Score):}
+
+\begin{enumerate}
+    \item \textbf{Group F1: Craniofacial Framework \& Global Proportions (40\%)}
+    \begin{itemize}
+        \item \textit{Key Metrics (weight = 2.0):} Midface Ratio, Face Width to Height Ratio, Lower Third
+        \item \textit{Standard Metrics (weight = 1.0):} Bitemporal Width, Bigonial Width, Jaw Slope, Middle Third, Top Third, Total Facial Width to Height Ratio, Lower Third Proportion
+    \end{itemize}
+    
+    \item \textbf{Group F2: Periorbital Complex (30\%)}
+    \begin{itemize}
+        \item \textit{Key Metrics:} Lateral Canthal Tilt, Eye Separation Ratio
+        \item \textit{Standard Metrics:} Cheekbone Height, Eye Aspect Ratio, Eyebrow Tilt, One Eye Apart Test, Eyebrow Low-Setedness, Brow Length to Face Width Ratio
+    \end{itemize}
+    
+    \item \textbf{Group F3: Perioral \& Nasal Complex (30\%)}
+    \begin{itemize}
+        \item \textit{Key Metrics:} Jaw Frontal Angle, Chin to Philtrum Ratio
+        \item \textit{Standard Metrics:} Nose Bridge to Width, Cupid's Bow Depth, Mouth Corner Position, Interpupillary-Mouth Width Ratio, Intercanthal-Nasal Width Ratio, Ipsilateral Alar Angle, Mouth Width to Nose Width Ratio, Nose Tip Position, Deviation of IAA \& JFA, Lower Lip to Upper Lip Ratio
+    \end{itemize}
+\end{enumerate}
+
+\paragraph{Side Profile Groups (40\% of Overall Score):}
+
+\begin{enumerate}
+    \item \textbf{Group S1: Profile Convexity \& Structural Depth (35\%)}
+    \begin{itemize}
+        \item \textit{Key Metrics:} Recession (Frankfort Plane), Total Facial Convexity
+        \item \textit{Standard Metrics:} Facial Convexity (Nasion), Anterior Facial Depth, Facial Depth to Height Ratio, Facial Convexity (Glabella), Interior Midface Projection Angle, Z-Angle
+    \end{itemize}
+    
+    \item \textbf{Group S2: Nasal Architecture \& Forehead Slope (35\%)}
+    \begin{itemize}
+        \item \textit{Key Metrics:} Nasal Projection, Nasolabial Angle
+        \item \textit{Standard Metrics:} Nasal Tip Angle, Nasal Width to Height Ratio, Nasofrontal Angle, Upper Forehead Slope, Browridge Inclination, Nose Tip Rotation Angle, Nasofacial Angle, Nasomental Angle, Frankfort-Tip Angle
+    \end{itemize}
+    
+    \item \textbf{Group S3: Mandibulofascial \& Labial Contours (30\%)}
+    \begin{itemize}
+        \item \textit{Key Metrics:} Gonial Angle, Lower Lip E-Line Position
+        \item \textit{Standard Metrics:} Upper Lip S-Line, Upper Lip Burstone Line, Holdaway H-Line, Mentolabial Angle, Upper Lip E-Line, Submental Cervical Angle, Orbital Vector, Lower Lip S-Line, Lower Lip Burstone Line, Mandibular Plane Angle, Ramus to Mandible Ratio, Gonion to Mouth Line
+    \end{itemize}
+\end{enumerate}
+
+\paragraph{Group Score Calculation:}
+
+For each group $G$, compute the weighted average:
+
+\begin{equation}
+S_G = \frac{\sum_{i \in \text{Key}} 2.0 \times H_i + \sum_{j \in \text{Std}} 1.0 \times H_j}{\sum_{i \in \text{Key}} 2.0 + \sum_{j \in \text{Std}} 1.0}
+\end{equation}
+
+\paragraph{Profile Scores:}
+
+\begin{align}
+S_{\text{Front}} &= 0.40 \times S_{F1} + 0.30 \times S_{F2} + 0.30 \times S_{F3} \\
+S_{\text{Side}} &= 0.35 \times S_{S1} + 0.35 \times S_{S2} + 0.30 \times S_{S3}
+\end{align}
+
+\subsubsection{Critical Flaw Penalty System}
+
+To account for severe disharmonies that disproportionately affect overall aesthetics, we apply a \textbf{critical flaw penalty}:
+
+\paragraph{Penalty Calculation:}
+
+\begin{equation}
+P = \min\left(P_{\text{cap}}, \sum_{i: H_i < T} (T - H_i) \times M\right)
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $T = 3.5$ is the critical threshold
+    \item $M = 0.25$ is the penalty multiplier
+    \item $P_{\text{cap}} = 1.0$ is the maximum penalty
+\end{itemize}
+
+\paragraph{Final Scores:}
+
+\begin{align}
+S_{\text{Front}}^{\text{final}} &= \max(0, S_{\text{Front}} - P_{\text{Front}}) \\
+S_{\text{Side}}^{\text{final}} &= \max(0, S_{\text{Side}} - P_{\text{Side}}) \\
+S_{\text{Overall}} &= \max(0, 0.60 \times S_{\text{Front}}^{\text{final}} + 0.40 \times S_{\text{Side}}^{\text{final}})
+\end{align}
+
+All scores are clamped to the range $[0, 10]$ and rounded to 2 decimal places.
+
+\subsection{Scientific Foundation and References}
+
+The measurement definitions, ideal values, and scoring methodology are grounded in peer-reviewed cephalometric and anthropometric research:
+
+\begin{enumerate}
+    \item \textbf{Farkas LG (1994).} \textit{Anthropometry of the Head and Face, 2nd Edition.} Raven Press, New York. -- Comprehensive anthropometric norms across ethnic groups.
+    
+    \item \textbf{Legan HL, Burstone CJ (1980).} ``Soft tissue cephalometric analysis for orthognathic surgery.'' \textit{Journal of Oral Surgery} 38(10):744--751. -- Soft tissue analysis standards.
+    
+    \item \textbf{Arnett GW, Bergman RT (1993).} ``Facial keys to orthodontic diagnosis and treatment planning.'' \textit{American Journal of Orthodontics and Dentofacial Orthopedics} 103(4):299--312. -- Clinical facial analysis framework.
+    
+    \item \textbf{McNamara JA Jr (1984).} ``A method of cephalometric evaluation.'' \textit{American Journal of Orthodontics} 86(6):449--469. -- Cephalometric analysis methodology.
+    
+    \item \textbf{Ricketts RM (1981).} ``Perspectives in the clinical application of cephalometrics.'' \textit{Angle Orthodontist} 51(2):115--150. -- E-line and profile analysis.
+    
+    \item \textbf{Steiner CC (1953).} ``Cephalometrics for you and me.'' \textit{American Journal of Orthodontics} 39(10):729--755. -- S-line and soft tissue analysis.
+    
+    \item \textbf{Holdaway RA (1983).} ``A soft-tissue cephalometric analysis and its use in orthodontic treatment planning.'' \textit{American Journal of Orthodontics} 84(1):1--28. -- H-line analysis.
+    
+    \item \textbf{Burstone CJ (1967).} ``Lip posture and its significance in treatment planning.'' \textit{American Journal of Orthodontics} 53(4):262--284. -- Burstone line analysis.
+\end{enumerate}
+
+\subsection{Summary}
+
+This comprehensive foundation establishes:
+\begin{itemize}
+    \item \textbf{80 anatomical landmarks} (49 frontal + 31 side) for precise geometric definition
+    \item \textbf{65 facial measurements} (33 frontal + 32 side) with rigorous mathematical formulations
+    \item \textbf{Ethnicity-calibrated ideal ranges} for 7 major ethnic groups with gender-specific adjustments
+    \item \textbf{Plateau Gaussian scoring model} for individual measurement evaluation
+    \item \textbf{Hierarchical weighted aggregation} reflecting clinical importance of facial regions
+    \item \textbf{Critical flaw penalty system} to account for severe disharmonies
+\end{itemize}
+
+This scientifically-grounded framework enables objective, reproducible, and clinically-relevant facial aesthetic analysis across diverse populations.
