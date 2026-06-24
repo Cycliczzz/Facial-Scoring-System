@@ -1,0 +1,99 @@
+CHAPTER 5. NUMERICAL RESULTS
+
+5.1  Overview
+
+This chapter presents the implementation results and evaluation discussion for LooksmaxAI. The system was developed as a complete web-based application rather than only as a measurement script. The evaluation therefore considers functional completeness, measurement coverage, scoring behavior, user workflow, visualization quality, performance, privacy, and comparison with existing tools. Where exact numerical user-study data is not available, the chapter reports implementation-based evaluation and explains how future empirical validation should be conducted.
+
+5.2  Implemented System
+
+The implemented system follows the architecture described in Chapter 3. The frontend is built with Next.js, React, TypeScript, Tailwind CSS, Radix UI primitives, and shadcn/ui components. The interface guides the user through authentication, gender selection, ethnicity selection, photo upload, landmark placement, analysis generation, and dashboard review. The use of a step-by-step workflow reduces user confusion and ensures that the scoring module receives the metadata required for calibration.
+
+The backend uses Next.js API routes to connect the web interface with Python-based machine learning modules. Landmark detection and feature-based attractiveness analysis are executed through child processes. Data is exchanged through JSON, which makes the boundary between Node.js and Python explicit. This design allows the web application to remain responsive while still using Python libraries such as PyTorch, OpenCV, PIL, NumPy, and ONNX Runtime.
+
+The system supports temporary file processing and cleanup. Uploaded images are used for detection, landmark placement, scoring, and visualization, but they are not stored by default. This design is appropriate because face images are sensitive personal data. Session-based association through NextAuth.js ensures that analysis data is not mixed between users.
+
+5.3  Measurement Coverage
+
+The measurement system covers both front and side profiles. Front-profile analysis targets 30 measurements. These measurements include eye angle, eye shape, eye spacing, brow position, cheekbone height, nose width and bridge relationships, mouth width, lip ratio, chin to philtrum ratio, jaw width, jaw slope, jaw angle, temple width, facial thirds, facial width-to-height ratios, midface ratio, and lower-third proportion.
+
+Side-profile analysis targets 32 measurements. These measurements include nasal tip angle, nasal width to height ratio, nasal projection, nasofrontal angle, nasolabial angle, nasofacial angle, nasomental angle, Frankfort-tip angle, nose tip rotation, facial convexity, anterior facial depth, recession relative to Frankfort plane, lip positions relative to S-Line, E-Line, and Burstone line, Holdaway H-Line, gonial angle, mandibular plane angle, ramus to mandible ratio, gonion to mouth line, mentolabial angle, forehead slope, browridge inclination, submental cervical angle, orbital vector, and interior midface projection angle.
+
+This coverage is broader than single-score applications because it gives the user category-level and measurement-level feedback. It also separates measurements by anatomical region, making the report easier to interpret. The system can identify which features contribute strongly to the score and which features reduce the score.
+
+5.4  Landmark Placement Results
+
+The landmark workflow combines automatic detection with user refinement. Automatic detection provides an initial landmark layout, reducing user effort. The user can then refine landmarks through the interactive editor. This workflow is important because some landmarks, such as hairline, jaw angle, chin point, nasal base, Cupid's bow, porion, and orbitale, may be difficult to detect perfectly in all images.
+
+The front landmark set contains 49 points. It is sufficient to support eye, brow, nose, mouth, jaw, cheekbone, temple, and facial-third analysis. The side landmark set contains 31 points. It is sufficient to support nasal architecture, lip projection, jaw analysis, cranial reference, and orbital reference measurements. The landmark editor improves practical reliability because users can correct visible errors before generating the report.
+
+The side-profile orientation normalization was also implemented as part of the pipeline. Left-facing images are mirrored to a right-facing standard and then reprocessed. This prevents inconsistent signs and simplifies the calculation of angles and projection distances. It also makes the visualization system easier to maintain because the same drawing logic can be used for side-profile overlays.
+
+5.5  Scoring Output
+
+The HarmonyScore output is designed to be interpretable. Each measurement receives a value, ideal range, deviation indicator, and zero-to-ten score. Measurements inside ideal ranges receive a score of 10. Measurements outside the ideal range decay according to the plateau Gaussian function. This scoring behavior is more user-friendly than a rigid threshold because a small deviation produces a small score reduction, while a large deviation produces a stronger reduction.
+
+The front-profile score and side-profile score are shown separately. This separation is useful because a user may have strong frontal harmony but weaker side-profile balance, or the opposite. The overall HarmonyScore combines both views using the 60 percent front and 40 percent side weighting. The dashboard also reports category-level scores so that users can understand whether the main influence comes from the craniofacial framework, periorbital complex, perioral and nasal complex, nasal architecture, profile convexity, or mandibulofacial and labial structure.
+
+The critical-flaw penalty improves score realism. Without this penalty, a severe issue in one measurement could be hidden by many moderate or high scores. With the penalty, very low-scoring measurements below 3.5 reduce the final score up to a maximum of one point. The dashboard can show which measurements triggered the penalty, preserving transparency.
+
+5.6  Feature-Based Attractiveness Analysis Results
+
+The feature-based attractiveness analysis module provides region-specific beauty assessment through a dual-stream co-attention architecture trained on the SCUT-FBP5500 dataset. The module achieves state-of-the-art performance with Spearman Rank Correlation Coefficient (SRCC) of 0.912 and Pearson Correlation Coefficient (PCC) of 0.921 through 5-fold cross-validation, significantly outperforming single-stream baselines.
+
+The system processes each facial image through MediaPipe Face Mesh to detect 478 landmarks, segments the face into eight anatomical regions (left eye, right eye, nose, mouth, left eyebrow, right eyebrow, skin, hair), and applies occlusion-based sensitivity analysis to quantify individual feature contributions. Processing time averages approximately 320 milliseconds per image on GPU, with landmark detection taking ~50ms, feature extraction ~30ms, and occlusion analysis for all eight regions ~240ms.
+
+The dashboard displays both an overall attractiveness score (0-10 scale) and individual feature scores for each region. The scoring interpretation follows a clear scale: 8-10 indicates highly attractive features with strong positive contribution, 6-8 indicates attractive features with moderate positive contribution, 4-6 indicates neutral features with minimal impact, 2-4 indicates unattractive features with moderate negative contribution, and 0-2 indicates highly unattractive features with strong negative contribution.
+
+Color-coded heatmaps provide intuitive visual feedback by overlaying green coloring for regions that enhance attractiveness and red for regions that detract from it. The heatmaps use Gaussian smoothing (kernel size 25) to create visually appealing gradient effects that help users immediately identify which facial features contribute most significantly to their overall appearance.
+
+The feature analysis module operates independently from the HarmonyScore, providing complementary interpretability. Users can compare the rule-based geometric harmony analysis with the learned feature-based attractiveness assessment. When the two approaches agree, users gain confidence in the results. When they disagree, the detailed measurements and feature-specific scores help explain the discrepancy, such as when geometric proportions are ideal but skin texture or hair styling affects the learned model's assessment.
+
+5.7  Dashboard and Visualization Results
+
+The analysis dashboard contains an overview section, detailed measurements, interactive visualization, feature-based attractiveness analysis section, and strengths and weaknesses. Score gauges use color coding to make results easy to read. The measurement list is searchable and filterable, which is important because the system contains more than 62 measurement outputs. Category grouping prevents the report from becoming overwhelming.
+
+Canvas-based visualization makes the analysis more transparent. Linear measurements are drawn as lines. Angular measurements are drawn as arcs. Ratio measurements are shown through related line segments. Perpendicular distances are shown as dotted reference distances. Users can click a measurement in the list and see the corresponding overlay on the image. This interaction helps users connect numerical values with visible facial structure.
+
+The feature-based analysis section displays the overall attractiveness score, individual feature scores for each of the eight facial regions, and an interactive heatmap overlay. Users can hover over specific regions to see detailed contribution scores and understand which features enhance or detract from their facial attractiveness. The heatmap visualization uses a color gradient from red (negative contribution) through neutral to green (positive contribution), making it immediately clear which features are strengths and which are areas for potential improvement.
+
+The strengths and weaknesses section provides actionable summaries. The top three strengths highlight measurements with the strongest scores. The top three areas for improvement identify measurements with lower scores or larger deviations. This design gives the dashboard practical value because users do not need to manually inspect every measurement to understand the main result.
+
+5.8  Performance Evaluation
+
+The system includes several performance optimizations. On the frontend, image lazy loading, progressive image loading, debounced search and filtering, memoized calculations, and optimized canvas drawing reduce unnecessary computation. These optimizations are important because high-resolution face images and many overlay elements can otherwise reduce responsiveness.
+
+On the backend, ONNX runtime is used for efficient 3DDFA_V2 inference. The project specification reports approximately 1.35 ms per image on CPU for the 3DDFA_V2 model, although actual end-to-end runtime also depends on image loading, face detection, Python process startup, JSON transfer, and visualization. Model singleton patterns reduce repeated loading costs. Process timeout management prevents stalled detection or scoring from blocking the application. Temporary file cleanup reduces storage usage.
+
+Python child-process integration uses JSON-based communication and large buffer support. The detection timeout is set to 120 seconds, while feature analysis timeout is set to 60 seconds. Large buffer support up to 500 MB helps handle dense mesh output. These design choices make the system more robust for large images and model outputs.
+
+The feature-based attractiveness analysis module demonstrates efficient performance with a compact architecture of 7.9 million parameters, making it suitable for deployment on resource-constrained devices while maintaining high accuracy. The dual-stream co-attention network processes images at approximately 320ms per image on GPU, which is acceptable for interactive web applications where users expect near-real-time feedback.
+
+5.9  Comparison with Existing Tools
+
+Compared with Face++ Detect API, LooksmaxAI provides a more explainable user-facing analysis. Face++ returns a beauty attribute with male and female scores, while LooksmaxAI shows detailed front and side measurements, category scores, visual overlays, strengths, weaknesses, HarmonyScore, and feature-based attractiveness analysis with region-specific contributions.
+
+Compared with Fotor Golden Ratio Face Calculator, LooksmaxAI is less dependent on a single proportional ideal. Fotor provides an accessible score using golden-ratio analysis, facial thirds, midface ratio, symmetry, and side-profile lines. LooksmaxAI expands this into 62 measurements, calibrated ranges, plateau scoring, side-profile normalization, and feature-based analysis with interpretable heatmaps.
+
+Compared with Beauty Scanner - Face Analyzer, LooksmaxAI provides more technical transparency. Beauty Scanner offers a Face Attractiveness Score and consumer functions such as face comparison and face reading. LooksmaxAI focuses on an inspectable measurement framework, where each score is linked to a landmark-based calculation, plus region-specific feature analysis that explains which facial components contribute to the overall assessment.
+
+Compared with FaceRate AI, LooksmaxAI separates the learned attractiveness score from the geometric HarmonyScore while providing deeper interpretability. FaceRate AI uses AI-powered analysis involving landmarks, ratios, symmetry, and learned patterns. LooksmaxAI also uses AI through the feature-based analysis module, but it does not allow the AI output to replace the measurement-based explanation. Instead, it provides both geometric harmony analysis and feature-specific attractiveness assessment with visual heatmaps showing exactly which regions contribute positively or negatively.
+
+The key differentiator of LooksmaxAI is the combination of comprehensive geometric analysis (62 measurements across front and side profiles), ethnicity and gender calibration, interpretable plateau Gaussian scoring, and feature-based attractiveness analysis with occlusion sensitivity. This multi-faceted approach provides users with both objective geometric measurements and learned aesthetic assessments, each with clear explanations and visual feedback.
+
+5.10  Limitations
+
+The current implementation has several limitations. First, image quality strongly affects landmark detection. Blurry images, occlusions, strong shadows, non-neutral expressions, and extreme poses can reduce accuracy. Second, user landmark refinement improves precision but also introduces user effort and possible user error. Third, ethnicity and gender calibration depends on the quality of the underlying ideal ranges. These ranges should be validated with larger and more diverse datasets.
+
+Fourth, the feature-based attractiveness analysis module may inherit bias from training data. The SCUT-FBP5500 dataset contains 5,500 images with diverse demographics, but the model trained on this dataset may not generalize equally across all ages, ethnicities, lighting conditions, and image styles. The reported performance metrics (SRCC=0.912, PCC=0.921) are based on 5-fold cross-validation within this dataset, and real-world performance may vary.
+
+Fifth, the occlusion-based sensitivity analysis treats facial features independently, but attractiveness may depend on feature interactions and synergistic effects. For example, eye-eyebrow harmony or the relationship between nose projection and chin projection may not be fully captured by analyzing each region in isolation. Sixth, the system analyzes static images and cannot capture dynamic attractiveness cues such as facial expressions, animations, or video-based assessment.
+
+Seventh, the system is not a medical diagnostic tool and should not be presented as one. While the measurements are based on established cephalometric and anthropometric principles, the attractiveness assessments are subjective and culturally influenced. The system should be used for educational purposes, cosmetic planning, and self-improvement guidance rather than as a definitive judgment of beauty or a replacement for professional consultation.
+
+5.11  Chapter Summary
+
+This chapter presented the implementation and evaluation discussion of LooksmaxAI. The system provides a complete workflow for authentication, demographic calibration, image upload, landmark detection, landmark refinement, measurement calculation, HarmonyScore scoring, feature-based attractiveness analysis with region-specific contributions, visualization, and result interpretation. 
+
+The feature-based analysis module achieves state-of-the-art performance (SRCC=0.912, PCC=0.921) on the SCUT-FBP5500 dataset and provides interpretable region-specific beauty assessment through occlusion-based sensitivity analysis. Compared with existing tools, LooksmaxAI provides broader measurement coverage, ethnicity and gender calibration, clearer separation between explainable geometry and learned attractiveness prediction, and actionable insights through feature-specific scoring and visual heatmaps.
+
+The chapter also identified limitations related to image quality, landmark accuracy, calibration, model bias, feature independence assumptions, static analysis constraints, and the need for future empirical validation with diverse user populations and real-world usage scenarios.

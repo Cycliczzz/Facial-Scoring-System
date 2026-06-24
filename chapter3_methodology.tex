@@ -1,0 +1,111 @@
+CHAPTER 3. METHODOLOGY
+
+3.1  Overview
+
+Chapter 2 reviewed the scientific and technical background of facial analysis. This chapter describes the methodology used to design and implement LooksmaxAI. The methodology is organized around the complete data flow from user input to final dashboard output. The system receives user information and images, detects and refines landmarks, calculates front and side profile measurements, applies calibrated scoring, computes the HarmonyScore, executes feature-based attractiveness analysis, and visualizes the results in a web interface.
+
+The overall design follows a full-stack architecture. The frontend is implemented with Next.js 14.2.5, React 18.3.1, TypeScript 5, Tailwind CSS 3.4.1, Radix UI primitives, and shadcn/ui components. The backend uses Next.js API routes running on Node.js. Python scripts are executed through child processes for machine learning tasks. The landmark detection module uses 3DDFA_V2 in ONNX form, with FaceBoxes for initial face detection. The feature-based attractiveness analysis module uses a dual-stream co-attention architecture with MobileNetV2 networks, trained on the SCUT-FBP5500 dataset. Image processing uses OpenCV, PIL, and NumPy. Authentication is handled through NextAuth.js.
+
+3.2  System Architecture
+
+LooksmaxAI is divided into six major layers: presentation layer, interaction layer, application logic layer, machine learning layer, measurement and scoring layer, and persistence or session layer. The presentation layer displays the onboarding flow, upload interface, landmark editor, analysis dashboard, gauges, measurement lists, and canvas overlays. The interaction layer handles user actions such as selecting gender, selecting ethnicity, uploading images, zooming, panning, placing landmarks, undoing landmark changes, and selecting measurements for visualization.
+
+The application logic layer coordinates data between the browser and backend. It validates inputs, sends images to API routes, receives landmark results, stores intermediate analysis state, and triggers measurement calculation. React hooks such as useState, useEffect, and useCallback are used for local state management and event handling. This approach keeps the implementation simple while still supporting an interactive user experience.
+
+The machine learning layer contains the Python-based components. For landmark detection, the backend writes temporary image files, calls the Python detection process, loads the ONNX 3DDFA_V2 model, runs FaceBoxes face detection, performs dense alignment, and returns landmarks as JSON. For feature-based attractiveness analysis, the backend calls a separate Python process that loads the co-attention model with MobileNetV2 networks, detects 478 MediaPipe facial landmarks, segments the face into eight anatomical regions, applies occlusion-based sensitivity analysis, and returns overall attractiveness scores, individual feature scores, and color-coded heatmaps.
+
+The measurement and scoring layer is responsible for converting landmarks into values. It calculates distances, angles, ratios, perpendicular distances, and reference-line positions. It then compares each value with an ideal range calibrated by gender and ethnicity. The output is a list of measurements, individual scores, category scores, front and side scores, the overall HarmonyScore, detected strengths, detected weaknesses, and visualization metadata.
+
+The session layer ties analysis results to authenticated users. NextAuth.js provides login and session management. Photos are not stored by default. Temporary files are cleaned after processing, and user data is tied to the active session. This design supports privacy while still allowing a guided workflow.
+
+3.3  User Workflow
+
+The user workflow begins with authentication. The user logs in through the NextAuth.js-based system, and a session is created. Authentication is useful because facial analysis is a personal task and results should not be mixed between users. It also allows the system to associate the onboarding state, uploaded images, and analysis result with the current session.
+
+After authentication, the user selects gender. The project supports male and female selection because several ideal measurement ranges differ by gender. For example, the project specification accounts for narrower female bizygomatic width, more upward canthal tilt, smaller nose size, more convex profile, shorter lower face, and larger eye aspect ratio. Gender selection therefore influences the calibration stage rather than only the interface.
+
+The next step is ethnicity selection. The system supports East Asian, Caucasian, Black, Hispanic, Middle Eastern, South Asian, and Mixed categories. Ethnicity selection affects ideal value calibration for nose width, nasal projection, lip protrusion, canthal tilt, profile convexity, jaw width, and eye separation.
+
+The user then uploads two photos: a front-profile photo and a side-profile photo. The upload module validates image format, file size, and basic image quality. It checks whether a face can be detected and whether the image is suitable for analysis. Front images should show the face with minimal rotation, while side images should clearly show the nose, lips, chin, jaw, forehead, and ear reference region.
+
+After upload, the landmark placement interface is displayed. The system provides automatic landmark suggestions using 3DDFA_V2 and related landmark extraction. The user can inspect 49 front landmarks and 31 side landmarks. Visual guides and tooltips explain where each landmark should be placed. Zoom, pan, undo, and redo controls support accurate placement. This step is important because measurement accuracy depends on landmark accuracy.
+
+The final step is analysis generation. The system calculates measurements in real time or near real time, applies ideal ranges, computes scores, runs the feature-based attractiveness analysis module, and renders the dashboard. Progress indicators show the current processing stage so the user understands whether the system is detecting landmarks, calculating measurements, scoring harmony, or running feature analysis models.
+
+3.4  Landmark Detection and Normalization
+
+The landmark pipeline begins with face detection. FaceBoxes is used to detect the face bounding box. The image is then cropped or transformed into the input format expected by 3DDFA_V2. The ONNX version of 3DDFA_V2 performs dense three-dimensional alignment and returns mesh information and sparse keypoints. The dense mesh contains 38,365 points, and the sparse landmark set contains 68 keypoints.
+
+The system then maps model outputs to application-specific landmarks. For front analysis, 49 landmarks are used. These points cover the hairline, pupils, eye corners, eyelids, eyebrows, nose bridge, nose sides, nasal base, mouth corners, lips, Cupid's bow, jaw angles, chin, cheekbones, and temples. For side analysis, 31 landmarks are used. These points cover the top of head, occiput, hairline, forehead, glabella, nasal bridge, nose tip, columella, subnasale, upper lip, lower lip, chin, jaw angles, porion, tragus, intertragic notch, orbitale, and corneal apex.
+
+For the feature-based attractiveness analysis module, MediaPipe Face Mesh is employed to detect 478 3D facial landmarks with high precision. These landmarks enable accurate segmentation of eight anatomical regions: left eye, right eye, nose, mouth, left eyebrow, right eyebrow, skin (computed as face oval minus all feature regions), and hair (area above eyebrows). Each region is represented by a binary mask generated by filling the polygon defined by corresponding landmark points, resized to 224×224 pixels to match neural network input dimensions.
+
+Side-profile orientation is normalized before measurement. If the face is left-facing, the system mirrors the image so that all side profiles follow a standard right-facing coordinate convention. After mirroring, landmark detection is run again. This avoids inconsistent angle signs and left-right distance calculations. Standardization also simplifies visualization because reference lines and arcs can be drawn using the same geometric assumptions for every user.
+
+Automatic detection is followed by optional user refinement. The landmark editor displays the image and landmarks on an HTML5 Canvas. The user can drag points, zoom into regions, pan the image, and undo changes. The adjusted landmarks are stored as the final measurement input. This human-in-the-loop step is a major methodological choice because it balances automation with precision.
+
+3.5  Front Profile Measurement Design
+
+The front-profile analysis measures structures that are visible from a straight frontal image. The first category is the eyes and periorbital region. Lateral canthal tilt measures the angle of the eye corners relative to the horizontal direction. Eye aspect ratio describes eye width relative to eye height. Eye separation ratio compares interpupillary distance or intercanthal spacing with face width. The one eye apart test checks whether the distance between the eyes is close to the width of one eye. Eyebrow tilt measures brow angle. Eyebrow low setedness measures brow-to-eye distance. Brow length to face width ratio compares brow length with facial width. Cheekbone height measures the vertical position of cheekbone landmarks relative to the face.
+
+The second category is the nose. Nose bridge to nose width ratio compares the upper nasal structure with the nasal base. Ipsilateral alar angle describes the nasal base angle. Intercanthal-nasal width ratio compares the distance between the inner eye corners with nasal width. Mouth width to nose width ratio compares oral width with nasal width. Nose tip position measures the location of the nasal tip within the frontal facial frame.
+
+The third category is mouth and lips. Cupid's bow depth measures the shape of the upper lip. Mouth corner position checks the vertical and horizontal balance of the mouth corners. Interpupillary-mouth width ratio compares mouth width with interpupillary distance. Lower lip to upper lip ratio measures lip proportion. Chin to philtrum ratio compares lower chin-related height with the philtrum region.
+
+The fourth category is jaw and facial structure. Bigonial width measures jaw width relative to the face. Jaw slope describes the inclination of the jawline. Jaw frontal angle measures the front-facing mandibular shape. Bitemporal width describes temple width. Deviation of ipsilateral alar angle and jaw frontal angle is used as an angle harmony metric between nasal and jaw-related structures.
+
+The fifth category is global facial proportions. Middle third, lower third, and top third describe vertical balance. Face width to height ratio and total facial width to height ratio describe global facial shape. Midface ratio evaluates the relative height of the midface. Lower third proportion evaluates the lower facial region in relation to the entire face.
+
+3.6  Side Profile Measurement Design
+
+The side-profile analysis measures projection, convexity, and reference-line relationships. The nasal architecture category contains nasal tip angle, nasal width to height ratio, nasal projection, nasofrontal angle, nasolabial angle, nasofacial angle, nasomental angle, Frankfort-tip angle, and nose tip rotation angle. These measurements describe the shape and projection of the nose relative to the forehead, lips, chin, and reference plane.
+
+The profile convexity and depth category contains facial convexity measured from nasion, facial convexity measured from glabella, total facial convexity, anterior facial depth, facial depth to height ratio, and recession relative to the Frankfort plane. These measurements describe how the forehead, midface, mouth, and chin align in the sagittal direction.
+
+The lip position and aesthetics category contains upper lip S-Line position, upper lip E-Line position, upper lip Burstone line, lower lip S-Line position, lower lip E-Line position, lower lip Burstone line, and Holdaway H-Line. These measurements describe whether the lips are retrusive, balanced, or protrusive relative to established soft tissue reference lines.
+
+The jaw and mandibular category contains gonial angle, mandibular plane angle, ramus to mandible ratio, gonion to mouth line, and mentolabial angle. These measurements describe jaw strength, mandibular rotation, jaw-length relationships, and chin-lip transition. The forehead and cranial category contains upper forehead slope, browridge inclination angle, and submental cervical angle. The midface and orbital category contains orbital vector and interior midface projection angle.
+
+3.7  HarmonyScore Calculation
+
+Each measurement is first converted into a zero-to-ten score. The system uses a plateau Gaussian model. If a value lies inside the ideal range, the measurement receives a score of 10. If the value lies outside the ideal range, the system calculates normalized deviation from the nearest boundary of the ideal range. The score is then computed by Gaussian decay with a configurable steepness factor and a minimum floor score. This prevents small deviations from being punished too harshly while still reducing the score for large deviations.
+
+The front-profile score is calculated from three groups. The craniofacial framework group contributes 40 percent of the front score. The periorbital complex contributes 30 percent. The perioral and nasal complex contributes 30 percent. The side-profile score is calculated from three groups. Profile convexity and depth contributes 35 percent. Nasal architecture contributes 35 percent. Mandibulofacial and labial structure contributes 30 percent.
+
+Within each group, key metrics receive weight 2.0 and standard metrics receive weight 1.0. This distinction allows measurements with stronger visual or structural importance to influence the category score more than supporting measurements. The overall HarmonyScore then combines the front-profile score and side-profile score. Front profile contributes 60 percent and side profile contributes 40 percent.
+
+A critical-flaw penalty is applied after aggregation. Any measurement with a score below 3.5 contributes to a penalty. The penalty is calculated as the sum of threshold minus score multiplied by 0.25, capped at 1.0 point. This design prevents the final score from hiding severe local imbalance. For example, a user may have strong eye and lip proportions but a very low side-profile jaw score. The critical-flaw penalty ensures that this issue is reflected in the final HarmonyScore.
+
+3.8  Feature-Based Attractiveness Analysis Method
+
+The feature-based attractiveness analysis module operates independently from the HarmonyScore to provide complementary interpretability through region-specific beauty assessment. The module employs a dual-stream co-attention deep learning architecture that processes both RGB facial images and 7-channel semantic parsing maps through parallel MobileNetV2-based networks.
+
+The processing pipeline begins with MediaPipe Face Mesh detecting 478 facial landmarks, which are used to generate binary masks for eight anatomical regions. The parsing stream processes a 7-channel facial segmentation map encoding background, face boundary, eyes, eyebrows, nose, mouth, and hair regions. The image stream processes the RGB facial image with spatial attention mechanisms that learn to weight the importance of different spatial locations across 7×7 feature map positions.
+
+Features from both streams are concatenated and passed through fully connected layers to produce a baseline attractiveness score on a 1-5 scale. To quantify individual feature contributions, the system applies occlusion-based sensitivity analysis by systematically blurring each facial region using Gaussian blur (kernel size 31, σ≈7.75) and measuring the resulting score change. The contribution of each region r is computed as Δr = sbase - socc(r), where positive values indicate features that enhance attractiveness and negative values indicate features that detract from it.
+
+The system outputs both an overall attractiveness score (converted to 0-10 scale) and individual feature scores for each of the eight regions, normalized such that the most positively contributing feature receives a score close to 10 and the most negatively contributing feature receives a score close to 0. Color-coded heatmaps visualize these contributions by overlaying green coloring for attractive features and red for unattractive ones, with Gaussian smoothing (kernel size 25) applied for visual appeal.
+
+The feature analysis module is intentionally independent from the HarmonyScore. It does not replace the measurement-based result and does not directly change the geometric harmony analysis. This separation makes the dashboard more informative. A user can see whether the rule-based harmony analysis and learned feature-based attractiveness assessment agree or disagree. When they disagree, the detailed measurements and feature-specific scores can help explain possible causes.
+
+3.9  Visualization and Dashboard Design
+
+LooksmaxAI uses HTML5 Canvas for measurement visualization. Linear measurements are shown as straight lines between landmarks. Angular measurements are shown as arcs with reference arms. Ratio measurements are shown as multiple related lines. Perpendicular distances are shown as dotted lines to a reference plane. Landmark points are highlighted, and different measurement groups can be color-coded.
+
+The dashboard contains an overview section, detailed measurement section, interactive visualization section, feature-based attractiveness analysis section, and strengths and weaknesses section. The overview section displays the overall HarmonyScore, front score, side score, and feature analysis score with color-coded gauges. The detailed measurement section provides a searchable and filterable list grouped by category. Each measurement shows its value, ideal range, score, deviation indicator, and explanation. The interactive visualization section lets users click a measurement to highlight its corresponding lines, angles, or ratios on the photo.
+
+The feature-based analysis section displays the overall attractiveness score, individual feature scores for each of the eight facial regions (eyes, eyebrows, nose, mouth, skin, hair), and an interactive heatmap overlay showing which regions contribute positively (green) or negatively (red) to perceived beauty. Users can hover over specific regions to see detailed contribution scores and understand which features enhance or detract from their facial attractiveness.
+
+The strengths and weaknesses section identifies the top three strongest measurements and top three areas for improvement. This is important because users need more than a score. They need to understand which aspects of the face contribute positively and which aspects reduce harmony. The system presents these findings as structured feedback rather than as vague aesthetic judgment.
+
+3.10  Performance, Security, and Privacy
+
+The frontend uses image lazy loading, progressive image loading, debounced search and filtering, memoized calculations, and optimized canvas rendering. These methods reduce unnecessary computation and improve responsiveness. The backend uses ONNX runtime for fast landmark inference, model singleton patterns for lazy loading, temporary file cleanup, process timeout management, and fallback error handling.
+
+Python integration is implemented through child process spawning and JSON-based inter-process communication. Detection processes use a timeout of 120 seconds, while feature analysis processes use a timeout of 60 seconds. Large buffer support is configured for mesh data, with a buffer size up to 500 MB. These safeguards reduce the risk of stalled processes or broken output when processing large images.
+
+Privacy is handled through no default photo storage, temporary processing files, session-based data association, browser-side landmark adjustment, and NextAuth.js session tokens. Because face images are sensitive personal data, the system is designed to avoid unnecessary persistence. The analysis workflow uses the uploaded images only for the current processing task unless explicit storage is added in a future version.
+
+3.11  Chapter Summary
+
+This chapter described the methodology of LooksmaxAI. The system combines a modern web frontend, API-based backend, Python machine learning execution, 3DDFA_V2 landmark detection, MediaPipe-based feature segmentation, user landmark refinement, 62 facial measurements, calibrated plateau Gaussian scoring, hierarchical HarmonyScore aggregation, independent feature-based attractiveness analysis with occlusion sensitivity, interactive visualization, and privacy-conscious processing. Chapter 4 analyzes the mathematical and theoretical foundation of these components.
